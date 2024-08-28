@@ -1,0 +1,44 @@
+{
+    "name": "swooletw/laravel-clickhouse",
+    "description": "A ClickHouse based Eloquent model and Query builder for Laravel and Hyperf",
+    "keywords": [
+        "php",
+        "laravel",
+        "hyperf",
+        "eloquent",
+        "clickhouse",
+        "database",
+        "model"
+    ],
+    "homepage": "https://github.com/swooletw/laravel-clickhouse",
+    "authors": [
+        { "name": "Sasaya", "email": "sasaya@percussion.life" },
+        { "name": "Albert Chen", "email": "albert.cht@pm.me", "homepage": "https://albert-chen.com" }
+    ],
+    "license": "MIT",
+    "require": {
+        "php": "^8.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.3",
+        "mockery/mockery": "^1.6",
+        "phpstan/phpstan": "^1.12",
+        "laravel/pint": "^1.17"
+    },
+    "autoload": {
+        "psr-4": {
+            "SwooleTW\\ClickHouse\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SwooleTW\\ClickHouse\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+      "test": "phpunit --colors",
+      "phpstan": "phpstan analyse",
+      "cs": "pint src tests --test",
+      "cs:fix": "pint src tests"
+    }
+}
