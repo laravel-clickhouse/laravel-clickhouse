@@ -1,0 +1,39 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  linux_tests:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]')"
+
+    strategy:
+      fail-fast: true
+      matrix:
+        php:
+          - "8.2"
+          - "8.3"
+
+    name: PHP ${{ matrix.php }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Installing php
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer
+
+      - name: Install dependencies
+        run: |
+          composer install --prefer-dist -n -o
+
+      - name: Execute tests
+        run: |
+          vendor/bin/pint src tests --test
+          vendor/bin/phpstan analyse
+          vendor/bin/phpunit
