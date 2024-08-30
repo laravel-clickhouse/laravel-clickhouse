@@ -510,18 +510,32 @@ class BuilderTest extends TestCase
         $this->getBuilder()->from('table')->insertGetId(['column' => 'value']);
     }
 
-    private function getBuilder(?string $select = null, ?string $insert = null, array $bindings = [], mixed $result = null)
+    public function testUpdate()
     {
-        $connection = $this->getConnection($select, $insert, $bindings, $result);
+        $expectedSql = 'alter table `table` update `column` = ? where `column` = ?';
+        $bindings = ['value_b', 'value_a'];
+        $this->getBuilder(update: $expectedSql, bindings: $bindings)->from('table')->where('column', 'value_a')->update(['column' => 'value_b']);
+    }
+
+    public function testUpdateWithJoin()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('ClickHouse does not support update with join, please use joinGet or dictGet instead.');
+        $this->getBuilder()->from('table_a')->crossJoin('table_b')->update(['column' => 'value']);
+    }
+
+    private function getBuilder(?string $select = null, ?string $insert = null, ?string $update = null, array $bindings = [], mixed $result = null)
+    {
+        $connection = $this->getConnection($select, $insert, $update, $bindings, $result);
         $grammar = (new Grammar)->setConnection($connection);
         $processor = $this->getProcessor();
 
         return new Builder($connection, $grammar, $processor);
     }
 
-    private function getConnection(?string $select = null, ?string $insert = null, array $bindings = [], mixed $result = null)
+    private function getConnection(?string $select = null, ?string $insert = null, ?string $update = null, array $bindings = [], mixed $result = null)
     {
-        return $this->mock(Connection::class, function ($connection) use ($select, $insert, $bindings, $result) {
+        return $this->mock(Connection::class, function ($connection) use ($select, $insert, $update, $bindings, $result) {
             $connection->shouldReceive('getDatabaseName')->andReturn('database');
             $connection->shouldReceive('prepareBindings')->andReturnUsing(fn ($bindings) => $bindings);
             $connection->shouldReceive('escape')->andReturnUsing(fn ($value) => is_string($value) ? "'{$value}'" : $value);
@@ -532,6 +546,10 @@ class BuilderTest extends TestCase
 
             if ($insert) {
                 $connection->shouldReceive('insert')->with($insert, $bindings)->once()->andReturn($result);
+            }
+
+            if ($update) {
+                $connection->shouldReceive('update')->with($update, $bindings)->once()->andReturn($result);
             }
         });
     }

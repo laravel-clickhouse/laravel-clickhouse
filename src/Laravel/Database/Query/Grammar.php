@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Database\Query\Grammars\Grammar as BaseGrammar;
+use LogicException;
 
 class Grammar extends BaseGrammar
 {
@@ -69,5 +70,17 @@ class Grammar extends BaseGrammar
         $value = $this->parameter($where['value']);
 
         return $function.'('.$this->wrap($where['column']).') '.$where['operator'].' '.$value;
+    }
+
+    /** {@inheritDoc} */
+    protected function compileUpdateWithoutJoins(Builder $query, $table, $columns, $where): string
+    {
+        return "alter table {$table} update {$columns} {$where}";
+    }
+
+    /** {@inheritDoc} */
+    protected function compileUpdateWithJoins(Builder $query, $table, $columns, $where): string
+    {
+        throw new LogicException('ClickHouse does not support update with join, please use joinGet or dictGet instead.');
     }
 }
