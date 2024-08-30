@@ -4,6 +4,7 @@ namespace SwooleTW\ClickHouse\Laravel\Database\Query;
 
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
 use Illuminate\Database\Query\Builder as BaseBuilder;
+use LogicException;
 
 class Builder extends BaseBuilder
 {
@@ -32,6 +33,16 @@ class Builder extends BaseBuilder
         }
 
         return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param  array<string, mixed>  $values
+     */
+    public function insertGetId(array $values, $sequence = null): int
+    {
+        throw new LogicException('ClickHouse does not support insert get id.');
     }
 
     /** {@inheritDoc} */

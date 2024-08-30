@@ -4,6 +4,7 @@ namespace SwooleTW\ClickHouse\Tests\Laravel\Database\Query;
 
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Processors\Processor;
+use LogicException;
 use SwooleTW\ClickHouse\Laravel\Database\Query\Builder;
 use SwooleTW\ClickHouse\Laravel\Database\Query\Grammar;
 use SwooleTW\ClickHouse\Tests\TestCase;
@@ -488,24 +489,49 @@ class BuilderTest extends TestCase
         $this->getBuilder(select: $expectedSql)->from('table_a')->union($this->getBuilder()->from('table_b'))->count();
     }
 
-    private function getBuilder(?string $select = null, mixed $result = null)
+    public function testInsert()
     {
-        $connection = $this->getConnection($select, $result);
+        $expectedSql = 'insert into `table` (`column`) values (?)';
+        $bindings = ['value'];
+        $this->getBuilder(insert: $expectedSql, bindings: $bindings)->from('table')->insert(['column' => 'value']);
+    }
+
+    public function testInsertMultiple()
+    {
+        $expectedSql = 'insert into `table` (`column`) values (?), (?)';
+        $bindings = ['value_1', 'value_2'];
+        $this->getBuilder(insert: $expectedSql, bindings: $bindings)->from('table')->insert([['column' => 'value_1'], ['column' => 'value_2']]);
+    }
+
+    public function testInsertGetId()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('ClickHouse does not support insert get id.');
+        $this->getBuilder()->from('table')->insertGetId(['column' => 'value']);
+    }
+
+    private function getBuilder(?string $select = null, ?string $insert = null, array $bindings = [], mixed $result = null)
+    {
+        $connection = $this->getConnection($select, $insert, $bindings, $result);
         $grammar = (new Grammar)->setConnection($connection);
         $processor = $this->getProcessor();
 
         return new Builder($connection, $grammar, $processor);
     }
 
-    private function getConnection(?string $select = null, mixed $result = null)
+    private function getConnection(?string $select = null, ?string $insert = null, array $bindings = [], mixed $result = null)
     {
-        return $this->mock(Connection::class, function ($connection) use ($select, $result) {
+        return $this->mock(Connection::class, function ($connection) use ($select, $insert, $bindings, $result) {
             $connection->shouldReceive('getDatabaseName')->andReturn('database');
             $connection->shouldReceive('prepareBindings')->andReturnUsing(fn ($bindings) => $bindings);
             $connection->shouldReceive('escape')->andReturnUsing(fn ($value) => is_string($value) ? "'{$value}'" : $value);
 
             if ($select) {
-                $connection->shouldReceive('select')->with($select, [], true)->once()->andReturn($result);
+                $connection->shouldReceive('select')->with($select, $bindings, true)->once()->andReturn($result);
+            }
+
+            if ($insert) {
+                $connection->shouldReceive('insert')->with($insert, $bindings)->once()->andReturn($result);
             }
         });
     }
