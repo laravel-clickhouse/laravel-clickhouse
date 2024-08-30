@@ -412,8 +412,8 @@ class BuilderTest extends TestCase
 
     public function testCount()
     {
-        $expected = 'select count(*) as aggregate from `table`';
-        $this->getBuilder($expected)->from('table')->count();
+        $expectedSql = 'select count(*) as aggregate from `table`';
+        $this->getBuilder(select: $expectedSql)->from('table')->count();
     }
 
     public function testExists()
@@ -421,7 +421,7 @@ class BuilderTest extends TestCase
         $expectedSql = 'select exists(select * from `table`) as `exists`';
         // NOTE: alias no function here, clickhouse's bug?
         $results = [['in(1, _subquery155282)' => 1]];
-        $this->assertTrue($this->getBuilder($expectedSql, $results)->from('table')->exists());
+        $this->assertTrue($this->getBuilder(select: $expectedSql, result: $results)->from('table')->exists());
     }
 
     public function testDoesntExist()
@@ -429,31 +429,31 @@ class BuilderTest extends TestCase
         $expectedSql = 'select exists(select * from `table`) as `exists`';
         // NOTE: alias no function here, clickhouse's bug?
         $results = [['in(1, _subquery155282)' => 1]];
-        $this->assertFalse($this->getBuilder($expectedSql, $results)->from('table')->doesntExist());
+        $this->assertFalse($this->getBuilder(select: $expectedSql, result: $results)->from('table')->doesntExist());
     }
 
     public function testMin()
     {
         $expectedSql = 'select min(`column`) as aggregate from `table`';
-        $this->getBuilder($expectedSql)->from('table')->min('column');
+        $this->getBuilder(select: $expectedSql)->from('table')->min('column');
     }
 
     public function testMax()
     {
         $expectedSql = 'select max(`column`) as aggregate from `table`';
-        $this->getBuilder($expectedSql)->from('table')->max('column');
+        $this->getBuilder(select: $expectedSql)->from('table')->max('column');
     }
 
     public function testSum()
     {
         $expectedSql = 'select sum(`column`) as aggregate from `table`';
-        $this->getBuilder($expectedSql)->from('table')->sum('column');
+        $this->getBuilder(select: $expectedSql)->from('table')->sum('column');
     }
 
     public function testAvg()
     {
         $expectedSql = 'select avg(`column`) as aggregate from `table`';
-        $this->getBuilder($expectedSql)->from('table')->avg('column');
+        $this->getBuilder(select: $expectedSql)->from('table')->avg('column');
     }
 
     public function testUnion()
@@ -484,28 +484,28 @@ class BuilderTest extends TestCase
 
     public function testUnionAggregate()
     {
-        $expected = 'select count(*) as aggregate from ((select * from `table_a`) union distinct (select * from `table_b`)) as `temp_table`';
-        $this->getBuilder($expected)->from('table_a')->union($this->getBuilder()->from('table_b'))->count();
+        $expectedSql = 'select count(*) as aggregate from ((select * from `table_a`) union distinct (select * from `table_b`)) as `temp_table`';
+        $this->getBuilder(select: $expectedSql)->from('table_a')->union($this->getBuilder()->from('table_b'))->count();
     }
 
-    private function getBuilder(?string $expectedSql = null, array $results = [])
+    private function getBuilder(?string $select = null, mixed $result = null)
     {
-        $connection = $this->getConnection($expectedSql, $results);
+        $connection = $this->getConnection($select, $result);
         $grammar = (new Grammar)->setConnection($connection);
         $processor = $this->getProcessor();
 
         return new Builder($connection, $grammar, $processor);
     }
 
-    private function getConnection(?string $expectedSql = null, array $results = [])
+    private function getConnection(?string $select = null, mixed $result = null)
     {
-        return $this->mock(Connection::class, function ($connection) use ($expectedSql, $results) {
+        return $this->mock(Connection::class, function ($connection) use ($select, $result) {
             $connection->shouldReceive('getDatabaseName')->andReturn('database');
             $connection->shouldReceive('prepareBindings')->andReturnUsing(fn ($bindings) => $bindings);
             $connection->shouldReceive('escape')->andReturnUsing(fn ($value) => is_string($value) ? "'{$value}'" : $value);
 
-            if ($expectedSql) {
-                $connection->shouldReceive('select')->with($expectedSql, [], true)->once()->andReturn($results);
+            if ($select) {
+                $connection->shouldReceive('select')->with($select, [], true)->once()->andReturn($result);
             }
         });
     }
@@ -513,9 +513,7 @@ class BuilderTest extends TestCase
     private function getProcessor()
     {
         return $this->mock(Processor::class, function ($processor) {
-            $processor->shouldReceive('processSelect')->andReturnUsing(function ($_, $results) {
-                return $results;
-            });
+            $processor->shouldReceive('processSelect')->andReturnUsing(fn ($_, $results) => $results);
         });
     }
 }
