@@ -35,17 +35,6 @@ class Builder extends BaseBuilder
     }
 
     /** {@inheritDoc} */
-    public function toSql(): string
-    {
-        $this->applyBeforeQueryCallbacks();
-
-        return $this->grammar->substituteBindingsIntoRawSql(
-            $this->grammar->compileSelect($this),
-            $this->connection->prepareBindings($this->getBindings())
-        );
-    }
-
-    /** {@inheritDoc} */
     protected function addDateBasedWhere($type, $column, $operator, $value, $boolean = 'and'): static
     {
         if (! in_array($type, ['Date', 'Time']) && ! $value instanceof ExpressionContract) {

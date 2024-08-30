@@ -14,7 +14,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table`',
-            $this->getBuilder()->select('*')->from('table')->toSql()
+            $this->getBuilder()->select('*')->from('table')->toRawSql()
         );
     }
 
@@ -22,7 +22,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select distinct `column` from `table`',
-            $this->getBuilder()->distinct()->select('column')->from('table')->toSql()
+            $this->getBuilder()->distinct()->select('column')->from('table')->toRawSql()
         );
     }
 
@@ -30,7 +30,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select `column` as `alias` from `table`',
-            $this->getBuilder()->select('column as alias')->from('table')->toSql()
+            $this->getBuilder()->select('column as alias')->from('table')->toRawSql()
         );
     }
 
@@ -38,7 +38,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `database`.`table`',
-            $this->getBuilder()->from('database.table')->toSql()
+            $this->getBuilder()->from('database.table')->toRawSql()
         );
     }
 
@@ -46,7 +46,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             "select * from `table` where `column` = 'value'",
-            $this->getBuilder()->from('table')->where('column', 'value')->toSql()
+            $this->getBuilder()->from('table')->where('column', 'value')->toRawSql()
         );
     }
 
@@ -54,7 +54,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             "select * from `table` where (`column` = 'value')",
-            $this->getBuilder()->from('table')->where([['column', 'value']])->toSql()
+            $this->getBuilder()->from('table')->where([['column', 'value']])->toRawSql()
         );
     }
 
@@ -62,7 +62,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             "select * from `table` where not `column` = 'value'",
-            $this->getBuilder()->from('table')->whereNot('column', 'value')->toSql()
+            $this->getBuilder()->from('table')->whereNot('column', 'value')->toRawSql()
         );
     }
 
@@ -70,7 +70,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             "select * from `table` where toDate(`column`) = '2000-01-01'",
-            $this->getBuilder()->from('table')->whereDate('column', '2000-01-01')->toSql()
+            $this->getBuilder()->from('table')->whereDate('column', '2000-01-01')->toRawSql()
         );
     }
 
@@ -78,7 +78,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where toDayOfMonth(`column`) = 1',
-            $this->getBuilder()->from('table')->whereDay('column', 1)->toSql()
+            $this->getBuilder()->from('table')->whereDay('column', 1)->toRawSql()
         );
     }
 
@@ -86,7 +86,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where toMonth(`column`) = 1',
-            $this->getBuilder()->from('table')->whereMonth('column', 1)->toSql()
+            $this->getBuilder()->from('table')->whereMonth('column', 1)->toRawSql()
         );
     }
 
@@ -94,7 +94,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where toYear(`column`) = 2000',
-            $this->getBuilder()->from('table')->whereYear('column', 2000)->toSql()
+            $this->getBuilder()->from('table')->whereYear('column', 2000)->toRawSql()
         );
     }
 
@@ -102,7 +102,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             "select * from `table` where toTime(`column`) = toTime(toDateTime('1970-01-01 10:20:30'))",
-            $this->getBuilder()->from('table')->whereTime('column', '10:20:30')->toSql()
+            $this->getBuilder()->from('table')->whereTime('column', '10:20:30')->toRawSql()
         );
     }
 
@@ -110,7 +110,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             "select * from `table` where `column` like 'value'",
-            $this->getBuilder()->from('table')->whereLike('column', 'value')->toSql()
+            $this->getBuilder()->from('table')->whereLike('column', 'value')->toRawSql()
         );
     }
 
@@ -118,7 +118,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             "select * from `table` where `column` not like 'value'",
-            $this->getBuilder()->from('table')->whereNotLike('column', 'value')->toSql()
+            $this->getBuilder()->from('table')->whereNotLike('column', 'value')->toRawSql()
         );
     }
 
@@ -126,7 +126,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where `column` between 1 and 2',
-            $this->getBuilder()->from('table')->whereBetween('column', [1, 2])->toSql()
+            $this->getBuilder()->from('table')->whereBetween('column', [1, 2])->toRawSql()
         );
     }
 
@@ -134,7 +134,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where `column` not between 1 and 2',
-            $this->getBuilder()->from('table')->whereNotBetween('column', [1, 2])->toSql()
+            $this->getBuilder()->from('table')->whereNotBetween('column', [1, 2])->toRawSql()
         );
     }
 
@@ -142,7 +142,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where `column` between `from` and `to`',
-            $this->getBuilder()->from('table')->whereBetweenColumns('column', ['from', 'to'])->toSql()
+            $this->getBuilder()->from('table')->whereBetweenColumns('column', ['from', 'to'])->toRawSql()
         );
     }
 
@@ -150,7 +150,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where `column` not between `from` and `to`',
-            $this->getBuilder()->from('table')->whereNotBetweenColumns('column', ['from', 'to'])->toSql()
+            $this->getBuilder()->from('table')->whereNotBetweenColumns('column', ['from', 'to'])->toRawSql()
         );
     }
 
@@ -158,7 +158,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             "select * from `table` where column = 'value'",
-            $this->getBuilder()->from('table')->whereRaw('column = ?', ['value'])->toSql()
+            $this->getBuilder()->from('table')->whereRaw('column = ?', ['value'])->toRawSql()
         );
     }
 
@@ -166,7 +166,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where `column` in (1, 2, 3)',
-            $this->getBuilder()->from('table')->whereIn('column', [1, 2, 3])->toSql()
+            $this->getBuilder()->from('table')->whereIn('column', [1, 2, 3])->toRawSql()
         );
     }
 
@@ -174,7 +174,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where `column` not in (1, 2, 3)',
-            $this->getBuilder()->from('table')->whereNotIn('column', [1, 2, 3])->toSql()
+            $this->getBuilder()->from('table')->whereNotIn('column', [1, 2, 3])->toRawSql()
         );
     }
 
@@ -182,7 +182,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where 0 = 1',
-            $this->getBuilder()->from('table')->whereIn('column', [])->toSql()
+            $this->getBuilder()->from('table')->whereIn('column', [])->toRawSql()
         );
     }
 
@@ -190,7 +190,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where 1 = 1',
-            $this->getBuilder()->from('table')->whereNotIn('column', [])->toSql()
+            $this->getBuilder()->from('table')->whereNotIn('column', [])->toRawSql()
         );
     }
 
@@ -198,7 +198,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where `column_a` = `column_b`',
-            $this->getBuilder()->from('table')->whereColumn('column_a', 'column_b')->toSql()
+            $this->getBuilder()->from('table')->whereColumn('column_a', 'column_b')->toRawSql()
         );
     }
 
@@ -206,7 +206,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where (`column_a` = `column_b`)',
-            $this->getBuilder()->from('table')->whereColumn([['column_a', 'column_b']])->toSql()
+            $this->getBuilder()->from('table')->whereColumn([['column_a', 'column_b']])->toRawSql()
         );
     }
 
@@ -214,7 +214,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             "select * from `table` where (`column_a` = 'value' and `column_b` = 'value')",
-            $this->getBuilder()->from('table')->whereAll(['column_a', 'column_b'], 'value')->toSql()
+            $this->getBuilder()->from('table')->whereAll(['column_a', 'column_b'], 'value')->toRawSql()
         );
     }
 
@@ -222,7 +222,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             "select * from `table` where (`column_a` = 'value' or `column_b` = 'value')",
-            $this->getBuilder()->from('table')->whereAny(['column_a', 'column_b'], 'value')->toSql()
+            $this->getBuilder()->from('table')->whereAny(['column_a', 'column_b'], 'value')->toRawSql()
         );
     }
 
@@ -230,7 +230,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             "select * from `table` where not (`column_a` = 'value' or `column_b` = 'value')",
-            $this->getBuilder()->from('table')->whereNone(['column_a', 'column_b'], 'value')->toSql()
+            $this->getBuilder()->from('table')->whereNone(['column_a', 'column_b'], 'value')->toRawSql()
         );
     }
 
@@ -238,7 +238,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where `column` is null',
-            $this->getBuilder()->from('table')->whereNull('column')->toSql()
+            $this->getBuilder()->from('table')->whereNull('column')->toRawSql()
         );
     }
 
@@ -246,7 +246,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where `column` is not null',
-            $this->getBuilder()->from('table')->whereNotNull('column')->toSql()
+            $this->getBuilder()->from('table')->whereNotNull('column')->toRawSql()
         );
     }
 
@@ -254,7 +254,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where `column_a` is null and `column_b` is null',
-            $this->getBuilder()->from('table')->whereNull(['column_a', 'column_b'])->toSql()
+            $this->getBuilder()->from('table')->whereNull(['column_a', 'column_b'])->toRawSql()
         );
     }
 
@@ -262,7 +262,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` where `column_a` is not null and `column_b` is not null',
-            $this->getBuilder()->from('table')->whereNotNull(['column_a', 'column_b'])->toSql()
+            $this->getBuilder()->from('table')->whereNotNull(['column_a', 'column_b'])->toRawSql()
         );
     }
 
@@ -270,7 +270,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table_a` where exists (select * from `table_b`)',
-            $this->getBuilder()->from('table_a')->whereExists(fn ($query) => $query->from('table_b'))->toSql()
+            $this->getBuilder()->from('table_a')->whereExists(fn ($query) => $query->from('table_b'))->toRawSql()
         );
     }
 
@@ -284,7 +284,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` group by `column`',
-            $this->getBuilder()->from('table')->groupBy('column')->toSql()
+            $this->getBuilder()->from('table')->groupBy('column')->toRawSql()
         );
     }
 
@@ -292,7 +292,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` group by `column_a`, `column_b`',
-            $this->getBuilder()->from('table')->groupBy(['column_a', 'column_b'])->toSql()
+            $this->getBuilder()->from('table')->groupBy(['column_a', 'column_b'])->toRawSql()
         );
     }
 
@@ -300,7 +300,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` order by `column_a` asc, `column_b` desc',
-            $this->getBuilder()->from('table')->orderBy('column_a')->orderBy('column_b', 'desc')->toSql()
+            $this->getBuilder()->from('table')->orderBy('column_a')->orderBy('column_b', 'desc')->toRawSql()
         );
     }
 
@@ -308,7 +308,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` order by randCanonical()',
-            $this->getBuilder()->from('table')->inRandomOrder()->toSql()
+            $this->getBuilder()->from('table')->inRandomOrder()->toRawSql()
         );
     }
 
@@ -316,7 +316,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             "select * from `table` having `column` = 'value'",
-            $this->getBuilder()->from('table')->having('column', 'value')->toSql()
+            $this->getBuilder()->from('table')->having('column', 'value')->toRawSql()
         );
     }
 
@@ -324,7 +324,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` having `column` between 1 and 2',
-            $this->getBuilder()->from('table')->havingBetween('column', [1, 2])->toSql()
+            $this->getBuilder()->from('table')->havingBetween('column', [1, 2])->toRawSql()
         );
     }
 
@@ -332,7 +332,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` having `column` is null',
-            $this->getBuilder()->from('table')->havingNull('column')->toSql()
+            $this->getBuilder()->from('table')->havingNull('column')->toRawSql()
         );
     }
 
@@ -340,7 +340,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` having `column` is not null',
-            $this->getBuilder()->from('table')->havingNotNull('column')->toSql()
+            $this->getBuilder()->from('table')->havingNotNull('column')->toRawSql()
         );
     }
 
@@ -348,7 +348,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             "select * from `table` having column = 'value'",
-            $this->getBuilder()->from('table')->havingRaw('column = ?', ['value'])->toSql()
+            $this->getBuilder()->from('table')->havingRaw('column = ?', ['value'])->toRawSql()
         );
     }
 
@@ -362,7 +362,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table` limit 1 offset 2',
-            $this->getBuilder()->from('table')->limit(1)->offset(2)->toSql()
+            $this->getBuilder()->from('table')->limit(1)->offset(2)->toRawSql()
         );
     }
 
@@ -370,7 +370,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table_a` inner join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
-            $this->getBuilder()->from('table_a')->join('table_b', 'table_a.column_a', 'table_b.column_b')->toSql()
+            $this->getBuilder()->from('table_a')->join('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
         );
     }
 
@@ -378,7 +378,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table_a` left join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
-            $this->getBuilder()->from('table_a')->leftJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toSql()
+            $this->getBuilder()->from('table_a')->leftJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
         );
     }
 
@@ -386,7 +386,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table_a` right join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
-            $this->getBuilder()->from('table_a')->rightJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toSql()
+            $this->getBuilder()->from('table_a')->rightJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
         );
     }
 
@@ -394,7 +394,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select * from `table_a` cross join `table_b`',
-            $this->getBuilder()->from('table_a')->crossJoin('table_b')->toSql()
+            $this->getBuilder()->from('table_a')->crossJoin('table_b')->toRawSql()
         );
     }
 
@@ -460,7 +460,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             '(select * from `table_a`) union distinct (select * from `table_b`)',
-            $this->getBuilder()->from('table_a')->union($this->getBuilder()->from('table_b'))->toSql()
+            $this->getBuilder()->from('table_a')->union($this->getBuilder()->from('table_b'))->toRawSql()
         );
     }
 
@@ -468,7 +468,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             '(select * from `table_a`) union all (select * from `table_b`)',
-            $this->getBuilder()->from('table_a')->unionAll($this->getBuilder()->from('table_b'))->toSql()
+            $this->getBuilder()->from('table_a')->unionAll($this->getBuilder()->from('table_b'))->toRawSql()
         );
     }
 
@@ -478,7 +478,7 @@ class BuilderTest extends TestCase
             '(select * from `table_a`) union all (select * from `table_b` inner join `table_c` on `table_b`.`column_b` = `table_c`.`column_c`)',
             $this->getBuilder()->from('table_a')->unionAll(
                 $this->getBuilder()->from('table_b')->join('table_c', fn ($join) => $join->on('table_b.column_b', '=', 'table_c.column_c'))
-            )->toSql()
+            )->toRawSql()
         );
     }
 
