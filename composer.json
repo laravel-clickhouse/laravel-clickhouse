@@ -23,7 +23,8 @@
         "phpunit/phpunit": "^11.3",
         "mockery/mockery": "^1.6",
         "phpstan/phpstan": "^1.12",
-        "laravel/pint": "^1.17"
+        "laravel/pint": "^1.17",
+        "illuminate/database": "^11.21"
     },
     "autoload": {
         "psr-4": {
