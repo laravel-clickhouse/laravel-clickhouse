@@ -564,6 +564,15 @@ class BuilderTest extends TestCase
         $this->getBuilder()->from('table_a')->crossJoin('table_b')->delete();
     }
 
+    public function testTruncate()
+    {
+        $expectedSql = 'truncate table `table`';
+        $bindings = [];
+        $builder = $this->getBuilder();
+        $builder->getConnection()->shouldReceive('statement')->with($expectedSql, $bindings)->once()->andReturn(true);
+        $builder->from('table')->truncate();
+    }
+
     private function getBuilder(
         ?string $select = null,
         ?string $insert = null,
