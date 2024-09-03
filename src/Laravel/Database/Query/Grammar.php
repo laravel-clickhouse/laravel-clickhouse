@@ -17,6 +17,20 @@ class Grammar extends BaseGrammar
     }
 
     /** {@inheritDoc} */
+    public function compileDelete(Builder $query, ?bool $lightweight = null): string
+    {
+        $table = $this->wrapTable($query->from);
+
+        $where = $this->compileWheres($query);
+
+        return trim(
+            isset($query->joins)
+                ? $this->compileDeleteWithJoins($query, $table, $where, $lightweight)
+                : $this->compileDeleteWithoutJoins($query, $table, $where, $lightweight)
+        );
+    }
+
+    /** {@inheritDoc} */
     protected function wrapValue($value): string
     {
         if ($value !== '*') {
@@ -82,5 +96,21 @@ class Grammar extends BaseGrammar
     protected function compileUpdateWithJoins(Builder $query, $table, $columns, $where): string
     {
         throw new LogicException('ClickHouse does not support update with join, please use joinGet or dictGet instead.');
+    }
+
+    /** {@inheritDoc} */
+    protected function compileDeleteWithoutJoins(Builder $query, $table, $where, ?bool $lightweight = null): string
+    {
+        if ((! is_null($lightweight) && $lightweight) || $query->connection->getConfig('use_lightweight_delete')) {
+            return "delete from {$table} {$where}";
+        }
+
+        return "alter table {$table} delete {$where}";
+    }
+
+    /** {@inheritDoc} */
+    protected function compileDeleteWithJoins(Builder $query, $table, $where): string
+    {
+        throw new LogicException('ClickHouse does not support delete with join.');
     }
 }

@@ -531,34 +531,86 @@ class BuilderTest extends TestCase
         $this->getBuilder()->from('table')->upsert([['column' => 'value']], 'column');
     }
 
-    private function getBuilder(?string $select = null, ?string $insert = null, ?string $update = null, array $bindings = [], mixed $result = null)
+    public function testDelete()
     {
-        $connection = $this->getConnection($select, $insert, $update, $bindings, $result);
+        $expectedSql = 'alter table `table` delete where `column` = ?';
+        $bindings = ['value'];
+        $builder = $this->getBuilder(delete: $expectedSql, bindings: $bindings);
+        $builder->getConnection()->shouldReceive('getConfig')->with('use_lightweight_delete')->once()->andReturn(null);
+        $builder->from('table')->where('column', 'value')->delete();
+    }
+
+    public function testLightweightDelete()
+    {
+        $expectedSql = 'delete from `table` where `column` = ?';
+        $bindings = ['value'];
+        $builder = $this->getBuilder(delete: $expectedSql, bindings: $bindings);
+        $builder->from('table')->where('column', 'value')->delete(lightweight: true);
+    }
+
+    public function testLightweightDeleteWithConfig()
+    {
+        $expectedSql = 'delete from `table` where `column` = ?';
+        $bindings = ['value'];
+        $builder = $this->getBuilder(delete: $expectedSql, bindings: $bindings);
+        $builder->getConnection()->shouldReceive('getConfig')->with('use_lightweight_delete')->once()->andReturn(true);
+        $builder->from('table')->where('column', 'value')->delete();
+    }
+
+    public function testDeleteWithJoin()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('ClickHouse does not support delete with join.');
+        $this->getBuilder()->from('table_a')->crossJoin('table_b')->delete();
+    }
+
+    private function getBuilder(
+        ?string $select = null,
+        ?string $insert = null,
+        ?string $update = null,
+        ?string $delete = null,
+        array $bindings = [],
+        mixed $result = null
+    ) {
+        $connection = $this->getConnection($select, $insert, $update, $delete, $bindings, $result);
         $grammar = (new Grammar)->setConnection($connection);
         $processor = $this->getProcessor();
 
         return new Builder($connection, $grammar, $processor);
     }
 
-    private function getConnection(?string $select = null, ?string $insert = null, ?string $update = null, array $bindings = [], mixed $result = null)
-    {
-        return $this->mock(Connection::class, function ($connection) use ($select, $insert, $update, $bindings, $result) {
-            $connection->shouldReceive('getDatabaseName')->andReturn('database');
-            $connection->shouldReceive('prepareBindings')->andReturnUsing(fn ($bindings) => $bindings);
-            $connection->shouldReceive('escape')->andReturnUsing(fn ($value) => is_string($value) ? "'{$value}'" : $value);
+    private function getConnection(
+        ?string $select = null,
+        ?string $insert = null,
+        ?string $update = null,
+        ?string $delete = null,
+        array $bindings = [],
+        mixed $result = null
+    ) {
+        return $this->mock(
+            Connection::class,
+            function ($connection) use ($select, $insert, $update, $delete, $bindings, $result) {
+                $connection->shouldReceive('getDatabaseName')->andReturn('database');
+                $connection->shouldReceive('prepareBindings')->andReturnUsing(fn ($bindings) => $bindings);
+                $connection->shouldReceive('escape')->andReturnUsing(fn ($value) => is_string($value) ? "'{$value}'" : $value);
 
-            if ($select) {
-                $connection->shouldReceive('select')->with($select, $bindings, true)->once()->andReturn($result);
-            }
+                if ($select) {
+                    $connection->shouldReceive('select')->with($select, $bindings, true)->once()->andReturn($result);
+                }
 
-            if ($insert) {
-                $connection->shouldReceive('insert')->with($insert, $bindings)->once()->andReturn($result);
-            }
+                if ($insert) {
+                    $connection->shouldReceive('insert')->with($insert, $bindings)->once()->andReturn($result);
+                }
 
-            if ($update) {
-                $connection->shouldReceive('update')->with($update, $bindings)->once()->andReturn($result);
+                if ($update) {
+                    $connection->shouldReceive('update')->with($update, $bindings)->once()->andReturn($result);
+                }
+
+                if ($delete) {
+                    $connection->shouldReceive('delete')->with($delete, $bindings)->once()->andReturn($result ?? 1);
+                }
             }
-        });
+        );
     }
 
     private function getProcessor()

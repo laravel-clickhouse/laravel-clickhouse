@@ -55,6 +55,27 @@ class Builder extends BaseBuilder
         throw new LogicException('ClickHouse does not support upsert.');
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    public function delete($id = null, ?bool $lightweight = null): int
+    {
+        // If an ID is passed to the method, we will set the where clause to check the
+        // ID to let developers to simply and quickly remove a single row from this
+        // database without manually specifying the "where" clauses on the query.
+        if (! is_null($id)) {
+            $this->where($this->from.'.id', '=', $id);
+        }
+
+        $this->applyBeforeQueryCallbacks();
+
+        return $this->connection->delete(
+            $this->grammar->compileDelete($this, $lightweight), $this->cleanBindings(
+                $this->grammar->prepareBindingsForDelete($this->bindings)
+            )
+        );
+    }
+
     /** {@inheritDoc} */
     protected function addDateBasedWhere($type, $column, $operator, $value, $boolean = 'and'): static
     {
