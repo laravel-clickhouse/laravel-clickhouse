@@ -84,6 +84,30 @@ class Builder extends BaseBuilder
         throw new LogicException('ClickHouse does not support locking feature.');
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    public function useIndex($index): static
+    {
+        throw new LogicException('ClickHouse does not support specify indexes, please use preWhere instead.');
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function forceIndex($index): static
+    {
+        throw new LogicException('ClickHouse does not support specify indexes, please use preWhere instead.');
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function ignoreIndex($index): static
+    {
+        throw new LogicException('ClickHouse does not support specify indexes.');
+    }
+
     /** {@inheritDoc} */
     protected function addDateBasedWhere($type, $column, $operator, $value, $boolean = 'and'): static
     {

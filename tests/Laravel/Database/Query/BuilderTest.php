@@ -580,6 +580,27 @@ class BuilderTest extends TestCase
         $this->getBuilder()->from('table')->lock();
     }
 
+    public function testUseIndex()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('ClickHouse does not support specify indexes, please use preWhere instead.');
+        $this->getBuilder()->from('table')->useIndex('index');
+    }
+
+    public function testForceIndex()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('ClickHouse does not support specify indexes, please use preWhere instead.');
+        $this->getBuilder()->from('table')->forceIndex('index');
+    }
+
+    public function testIgnoreIndex()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('ClickHouse does not support specify indexes.');
+        $this->getBuilder()->from('table')->ignoreIndex('index');
+    }
+
     private function getBuilder(
         ?string $select = null,
         ?string $insert = null,
