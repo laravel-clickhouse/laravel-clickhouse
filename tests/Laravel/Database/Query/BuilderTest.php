@@ -573,6 +573,13 @@ class BuilderTest extends TestCase
         $builder->from('table')->truncate();
     }
 
+    public function testLock()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('ClickHouse does not support locking feature.');
+        $this->getBuilder()->from('table')->lock();
+    }
+
     private function getBuilder(
         ?string $select = null,
         ?string $insert = null,

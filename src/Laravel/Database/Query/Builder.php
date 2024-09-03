@@ -76,6 +76,14 @@ class Builder extends BaseBuilder
         );
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    public function lock($value = true): static
+    {
+        throw new LogicException('ClickHouse does not support locking feature.');
+    }
+
     /** {@inheritDoc} */
     protected function addDateBasedWhere($type, $column, $operator, $value, $boolean = 'and'): static
     {
