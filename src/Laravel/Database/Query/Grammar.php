@@ -3,6 +3,7 @@
 namespace SwooleTW\ClickHouse\Laravel\Database\Query;
 
 use Carbon\Carbon;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Database\Query\Grammars\Grammar as BaseGrammar;
@@ -24,6 +25,7 @@ class Grammar extends BaseGrammar
         $where = $this->compileWheres($query);
 
         return trim(
+            // @phpstan-ignore-next-line
             isset($query->joins)
                 ? $this->compileDeleteWithJoins($query, $table, $where, $lightweight)
                 : $this->compileDeleteWithoutJoins($query, $table, $where, $lightweight)
@@ -101,7 +103,10 @@ class Grammar extends BaseGrammar
     /** {@inheritDoc} */
     protected function compileDeleteWithoutJoins(Builder $query, $table, $where, ?bool $lightweight = null): string
     {
-        if ((! is_null($lightweight) && $lightweight) || $query->connection->getConfig('use_lightweight_delete')) {
+        /** @var Connection $connection */
+        $connection = $query->connection;
+
+        if ((! is_null($lightweight) && $lightweight) || $connection->getConfig('use_lightweight_delete')) {
             return "delete from {$table} {$where}";
         }
 
@@ -109,7 +114,7 @@ class Grammar extends BaseGrammar
     }
 
     /** {@inheritDoc} */
-    protected function compileDeleteWithJoins(Builder $query, $table, $where): string
+    protected function compileDeleteWithJoins(Builder $query, $table, $where, ?bool $lightweight = null): string
     {
         throw new LogicException('ClickHouse does not support delete with join.');
     }

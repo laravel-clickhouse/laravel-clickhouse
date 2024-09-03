@@ -11,6 +11,13 @@ class Builder extends BaseBuilder
     /**
      * {@inheritDoc}
      *
+     * @var Grammar
+     */
+    public $grammar;
+
+    /**
+     * {@inheritDoc}
+     *
      * NOTE: alias no function when using exists method, clickhouse's bug?
      */
     public function exists(): bool
@@ -49,6 +56,8 @@ class Builder extends BaseBuilder
      * {@inheritDoc}
      *
      * @param  array<string, mixed>[]  $values
+     * @param  string[]  $uniqueBy
+     * @param  string[]  $update
      */
     public function upsert(array $values, $uniqueBy, $update = null): int
     {
@@ -64,6 +73,7 @@ class Builder extends BaseBuilder
         // ID to let developers to simply and quickly remove a single row from this
         // database without manually specifying the "where" clauses on the query.
         if (! is_null($id)) {
+            // @phpstan-ignore-next-line
             $this->where($this->from.'.id', '=', $id);
         }
 
