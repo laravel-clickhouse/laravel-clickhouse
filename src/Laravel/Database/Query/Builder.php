@@ -45,6 +45,16 @@ class Builder extends BaseBuilder
         throw new LogicException('ClickHouse does not support insert get id.');
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @param  array<string, mixed>[]  $values
+     */
+    public function upsert(array $values, $uniqueBy, $update = null): int
+    {
+        throw new LogicException('ClickHouse does not support upsert.');
+    }
+
     /** {@inheritDoc} */
     protected function addDateBasedWhere($type, $column, $operator, $value, $boolean = 'and'): static
     {

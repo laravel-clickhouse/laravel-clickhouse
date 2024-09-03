@@ -524,6 +524,13 @@ class BuilderTest extends TestCase
         $this->getBuilder()->from('table_a')->crossJoin('table_b')->update(['column' => 'value']);
     }
 
+    public function testUpsert()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('ClickHouse does not support upsert.');
+        $this->getBuilder()->from('table')->upsert([['column' => 'value']], 'column');
+    }
+
     private function getBuilder(?string $select = null, ?string $insert = null, ?string $update = null, array $bindings = [], mixed $result = null)
     {
         $connection = $this->getConnection($select, $insert, $update, $bindings, $result);
