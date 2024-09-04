@@ -6,3 +6,4 @@
 /.cache
 composer.lock
 .DS_Store
+phpunit.xml
