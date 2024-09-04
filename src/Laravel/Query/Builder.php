@@ -2,10 +2,13 @@
 
 namespace SwooleTW\ClickHouse\Laravel\Query;
 
+use Closure;
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
+use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Support\Arr;
 use LogicException;
+use SwooleTW\ClickHouse\Laravel\Eloquent\Model;
 
 class Builder extends BaseBuilder
 {
@@ -209,6 +212,41 @@ class Builder extends BaseBuilder
     public function orHavingNotEmpty(string|array|ExpressionContract $columns): static
     {
         return $this->havingEmpty($columns, 'or', true);
+    }
+
+    /**
+     * Add a "full join" clause to the query.
+     */
+    public function fullJoin(
+        string|ExpressionContract $table,
+        Closure|ExpressionContract|string|null $first = null,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        if ($first) {
+            return $this->join($table, $first, $operator, $second, 'full');
+        }
+
+        // @phpstan-ignore-next-line
+        $this->joins[] = $this->newJoinClause($this, 'full', $table);
+
+        return $this;
+    }
+
+    /**
+     * Add a subquery full join to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     */
+    public function fullJoinSub(
+        Closure|self|BaseEloquentBuilder|string $query,
+        string $as,
+        Closure|ExpressionContract|string|null $first = null,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        // @phpstan-ignore-next-line
+        return $this->joinSub($query, $as, $first, $operator, $second, 'full');
     }
 
     /** {@inheritDoc} */

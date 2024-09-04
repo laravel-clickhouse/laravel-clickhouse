@@ -443,6 +443,18 @@ class BuilderTest extends TestCase
         );
     }
 
+    public function testJoinSub()
+    {
+        $this->assertEquals(
+            'select * from `table_a` inner join (select * from `table_b`) as `alias` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->joinSub(
+                $this->getBuilder()->from('table_b'),
+                'alias',
+                fn ($query) => $query->on('table_a.column_a', '=', 'table_b.column_b')
+            )->toRawSql()
+        );
+    }
+
     public function testLeftJoin()
     {
         $this->assertEquals(
@@ -467,8 +479,25 @@ class BuilderTest extends TestCase
         );
     }
 
-    // TODO: fullJoin
-    // 'select * from `table_a` full join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
+    public function testFullJoin()
+    {
+        $this->assertEquals(
+            'select * from `table_a` full join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->fullJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
+        );
+    }
+
+    public function testFullJoinSub()
+    {
+        $this->assertEquals(
+            'select * from `table_a` full join (select * from `table_b`) as `alias` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->fullJoinSub(
+                $this->getBuilder()->from('table_b'),
+                'alias',
+                fn ($query) => $query->on('table_a.column_a', '=', 'table_b.column_b')
+            )->toRawSql()
+        );
+    }
 
     // TODO: arrayJoin
     // 'select * from `table` array join `column`',
