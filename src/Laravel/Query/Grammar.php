@@ -1,6 +1,6 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Laravel\Database\Query;
+namespace SwooleTW\ClickHouse\Laravel\Query;
 
 use Carbon\Carbon;
 use Illuminate\Database\Connection;

@@ -1,6 +1,6 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Laravel\Database\Query;
+namespace SwooleTW\ClickHouse\Laravel\Query;
 
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
 use Illuminate\Database\Query\Builder as BaseBuilder;

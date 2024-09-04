@@ -1,10 +1,10 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Tests\Laravel\Database;
+namespace SwooleTW\ClickHouse\Tests\Laravel;
 
 use ClickHouseDB\Client;
 use ClickHouseDB\Statement;
-use SwooleTW\ClickHouse\Laravel\Database\Connection;
+use SwooleTW\ClickHouse\Laravel\Connection;
 use SwooleTW\ClickHouse\Tests\TestCase;
 
 class ConnectionTest extends TestCase

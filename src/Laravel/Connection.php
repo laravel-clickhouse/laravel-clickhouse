@@ -1,12 +1,12 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Laravel\Database;
+namespace SwooleTW\ClickHouse\Laravel;
 
 use ClickHouseDB\Client;
 use ClickHouseDB\Quote\ValueFormatter;
 use Exception;
 use Illuminate\Database\Connection as BaseConnection;
-use SwooleTW\ClickHouse\Laravel\Database\Query\Grammar;
+use SwooleTW\ClickHouse\Laravel\Query\Grammar;
 
 class Connection extends BaseConnection
 {
