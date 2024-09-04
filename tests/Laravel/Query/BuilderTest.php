@@ -387,11 +387,45 @@ class BuilderTest extends TestCase
         );
     }
 
-    // TODO: havingEmpty
-    // "select * from `table` having empty(`column`)",
+    public function testHavingEmpty()
+    {
+        $this->assertEquals(
+            'select * from `table` having empty(`column`)',
+            $this->getBuilder()->from('table')->havingEmpty('column')->toRawSql()
+        );
+    }
 
-    // TODO: havingNotEmpty
-    // "select * from `table` having not empty(`column`)",
+    public function testHavingEmptyWithArray()
+    {
+        $this->assertEquals(
+            'select * from `table` having empty(`column_a`) and empty(`column_b`)',
+            $this->getBuilder()->from('table')->havingEmpty(['column_a', 'column_b'])->toRawSql()
+        );
+    }
+
+    public function testHavingNotEmpty()
+    {
+        $this->assertEquals(
+            'select * from `table` having not empty(`column`)',
+            $this->getBuilder()->from('table')->havingNotEmpty('column')->toRawSql()
+        );
+    }
+
+    public function testOrHavingEmpty()
+    {
+        $this->assertEquals(
+            'select * from `table` having empty(`column_a`) or empty(`column_b`)',
+            $this->getBuilder()->from('table')->havingEmpty('column_a')->orHavingEmpty('column_b')->toRawSql()
+        );
+    }
+
+    public function testOrHavingNotEmpty()
+    {
+        $this->assertEquals(
+            'select * from `table` having not empty(`column_a`) or not empty(`column_b`)',
+            $this->getBuilder()->from('table')->havingNotEmpty('column_a')->orHavingNotEmpty('column_b')->toRawSql()
+        );
+    }
 
     public function testLimitAndOffset()
     {

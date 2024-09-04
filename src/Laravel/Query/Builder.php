@@ -165,6 +165,52 @@ class Builder extends BaseBuilder
         return $this->whereEmpty($columns, 'or', true);
     }
 
+    /**
+     * Add a "having empty" clause to the query.
+     *
+     * @param  string|string[]|ExpressionContract  $columns
+     */
+    public function havingEmpty(string|array|ExpressionContract $columns, string $boolean = 'and', bool $not = false): static
+    {
+        $type = $not ? 'NotEmpty' : 'Empty';
+
+        foreach (Arr::wrap($columns) as $column) {
+            $this->havings[] = compact('type', 'column', 'boolean');
+        }
+
+        return $this;
+    }
+
+    /**
+     * Add a "having not empty" clause to the query.
+     *
+     * @param  string|string[]|ExpressionContract  $columns
+     */
+    public function havingNotEmpty(string|array|ExpressionContract $columns, string $boolean = 'and'): static
+    {
+        return $this->havingEmpty($columns, $boolean, true);
+    }
+
+    /**
+     * Add a "or having empty" clause to the query.
+     *
+     * @param  string|string[]|ExpressionContract  $columns
+     */
+    public function orHavingEmpty(string|array|ExpressionContract $columns): static
+    {
+        return $this->havingEmpty($columns, 'or');
+    }
+
+    /**
+     * Add a "or having not empty" clause to the query.
+     *
+     * @param  string|string[]|ExpressionContract  $columns
+     */
+    public function orHavingNotEmpty(string|array|ExpressionContract $columns): static
+    {
+        return $this->havingEmpty($columns, 'or', true);
+    }
+
     /** {@inheritDoc} */
     protected function addDateBasedWhere($type, $column, $operator, $value, $boolean = 'and'): static
     {

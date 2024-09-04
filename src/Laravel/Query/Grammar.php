@@ -146,4 +146,50 @@ class Grammar extends BaseGrammar
     {
         return 'not empty('.$this->wrap($where['column']).')';
     }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param array{
+     *     'type': string,
+     *     'column': Expression|string,
+     *     'boolean': string,
+     * } $having
+     */
+    protected function compileBasicHaving($having): string
+    {
+        return match ($having['type']) {
+            'Empty' => $this->compileHavingEmpty($having),
+            'NotEmpty' => $this->compileHavingNotEmpty($having),
+            default => parent::compileBasicHaving($having),
+        };
+    }
+
+    /**
+     * Compile a having empty clause.
+     *
+     * @param array{
+     *     'type': string,
+     *     'column': Expression|string,
+     *     'boolean': string,
+     * } $having
+     */
+    protected function compileHavingEmpty(array $having): string
+    {
+        return 'empty('.$this->wrap($having['column']).')';
+    }
+
+    /**
+     * Compile a having not empty clause.
+     *
+     * @param array{
+     *     'type': string,
+     *     'column': Expression|string,
+     *     'boolean': string,
+     * } $having
+     */
+    protected function compileHavingNotEmpty(array $having): string
+    {
+        return 'not empty('.$this->wrap($having['column']).')';
+    }
 }
