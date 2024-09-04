@@ -3,8 +3,9 @@
 namespace SwooleTW\ClickHouse\Tests\Laravel;
 
 use Illuminate\Database\Capsule\Manager as DB;
+use Illuminate\Database\Eloquent\Model as BaseSQLiteModel;
 use SwooleTW\ClickHouse\Laravel\Connection;
-use SwooleTW\ClickHouse\Laravel\Eloquent\Model;
+use SwooleTW\ClickHouse\Laravel\Eloquent\Model as BaseClickHouseModel;
 use SwooleTW\ClickHouse\Tests\TestCase;
 
 class IntegrationTest extends TestCase
@@ -28,41 +29,68 @@ class IntegrationTest extends TestCase
 
     public function testCreate()
     {
-        TestModel::create(['id' => 1, 'column' => 'value']);
+        ClickHouseModel::create(['id' => 1, 'column' => 'value']);
 
         $this->assertEquals(
             [['id' => 1, 'column' => 'value']],
-            TestModel::all()->toArray()
+            ClickHouseModel::all()->toArray()
         );
     }
 
     public function testUpdate()
     {
-        TestModel::create(['id' => 1, 'column' => 'value']);
-        TestModel::where('id', 1)->update(['column' => 'new_value']);
+        ClickHouseModel::create(['id' => 1, 'column' => 'value']);
+        ClickHouseModel::where('id', 1)->update(['column' => 'new_value']);
 
         $this->assertEquals(
             [['id' => 1, 'column' => 'new_value']],
-            TestModel::all()->toArray()
+            ClickHouseModel::all()->toArray()
         );
     }
 
     public function testDelete()
     {
-        TestModel::create(['id' => 1, 'column' => 'value']);
-        TestModel::where('id', 1)->delete();
+        ClickHouseModel::create(['id' => 1, 'column' => 'value']);
+        ClickHouseModel::where('id', 1)->delete();
 
         $this->assertEquals(
             [],
-            TestModel::all()->toArray()
+            ClickHouseModel::all()->toArray()
         );
+    }
+
+    public function testRelation()
+    {
+        $model = ClickHouseModel::create(['id' => 1, 'column' => 'value']);
+
+        $this->assertTrue($model->related->is($model));
+    }
+
+    public function testRelationWithSQLite()
+    {
+        $this->db->addConnection([
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+        ], 'sqlite');
+        $this->db->getConnection('sqlite')->statement('CREATE TABLE IF NOT EXISTS test(id INTEGER, column TEXT)');
+
+        $clickhouseModel = ClickHouseModel::create(['id' => 1, 'column' => 'value']);
+        $sqliteModel = SQLiteModel::create(['id' => 1, 'column' => 'value']);
+
+        $this->assertTrue($clickhouseModel->sqliteRelated->is($sqliteModel));
+
+        $this->db->getConnection('sqlite')->statement('DROP TABLE IF EXISTS test');
     }
 
     private function setUpEloquent()
     {
         $this->db = new DB;
 
-        $this->db->getDatabaseManager()->extend('clickhouse', function ($config) {
+        $this->db->getDatabaseManager()->extend('clickhouse', function ($config, $name) {
+            $config['name'] = $name;
+
+            unset($config['database']);
+
             return new Connection(database: $config['database'] ?? '', config: $config);
         });
 
@@ -73,7 +101,7 @@ class IntegrationTest extends TestCase
             'database' => getenv('CLICKHOUSE_DATABASE'),
             'username' => getenv('CLICKHOUSE_USERNAME'),
             'password' => getenv('CLICKHOUSE_PASSWORD'),
-        ]);
+        ], 'clickhouse');
 
         $this->db->bootEloquent();
     }
@@ -90,13 +118,36 @@ class IntegrationTest extends TestCase
 
     private function clickhouseClient()
     {
-        return $this->db->getConnection()->getClient();
+        return $this->db->getConnection('clickhouse')->getClient();
     }
 }
 
-class TestModel extends Model
+class ClickHouseModel extends BaseClickHouseModel
 {
     public $timestamps = false;
+
+    protected $connection = 'clickhouse';
+
+    protected $table = 'test';
+
+    protected $fillable = ['id', 'column'];
+
+    public function related()
+    {
+        return $this->belongsTo(static::class, 'id', 'id');
+    }
+
+    public function sqliteRelated()
+    {
+        return $this->belongsTo(SQLiteModel::class, 'id', 'id');
+    }
+}
+
+class SQLiteModel extends BaseSQLiteModel
+{
+    public $timestamps = false;
+
+    protected $connection = 'sqlite';
 
     protected $table = 'test';
 
