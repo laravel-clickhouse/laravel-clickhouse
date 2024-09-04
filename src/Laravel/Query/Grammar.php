@@ -118,4 +118,32 @@ class Grammar extends BaseGrammar
     {
         throw new LogicException('ClickHouse does not support delete with join.');
     }
+
+    /**
+     * Compile a "where empty" clause.
+     *
+     * @param array{
+     *     'type': string,
+     *     'column': Expression|string,
+     *     'boolean': string,
+     * } $where
+     */
+    protected function whereEmpty(Builder $query, $where): string
+    {
+        return 'empty('.$this->wrap($where['column']).')';
+    }
+
+    /**
+     * Compile a "where not empty" clause.
+     *
+     * @param array{
+     *     'type': string,
+     *     'column': Expression|string,
+     *     'boolean': string,
+     * } $where
+     */
+    protected function whereNotEmpty(Builder $query, $where): string
+    {
+        return 'not empty('.$this->wrap($where['column']).')';
+    }
 }

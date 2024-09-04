@@ -275,11 +275,45 @@ class BuilderTest extends TestCase
         );
     }
 
-    // TODO: whereEmpty
-    // "select * from `table` where empty(`column`)",
+    public function testWhereEmpty()
+    {
+        $this->assertEquals(
+            'select * from `table` where empty(`column`)',
+            $this->getBuilder()->from('table')->whereEmpty('column')->toRawSql()
+        );
+    }
 
-    // TODO: whereNotEmpty
-    // "select * from `table` where not empty(`column`)",
+    public function testWhereEmptyWithArray()
+    {
+        $this->assertEquals(
+            'select * from `table` where empty(`column_a`) and empty(`column_b`)',
+            $this->getBuilder()->from('table')->whereEmpty(['column_a', 'column_b'])->toRawSql()
+        );
+    }
+
+    public function testWhereNotEmpty()
+    {
+        $this->assertEquals(
+            'select * from `table` where not empty(`column`)',
+            $this->getBuilder()->from('table')->whereNotEmpty('column')->toRawSql()
+        );
+    }
+
+    public function testOrWhereEmpty()
+    {
+        $this->assertEquals(
+            'select * from `table` where empty(`column_a`) or empty(`column_b`)',
+            $this->getBuilder()->from('table')->whereEmpty('column_a')->orWhereEmpty('column_b')->toRawSql()
+        );
+    }
+
+    public function testOrWhereNotEmpty()
+    {
+        $this->assertEquals(
+            'select * from `table` where not empty(`column_a`) or not empty(`column_b`)',
+            $this->getBuilder()->from('table')->whereNotEmpty('column_a')->orWhereNotEmpty('column_b')->toRawSql()
+        );
+    }
 
     public function testGroupBy()
     {

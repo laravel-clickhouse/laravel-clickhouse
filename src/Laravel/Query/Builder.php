@@ -4,6 +4,7 @@ namespace SwooleTW\ClickHouse\Laravel\Query;
 
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
 use Illuminate\Database\Query\Builder as BaseBuilder;
+use Illuminate\Support\Arr;
 use LogicException;
 
 class Builder extends BaseBuilder
@@ -116,6 +117,52 @@ class Builder extends BaseBuilder
     public function ignoreIndex($index): static
     {
         throw new LogicException('ClickHouse does not support specify indexes.');
+    }
+
+    /**
+     * Add a "where empty" clause to the query.
+     *
+     * @param  string|string[]|ExpressionContract  $columns
+     */
+    public function whereEmpty(string|array|ExpressionContract $columns, string $boolean = 'and', bool $not = false): static
+    {
+        $type = $not ? 'NotEmpty' : 'Empty';
+
+        foreach (Arr::wrap($columns) as $column) {
+            $this->wheres[] = compact('type', 'column', 'boolean');
+        }
+
+        return $this;
+    }
+
+    /**
+     * Add a "where not empty" clause to the query.
+     *
+     * @param  string|string[]|ExpressionContract  $columns
+     */
+    public function whereNotEmpty(string|array|ExpressionContract $columns, string $boolean = 'and'): static
+    {
+        return $this->whereEmpty($columns, $boolean, true);
+    }
+
+    /**
+     * Add a "or where empty" clause to the query.
+     *
+     * @param  string|string[]|ExpressionContract  $columns
+     */
+    public function orWhereEmpty(string|array|ExpressionContract $columns): static
+    {
+        return $this->whereEmpty($columns, 'or');
+    }
+
+    /**
+     * Add a "or where not empty" clause to the query.
+     *
+     * @param  string|string[]|ExpressionContract  $columns
+     */
+    public function orWhereNotEmpty(string|array|ExpressionContract $columns): static
+    {
+        return $this->whereEmpty($columns, 'or', true);
     }
 
     /** {@inheritDoc} */
