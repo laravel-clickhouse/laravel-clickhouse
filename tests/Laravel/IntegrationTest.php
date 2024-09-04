@@ -75,7 +75,7 @@ class IntegrationTest extends TestCase
         $this->db->getConnection('sqlite')->statement('CREATE TABLE IF NOT EXISTS test(id INTEGER, column TEXT)');
 
         $clickhouseModel = ClickHouseModel::create(['id' => 1, 'column' => 'value']);
-        $sqliteModel = SQLiteModel::create(['id' => 1, 'column' => 'value']);
+        $sqliteModel = SQLiteModel::create(['id' => 1, 'column' => 'another_value']);
 
         $this->assertTrue($clickhouseModel->sqliteRelated->is($sqliteModel));
 
