@@ -15,6 +15,13 @@
       <directory>tests/</directory>
     </testsuite>
   </testsuites>
+  <php>
+    <env name="CLICKHOUSE_HOST" value="127.0.0.1" />
+    <env name="CLICKHOUSE_PORT" value="8123" />
+    <env name="CLICKHOUSE_DATABASE" value="default" />
+    <env name="CLICKHOUSE_USERNAME" value="default" />
+    <env name="CLICKHOUSE_PASSWORD" value="default" />
+  </php>
   <source restrictNotices="true" restrictWarnings="true" ignoreIndirectDeprecations="true">
     <include>
       <directory>./src</directory>

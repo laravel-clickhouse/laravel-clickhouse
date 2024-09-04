@@ -104,6 +104,14 @@ class Connection extends BaseConnection
         throw new Exception('Not supported yet');
     }
 
+    /**
+     * get the ClickHouse client
+     */
+    public function getClient(): Client
+    {
+        return $this->client;
+    }
+
     /** {@inheritDoc} */
     protected function getDefaultQueryGrammar()
     {
