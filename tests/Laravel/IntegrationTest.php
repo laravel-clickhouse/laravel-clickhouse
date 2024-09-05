@@ -59,6 +59,22 @@ class IntegrationTest extends TestCase
         );
     }
 
+    public function testArrayJoin()
+    {
+        ClickHouseModel::create(['id' => 1, 'column' => 'value']);
+
+        $this->assertEquals(
+            [
+                ['id' => 1, 'column' => 'value', 'alias' => 'foo'],
+                ['id' => 1, 'column' => 'value', 'alias' => 'bar'],
+            ],
+            ClickHouseModel::query()
+                ->arrayJoin(ClickHouseModel::selectRaw("['foo', 'bar']"), 'alias')
+                ->get()
+                ->toArray()
+        );
+    }
+
     public function testRelation()
     {
         $model = ClickHouseModel::create(['id' => 1, 'column' => 'value']);

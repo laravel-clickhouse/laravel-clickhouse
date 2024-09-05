@@ -499,14 +499,114 @@ class BuilderTest extends TestCase
         );
     }
 
-    // TODO: arrayJoin
-    // 'select * from `table` array join `column`',
-    // 'select *, `alias` from `table` array join `column` as `alias`',
-    // 'select * from `table` array join `column_a`, `column_b`',
-    // 'select *, `alias_a`, `alias_b` from `table` array join `column_a` as `alias_a`, `column_b` as `alias_b`, `column_c`',
+    public function testArrayJoin()
+    {
+        $this->assertEquals(
+            'select * from `table` array join `column`',
+            $this->getBuilder()->from('table')->arrayJoin('column')->toRawSql()
+        );
+    }
 
-    // TODO: leftArrayJoin
-    // 'select * from `table` left array join `column`',
+    public function testArrayJoinWithArray()
+    {
+        $this->assertEquals(
+            'select * from `table` array join `column_a`, `column_b`',
+            $this->getBuilder()->from('table')->arrayJoin(['column_a', 'column_b'])->toRawSql()
+        );
+    }
+
+    public function testArrayJoinWithAlias()
+    {
+        $this->assertEquals(
+            'select *, `alias` from `table` array join `column` as `alias`',
+            $this->getBuilder()->from('table')->arrayJoin('column', 'alias')->toRawSql()
+        );
+    }
+
+    public function testMultipleArrayJoins()
+    {
+        $this->assertEquals(
+            'select * from `table` array join `column_a`, `column_b`',
+            $this->getBuilder()->from('table')->arrayJoin('column_a')->arrayJoin('column_b')->toRawSql()
+        );
+    }
+
+    public function testArrayJoinWithArrayAndAlias()
+    {
+        $this->assertEquals(
+            'select *, `alias_a`, `alias_b` from `table` array join `column_a` as `alias_a`, `column_b` as `alias_b`, `column_c`',
+            $this->getBuilder()->from('table')->arrayJoin([
+                'alias_a' => 'column_a',
+                'alias_b' => 'column_b',
+                'column_c',
+            ])->toRawSql()
+        );
+    }
+
+    public function testArrayJoinWithSubQuery()
+    {
+        $this->assertEquals(
+            'select *, `alias` from `table_a` array join (select * from `table_b`) as `alias`',
+            $this->getBuilder()->from('table_a')->arrayJoin(
+                $this->getBuilder()->from('table_b'),
+                'alias'
+            )->toRawSql()
+        );
+    }
+
+    public function testArrayJoinWithSubQueryButNoAliasProvided()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Array join with subquery must have an alias.');
+        $this->getBuilder()->from('table_a')->arrayJoin($this->getBuilder()->from('table_b'))->toRawSql();
+    }
+
+    public function testArrayJoinWithArrayAndSubQuery()
+    {
+        $this->assertEquals(
+            'select *, `alias` from `table_a` array join (select * from `table_b`) as `alias`',
+            $this->getBuilder()->from('table_a')->arrayJoin([
+                'alias' => $this->getBuilder()->from('table_b'),
+            ])->toRawSql()
+        );
+    }
+
+    public function testArrayJoinSub()
+    {
+        $this->assertEquals(
+            'select *, `alias` from `table_a` array join (select * from `table_b`) as `alias`',
+            $this->getBuilder()->from('table_a')->arrayJoinSub(
+                $this->getBuilder()->from('table_b'),
+                'alias'
+            )->toRawSql()
+        );
+    }
+
+    public function testLeftArrayJoin()
+    {
+        $this->assertEquals(
+            'select * from `table` left array join `column`',
+            $this->getBuilder()->from('table')->leftArrayJoin('column')->toRawSql()
+        );
+    }
+
+    public function testLeftArrayJoinSub()
+    {
+        $this->assertEquals(
+            'select *, `alias` from `table_a` left array join (select * from `table_b`) as `alias`',
+            $this->getBuilder()->from('table_a')->leftArrayJoinSub(
+                $this->getBuilder()->from('table_b'),
+                'alias'
+            )->toRawSql()
+        );
+    }
+
+    public function testUseArrayJoinAndLeftArrayJoinAtTheSameTime()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Cannot use array join and left array join at the same time.');
+        $this->getBuilder()->from('table')->arrayJoin('column_a')->leftArrayJoin('column_b')->toRawSql();
+    }
 
     public function testCount()
     {

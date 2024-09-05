@@ -6,6 +6,7 @@ use ClickHouseDB\Client;
 use ClickHouseDB\Quote\ValueFormatter;
 use Exception;
 use Illuminate\Database\Connection as BaseConnection;
+use SwooleTW\ClickHouse\Laravel\Query\Builder;
 use SwooleTW\ClickHouse\Laravel\Query\Grammar;
 
 class Connection extends BaseConnection
@@ -29,6 +30,12 @@ class Connection extends BaseConnection
 
         $this->useDefaultQueryGrammar();
         $this->useDefaultPostProcessor();
+    }
+
+    /** {@inheritDoc} */
+    public function query()
+    {
+        return new Builder($this, $this->getQueryGrammar(), $this->getPostProcessor());
     }
 
     /**

@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
 use Illuminate\Database\Query\Builder as BaseBuilder;
+use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Arr;
 use LogicException;
 use SwooleTW\ClickHouse\Laravel\Eloquent\Model;
@@ -18,6 +19,35 @@ class Builder extends BaseBuilder
      * @var Grammar
      */
     public $grammar;
+
+    /**
+     * {@inheritDoc}
+     *
+     * @var array<string, mixed[]>
+     */
+    public $bindings = [
+        'select' => [],
+        'from' => [],
+        'join' => [],
+        'where' => [],
+        'groupBy' => [],
+        'having' => [],
+        'order' => [],
+        'union' => [],
+        'unionOrder' => [],
+        'arrayJoin' => [],
+    ];
+
+    /**
+     * The array joins for the query.
+     *
+     * @var array{
+     *     'type': string,
+     *     'column': Expression|string,
+     *     'as': string|null,
+     * }[]
+     */
+    public $arrayJoins = [];
 
     /**
      * {@inheritDoc}
@@ -247,6 +277,83 @@ class Builder extends BaseBuilder
     ): static {
         // @phpstan-ignore-next-line
         return $this->joinSub($query, $as, $first, $operator, $second, 'full');
+    }
+
+    /**
+     * Add a "array join" clause to the query.
+     *
+     * @param  array<int|string, string>|self|BaseEloquentBuilder<Model>|string  $columns
+     */
+    public function arrayJoin(
+        array|string|self|BaseEloquentBuilder $columns,
+        ?string $as = null,
+        string $type = 'inner'
+    ): static {
+        $columns = ! is_array($columns) && $as ? [$as => $columns] : Arr::wrap($columns);
+
+        foreach ($columns as $as => $column) {
+            if (is_numeric($as)) {
+                $as = null;
+            }
+
+            if ($this->isQueryable($column)) {
+                if (! $as) {
+                    throw new LogicException('Array join with subquery must have an alias.');
+                }
+
+                $this->arrayJoinSub($column, $as);
+
+                continue;
+            }
+
+            $this->arrayJoins[] = compact('type', 'column', 'as');
+        }
+
+        return $this;
+    }
+
+    /**
+     * Add a "array join sub" clause to the query.
+     *
+     * @param  self|BaseEloquentBuilder<Model>|string  $query
+     */
+    public function arrayJoinSub(
+        self|BaseEloquentBuilder|string $query,
+        string $as,
+        string $type = 'inner'
+    ): static {
+        [$query, $bindings] = $this->createSub($query);
+
+        $column = new Expression('('.$query.') as '.$this->grammar->wrapTable($as));
+
+        $this->addBinding($bindings, 'arrayJoin');
+        $this->arrayJoins[] = compact('type', 'column', 'as');
+
+        return $this;
+    }
+
+    /**
+     * Add a "left array join" clause to the query.
+     *
+     * @param  array<int|string, string>|self|BaseEloquentBuilder<Model>|string  $columns
+     */
+    public function leftArrayJoin(
+        array|string|self|BaseEloquentBuilder $columns,
+        ?string $as = null
+    ): static {
+        return $this->arrayJoin($columns, $as, 'left');
+    }
+
+    /**
+     * Add a "left array join sub" clause to the query.
+     *
+     * @param  self|BaseEloquentBuilder<Model>|string  $query
+     */
+    public function leftArrayJoinSub(
+        self|BaseEloquentBuilder|string $query,
+        string $as
+    ): static {
+        return $this->arrayJoinSub($query, $as, 'left');
     }
 
     /** {@inheritDoc} */
