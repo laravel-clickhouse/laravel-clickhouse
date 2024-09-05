@@ -17,12 +17,12 @@ class IntegrationTest extends TestCase
         parent::setUp();
 
         $this->setUpEloquent();
-        $this->createTestTable();
+        $this->createClickHouseTestTable();
     }
 
     protected function tearDown(): void
     {
-        $this->truncateTestTable();
+        $this->dropClickHouseTestTable();
 
         parent::tearDown();
     }
@@ -68,18 +68,16 @@ class IntegrationTest extends TestCase
 
     public function testRelationWithSQLite()
     {
-        $this->db->addConnection([
-            'driver' => 'sqlite',
-            'database' => ':memory:',
-        ], 'sqlite');
-        $this->db->getConnection('sqlite')->statement('CREATE TABLE IF NOT EXISTS test(id INTEGER, column TEXT)');
+        $this->addSQLiteConnection();
+
+        $this->createSQLiteTestTable();
 
         $clickhouseModel = ClickHouseModel::create(['id' => 1, 'column' => 'value']);
         $sqliteModel = SQLiteModel::create(['id' => 1, 'column' => 'another_value']);
 
         $this->assertTrue($clickhouseModel->sqliteRelated->is($sqliteModel));
 
-        $this->db->getConnection('sqlite')->statement('DROP TABLE IF EXISTS test');
+        $this->dropSQLiteTestTable();
     }
 
     private function setUpEloquent()
@@ -94,6 +92,13 @@ class IntegrationTest extends TestCase
             return new Connection(database: $config['database'] ?? '', config: $config);
         });
 
+        $this->addClickHouseConnection();
+
+        $this->db->bootEloquent();
+    }
+
+    private function addClickHouseConnection()
+    {
         $this->db->addConnection([
             'driver' => 'clickhouse',
             'host' => getenv('CLICKHOUSE_HOST'),
@@ -102,18 +107,34 @@ class IntegrationTest extends TestCase
             'username' => getenv('CLICKHOUSE_USERNAME'),
             'password' => getenv('CLICKHOUSE_PASSWORD'),
         ], 'clickhouse');
-
-        $this->db->bootEloquent();
     }
 
-    private function createTestTable()
+    private function createClickHouseTestTable()
     {
         $this->clickhouseClient()->write('CREATE TABLE IF NOT EXISTS `test` (`id` UInt32, `column` String) ENGINE = Memory');
     }
 
-    private function truncateTestTable()
+    private function dropClickHouseTestTable()
     {
-        $this->clickhouseClient()->write('TRUNCATE TABLE `test`');
+        $this->clickhouseClient()->write('DROP TABLE IF EXISTS `test`');
+    }
+
+    private function addSQLiteConnection()
+    {
+        $this->db->addConnection([
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+        ], 'sqlite');
+    }
+
+    private function createSQLiteTestTable()
+    {
+        $this->db->getConnection('sqlite')->statement('CREATE TABLE IF NOT EXISTS test(id INTEGER, column TEXT)');
+    }
+
+    private function dropSQLiteTestTable()
+    {
+        $this->db->getConnection('sqlite')->statement('DROP TABLE IF EXISTS test');
     }
 
     private function clickhouseClient()
