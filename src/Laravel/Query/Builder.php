@@ -245,22 +245,123 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * Add a "inner join" clause to the query.
+     */
+    public function innerJoin(
+        string|ExpressionContract $table,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->join($table, $first, $operator, $second, 'inner');
+    }
+
+    /**
+     * Add a subquery inner join to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     */
+    public function innerJoinSub(
+        Closure|self|BaseEloquentBuilder|string $query,
+        string $as,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->joinSub($query, $as, $first, $operator, $second, 'inner');
+    }
+
+    /**
+     * Add a "inner any join" clause to the query.
+     */
+    public function innerAnyJoin(
+        string|ExpressionContract $table,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->join($table, $first, $operator, $second, 'inner any');
+    }
+
+    /**
+     * Add a subquery inner any join to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     */
+    public function innerAnyJoinSub(
+        Closure|self|BaseEloquentBuilder|string $query,
+        string $as,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->joinSub($query, $as, $first, $operator, $second, 'inner any');
+    }
+
+    /**
+     * Add a "left any join" clause to the query.
+     */
+    public function leftAnyJoin(
+        string|ExpressionContract $table,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->join($table, $first, $operator, $second, 'left any');
+    }
+
+    /**
+     * Add a subquery left any join to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     */
+    public function leftAnyJoinSub(
+        Closure|self|BaseEloquentBuilder|string $query,
+        string $as,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->joinSub($query, $as, $first, $operator, $second, 'left any');
+    }
+
+    /**
+     * Add a "right any join" clause to the query.
+     */
+    public function rightAnyJoin(
+        string|ExpressionContract $table,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->join($table, $first, $operator, $second, 'right any');
+    }
+
+    /**
+     * Add a subquery right any join to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     */
+    public function rightAnyJoinSub(
+        Closure|self|BaseEloquentBuilder|string $query,
+        string $as,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->joinSub($query, $as, $first, $operator, $second, 'right any');
+    }
+
+    /**
      * Add a "full join" clause to the query.
      */
     public function fullJoin(
         string|ExpressionContract $table,
-        Closure|ExpressionContract|string|null $first = null,
+        Closure|ExpressionContract|string $first,
         ?string $operator = null,
         ExpressionContract|string|null $second = null
     ): static {
-        if ($first) {
-            return $this->join($table, $first, $operator, $second, 'full');
-        }
-
-        // @phpstan-ignore-next-line
-        $this->joins[] = $this->newJoinClause($this, 'full', $table);
-
-        return $this;
+        return $this->join($table, $first, $operator, $second, 'full');
     }
 
     /**
@@ -271,12 +372,173 @@ class Builder extends BaseBuilder
     public function fullJoinSub(
         Closure|self|BaseEloquentBuilder|string $query,
         string $as,
-        Closure|ExpressionContract|string|null $first = null,
+        Closure|ExpressionContract|string $first,
         ?string $operator = null,
         ExpressionContract|string|null $second = null
     ): static {
-        // @phpstan-ignore-next-line
         return $this->joinSub($query, $as, $first, $operator, $second, 'full');
+    }
+
+    /**
+     * Add a "semi join" clause to the query.
+     */
+    public function semiJoin(
+        string|ExpressionContract $table,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->join($table, $first, $operator, $second, 'semi');
+    }
+
+    /**
+     * Add a subquery semi join to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     */
+    public function semiJoinSub(
+        Closure|self|BaseEloquentBuilder|string $query,
+        string $as,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->joinSub($query, $as, $first, $operator, $second, 'semi');
+    }
+
+    /**
+     * Add a "right semi join" clause to the query.
+     */
+    public function rightSemiJoin(
+        string|ExpressionContract $table,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->join($table, $first, $operator, $second, 'right semi');
+    }
+
+    /**
+     * Add a subquery right semi join to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     */
+    public function rightSemiJoinSub(
+        Closure|self|BaseEloquentBuilder|string $query,
+        string $as,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->joinSub($query, $as, $first, $operator, $second, 'right semi');
+    }
+
+    /**
+     * Add a "anti join" clause to the query.
+     */
+    public function antiJoin(
+        string|ExpressionContract $table,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->join($table, $first, $operator, $second, 'anti');
+    }
+
+    /**
+     * Add a subquery anti join to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     */
+    public function antiJoinSub(
+        Closure|self|BaseEloquentBuilder|string $query,
+        string $as,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->joinSub($query, $as, $first, $operator, $second, 'anti');
+    }
+
+    /**
+     * Add a "right anti join" clause to the query.
+     */
+    public function rightAntiJoin(
+        string|ExpressionContract $table,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->join($table, $first, $operator, $second, 'right anti');
+    }
+
+    /**
+     * Add a subquery right anti join to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     */
+    public function rightAntiJoinSub(
+        Closure|self|BaseEloquentBuilder|string $query,
+        string $as,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->joinSub($query, $as, $first, $operator, $second, 'right anti');
+    }
+
+    /**
+     * Add a "asof join" clause to the query.
+     */
+    public function asofJoin(
+        string|ExpressionContract $table,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->join($table, $first, $operator, $second, 'asof');
+    }
+
+    /**
+     * Add a subquery asof join to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     */
+    public function asofJoinSub(
+        Closure|self|BaseEloquentBuilder|string $query,
+        string $as,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->joinSub($query, $as, $first, $operator, $second, 'asof');
+    }
+
+    /**
+     * Add a "left asof join" clause to the query.
+     */
+    public function leftAsofJoin(
+        string|ExpressionContract $table,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->join($table, $first, $operator, $second, 'left asof');
+    }
+
+    /**
+     * Add a subquery left asof join to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     */
+    public function leftAsofJoinSub(
+        Closure|self|BaseEloquentBuilder|string $query,
+        string $as,
+        Closure|ExpressionContract|string $first,
+        ?string $operator = null,
+        ExpressionContract|string|null $second = null
+    ): static {
+        return $this->joinSub($query, $as, $first, $operator, $second, 'left asof');
     }
 
     /**

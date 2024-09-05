@@ -455,6 +455,46 @@ class BuilderTest extends TestCase
         );
     }
 
+    public function testInnerJoin()
+    {
+        $this->assertEquals(
+            'select * from `table_a` inner join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->join('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
+        );
+    }
+
+    public function testInnerJoinSub()
+    {
+        $this->assertEquals(
+            'select * from `table_a` inner join (select * from `table_b`) as `alias` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->joinSub(
+                $this->getBuilder()->from('table_b'),
+                'alias',
+                fn ($query) => $query->on('table_a.column_a', '=', 'table_b.column_b')
+            )->toRawSql()
+        );
+    }
+
+    public function testInnerAnyJoin()
+    {
+        $this->assertEquals(
+            'select * from `table_a` inner any join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->innerAnyJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
+        );
+    }
+
+    public function testInnerAnyJoinSub()
+    {
+        $this->assertEquals(
+            'select * from `table_a` inner any join (select * from `table_b`) as `alias` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->innerAnyJoinSub(
+                $this->getBuilder()->from('table_b'),
+                'alias',
+                fn ($query) => $query->on('table_a.column_a', '=', 'table_b.column_b')
+            )->toRawSql()
+        );
+    }
+
     public function testLeftJoin()
     {
         $this->assertEquals(
@@ -463,11 +503,51 @@ class BuilderTest extends TestCase
         );
     }
 
+    public function testLeftAnyJoin()
+    {
+        $this->assertEquals(
+            'select * from `table_a` left any join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->leftAnyJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
+        );
+    }
+
+    public function testLeftAnyJoinSub()
+    {
+        $this->assertEquals(
+            'select * from `table_a` left any join (select * from `table_b`) as `alias` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->leftAnyJoinSub(
+                $this->getBuilder()->from('table_b'),
+                'alias',
+                fn ($query) => $query->on('table_a.column_a', '=', 'table_b.column_b')
+            )->toRawSql()
+        );
+    }
+
     public function testRightJoin()
     {
         $this->assertEquals(
             'select * from `table_a` right join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
             $this->getBuilder()->from('table_a')->rightJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
+        );
+    }
+
+    public function testRightAnyJoin()
+    {
+        $this->assertEquals(
+            'select * from `table_a` right any join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->rightAnyJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
+        );
+    }
+
+    public function testRightAnyJoinSub()
+    {
+        $this->assertEquals(
+            'select * from `table_a` right any join (select * from `table_b`) as `alias` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->rightAnyJoinSub(
+                $this->getBuilder()->from('table_b'),
+                'alias',
+                fn ($query) => $query->on('table_a.column_a', '=', 'table_b.column_b')
+            )->toRawSql()
         );
     }
 
@@ -492,6 +572,126 @@ class BuilderTest extends TestCase
         $this->assertEquals(
             'select * from `table_a` full join (select * from `table_b`) as `alias` on `table_a`.`column_a` = `table_b`.`column_b`',
             $this->getBuilder()->from('table_a')->fullJoinSub(
+                $this->getBuilder()->from('table_b'),
+                'alias',
+                fn ($query) => $query->on('table_a.column_a', '=', 'table_b.column_b')
+            )->toRawSql()
+        );
+    }
+
+    public function testSemiJoin()
+    {
+        $this->assertEquals(
+            'select * from `table_a` semi join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->semiJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
+        );
+    }
+
+    public function testSemiJoinSub()
+    {
+        $this->assertEquals(
+            'select * from `table_a` semi join (select * from `table_b`) as `alias` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->semiJoinSub(
+                $this->getBuilder()->from('table_b'),
+                'alias',
+                fn ($query) => $query->on('table_a.column_a', '=', 'table_b.column_b')
+            )->toRawSql()
+        );
+    }
+
+    public function testRightSemiJoin()
+    {
+        $this->assertEquals(
+            'select * from `table_a` right semi join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->rightSemiJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
+        );
+    }
+
+    public function testRightSemiJoinSub()
+    {
+        $this->assertEquals(
+            'select * from `table_a` right semi join (select * from `table_b`) as `alias` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->rightSemiJoinSub(
+                $this->getBuilder()->from('table_b'),
+                'alias',
+                fn ($query) => $query->on('table_a.column_a', '=', 'table_b.column_b')
+            )->toRawSql()
+        );
+    }
+
+    public function testAntiJoin()
+    {
+        $this->assertEquals(
+            'select * from `table_a` anti join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->antiJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
+        );
+    }
+
+    public function testAntiJoinSub()
+    {
+        $this->assertEquals(
+            'select * from `table_a` anti join (select * from `table_b`) as `alias` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->antiJoinSub(
+                $this->getBuilder()->from('table_b'),
+                'alias',
+                fn ($query) => $query->on('table_a.column_a', '=', 'table_b.column_b')
+            )->toRawSql()
+        );
+    }
+
+    public function testRightAntiJoin()
+    {
+        $this->assertEquals(
+            'select * from `table_a` right anti join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->rightAntiJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
+        );
+    }
+
+    public function testRightAntiJoinSub()
+    {
+        $this->assertEquals(
+            'select * from `table_a` right anti join (select * from `table_b`) as `alias` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->rightAntiJoinSub(
+                $this->getBuilder()->from('table_b'),
+                'alias',
+                fn ($query) => $query->on('table_a.column_a', '=', 'table_b.column_b')
+            )->toRawSql()
+        );
+    }
+
+    public function testAsofJoin()
+    {
+        $this->assertEquals(
+            'select * from `table_a` asof join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->asofJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
+        );
+    }
+
+    public function testAsofJoinSub()
+    {
+        $this->assertEquals(
+            'select * from `table_a` asof join (select * from `table_b`) as `alias` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->asofJoinSub(
+                $this->getBuilder()->from('table_b'),
+                'alias',
+                fn ($query) => $query->on('table_a.column_a', '=', 'table_b.column_b')
+            )->toRawSql()
+        );
+    }
+
+    public function testLeftAsofJoin()
+    {
+        $this->assertEquals(
+            'select * from `table_a` left asof join `table_b` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->leftAsofJoin('table_b', 'table_a.column_a', 'table_b.column_b')->toRawSql()
+        );
+    }
+
+    public function testLeftAsofJoinSub()
+    {
+        $this->assertEquals(
+            'select * from `table_a` left asof join (select * from `table_b`) as `alias` on `table_a`.`column_a` = `table_b`.`column_b`',
+            $this->getBuilder()->from('table_a')->leftAsofJoinSub(
                 $this->getBuilder()->from('table_b'),
                 'alias',
                 fn ($query) => $query->on('table_a.column_a', '=', 'table_b.column_b')
