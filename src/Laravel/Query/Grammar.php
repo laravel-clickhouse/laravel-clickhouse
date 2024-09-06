@@ -302,7 +302,7 @@ class Grammar extends BaseGrammar
             $column = $this->wrap($arrayJoin['column']);
             $as = ! $this->isExpression($arrayJoin['column']) && $arrayJoin['as'] && ! is_numeric($arrayJoin['as'])
                 ? " as {$this->wrapTable($arrayJoin['as'])}"
-            : '';
+                : '';
 
             return $column.$as;
         })->implode(', ');
