@@ -64,6 +64,25 @@ class Builder extends BaseBuilder
 
     /**
      * {@inheritDoc}
+     */
+    public function from($table, $as = null, bool $final = false): static
+    {
+        if (! $final) {
+            return parent::from($table, $as);
+        }
+
+        if ($this->isQueryable($table)) {
+            throw new LogicException('Select with final cannot be used with subquery.');
+        }
+
+        /** @var string $table */
+        $this->from = new Expression($this->grammar->wrapTable($as ? "{$table} as {$as}" : $table).' final');
+
+        return $this;
+    }
+
+    /**
+     * {@inheritDoc}
      *
      * NOTE: alias no function when using exists method, clickhouse's bug?
      */

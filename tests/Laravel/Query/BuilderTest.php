@@ -23,7 +23,7 @@ class BuilderTest extends TestCase
     {
         $this->assertEquals(
             'select distinct `column` from `table`',
-            $this->getBuilder()->distinct()->select('column')->from('table')->toRawSql()
+            $this->getBuilder()->select('column')->distinct()->from('table')->toRawSql()
         );
     }
 
@@ -41,6 +41,21 @@ class BuilderTest extends TestCase
             'select * from `database`.`table`',
             $this->getBuilder()->from('database.table')->toRawSql()
         );
+    }
+
+    public function testSelectFromFinal()
+    {
+        $this->assertEquals(
+            'select * from `table` final',
+            $this->getBuilder()->from('table', final: true)->toRawSql()
+        );
+    }
+
+    public function testSelectFromFinalWithSubquery()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Select with final cannot be used with subquery.');
+        $this->getBuilder()->from($this->getBuilder()->from('table'), final: true)->toRawSql();
     }
 
     public function testWhere()
