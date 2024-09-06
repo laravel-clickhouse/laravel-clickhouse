@@ -118,19 +118,11 @@ class Builder extends BaseBuilder
 
     /**
      * {@inheritDoc}
-     *
-     * @param  bool|string  $type
      */
-    public function union($query, $type = 'union', bool $all = false, bool $distinct = false): static
+    public function union($query, $all = false, bool $distinct = false, string $type = 'union'): static
     {
         if ($query instanceof Closure) {
             $query($query = $this->newQuery());
-        }
-
-        // NOTE: Compatible with Laravel's union method.
-        if (is_bool($type)) {
-            $type = 'union';
-            $all = $type;
         }
 
         if ($all && $distinct) {
@@ -159,7 +151,7 @@ class Builder extends BaseBuilder
      */
     public function unionDistinct(Closure|self|BaseEloquentBuilder $query): static
     {
-        return $this->union($query, 'union', distinct: true);
+        return $this->union($query, distinct: true);
     }
 
     /**
@@ -169,7 +161,7 @@ class Builder extends BaseBuilder
      */
     public function intersect(Closure|self|BaseEloquentBuilder $query, bool $distinct = false): static
     {
-        return $this->union($query, 'intersect', distinct: $distinct);
+        return $this->union($query, distinct: $distinct, type: 'intersect');
     }
 
     /**
@@ -189,7 +181,7 @@ class Builder extends BaseBuilder
      */
     public function except(Closure|self|BaseEloquentBuilder $query, bool $distinct = false): static
     {
-        return $this->union($query, 'except', distinct: $distinct);
+        return $this->union($query, distinct: $distinct, type: 'except');
     }
 
     /**
