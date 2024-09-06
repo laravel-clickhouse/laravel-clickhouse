@@ -297,12 +297,12 @@ class Grammar extends BaseGrammar
             throw new LogicException('Cannot use array join and left array join at the same time.');
         }
 
-        $type = match ($types->first()) {
-            'left' => 'left ',
-            default => '',
+        $conjunction = match ($types->first()) {
+            'left' => 'left array join ',
+            default => 'array join ',
         };
 
-        return $type.'array join '.$arrayJoins->map(function ($arrayJoin) {
+        return $conjunction.$arrayJoins->map(function ($arrayJoin) {
             $column = $this->wrap($arrayJoin['column']);
             $as = ! $this->isExpression($arrayJoin['column']) && $arrayJoin['as'] && ! is_numeric($arrayJoin['as'])
                 ? " as {$this->wrapTable($arrayJoin['as'])}"
