@@ -4,11 +4,11 @@ namespace SwooleTW\ClickHouse\Laravel\Query;
 
 use Closure;
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
-use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Arr;
 use LogicException;
+use SwooleTW\ClickHouse\Laravel\Eloquent\Builder as EloquentBuilder;
 use SwooleTW\ClickHouse\Laravel\Eloquent\Model;
 
 class Builder extends BaseBuilder
@@ -147,9 +147,9 @@ class Builder extends BaseBuilder
     /**
      * Add a union distinct statement to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>  $query
+     * @param  Closure|self|EloquentBuilder<Model>  $query
      */
-    public function unionDistinct(Closure|self|BaseEloquentBuilder $query): static
+    public function unionDistinct(Closure|self|EloquentBuilder $query): static
     {
         return $this->union($query, distinct: true);
     }
@@ -157,9 +157,9 @@ class Builder extends BaseBuilder
     /**
      * Add a intersect statement to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>  $query
+     * @param  Closure|self|EloquentBuilder<Model>  $query
      */
-    public function intersect(Closure|self|BaseEloquentBuilder $query, bool $distinct = false): static
+    public function intersect(Closure|self|EloquentBuilder $query, bool $distinct = false): static
     {
         return $this->union($query, distinct: $distinct, type: 'intersect');
     }
@@ -167,9 +167,9 @@ class Builder extends BaseBuilder
     /**
      * Add a intersect distinct statement to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>  $query
+     * @param  Closure|self|EloquentBuilder<Model>  $query
      */
-    public function intersectDistinct(Closure|self|BaseEloquentBuilder $query): static
+    public function intersectDistinct(Closure|self|EloquentBuilder $query): static
     {
         return $this->intersect($query, true);
     }
@@ -177,9 +177,9 @@ class Builder extends BaseBuilder
     /**
      * Add a except statement to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>  $query
+     * @param  Closure|self|EloquentBuilder<Model>  $query
      */
-    public function except(Closure|self|BaseEloquentBuilder $query, bool $distinct = false): static
+    public function except(Closure|self|EloquentBuilder $query, bool $distinct = false): static
     {
         return $this->union($query, distinct: $distinct, type: 'except');
     }
@@ -187,9 +187,9 @@ class Builder extends BaseBuilder
     /**
      * Add a except distinct statement to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>  $query
+     * @param  Closure|self|EloquentBuilder<Model>  $query
      */
-    public function exceptDistinct(Closure|self|BaseEloquentBuilder $query): static
+    public function exceptDistinct(Closure|self|EloquentBuilder $query): static
     {
         return $this->except($query, true);
     }
@@ -197,17 +197,17 @@ class Builder extends BaseBuilder
     /**
      * Add a "with" clause to the query.
      *
-     * @param  ExpressionContract|string|self|BaseEloquentBuilder<Model>  $expression
+     * @param  ExpressionContract|string|self|EloquentBuilder<Model>  $expression
      */
     public function withQuery(
-        ExpressionContract|string|self|BaseEloquentBuilder $expression,
+        ExpressionContract|string|self|EloquentBuilder $expression,
         string $identifier,
         bool $subquery = false
     ): static {
         $recursive = false;
 
         if ($this->isQueryable($expression)) {
-            /** @var self|BaseEloquentBuilder<Model> $expression */
+            /** @var self|EloquentBuilder<Model> $expression */
             [$query, $bindings] = $this->createSub($expression);
 
             $expression = new Expression('('.$query.')');
@@ -251,10 +251,10 @@ class Builder extends BaseBuilder
     /**
      * Add a "with subquery" clause to the query.
      *
-     * @param  self|BaseEloquentBuilder<Model>  $expression
+     * @param  self|EloquentBuilder<Model>  $expression
      */
     public function withQuerySub(
-        self|BaseEloquentBuilder $expression,
+        self|EloquentBuilder $expression,
         string $identifier,
         bool $recursive = false,
     ): static {
@@ -266,10 +266,10 @@ class Builder extends BaseBuilder
     /**
      * Add a "with recursive query" clause to the query.
      *
-     * @param  self|BaseEloquentBuilder<Model>  $expression
+     * @param  self|EloquentBuilder<Model>  $expression
      */
     public function withQueryRecursive(
-        self|BaseEloquentBuilder $expression,
+        self|EloquentBuilder $expression,
         string $identifier,
     ): static {
         return $this->withQuerySub($expression, $identifier, true);
@@ -458,10 +458,10 @@ class Builder extends BaseBuilder
     /**
      * Add a subquery inner join to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     * @param  Closure|self|EloquentBuilder<Model>|string  $query
      */
     public function innerJoinSub(
-        Closure|self|BaseEloquentBuilder|string $query,
+        Closure|self|EloquentBuilder|string $query,
         string $as,
         Closure|ExpressionContract|string $first,
         ?string $operator = null,
@@ -485,10 +485,10 @@ class Builder extends BaseBuilder
     /**
      * Add a subquery inner any join to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     * @param  Closure|self|EloquentBuilder<Model>|string  $query
      */
     public function innerAnyJoinSub(
-        Closure|self|BaseEloquentBuilder|string $query,
+        Closure|self|EloquentBuilder|string $query,
         string $as,
         Closure|ExpressionContract|string $first,
         ?string $operator = null,
@@ -512,10 +512,10 @@ class Builder extends BaseBuilder
     /**
      * Add a subquery left any join to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     * @param  Closure|self|EloquentBuilder<Model>|string  $query
      */
     public function leftAnyJoinSub(
-        Closure|self|BaseEloquentBuilder|string $query,
+        Closure|self|EloquentBuilder|string $query,
         string $as,
         Closure|ExpressionContract|string $first,
         ?string $operator = null,
@@ -539,10 +539,10 @@ class Builder extends BaseBuilder
     /**
      * Add a subquery right any join to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     * @param  Closure|self|EloquentBuilder<Model>|string  $query
      */
     public function rightAnyJoinSub(
-        Closure|self|BaseEloquentBuilder|string $query,
+        Closure|self|EloquentBuilder|string $query,
         string $as,
         Closure|ExpressionContract|string $first,
         ?string $operator = null,
@@ -566,10 +566,10 @@ class Builder extends BaseBuilder
     /**
      * Add a subquery full join to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     * @param  Closure|self|EloquentBuilder<Model>|string  $query
      */
     public function fullJoinSub(
-        Closure|self|BaseEloquentBuilder|string $query,
+        Closure|self|EloquentBuilder|string $query,
         string $as,
         Closure|ExpressionContract|string $first,
         ?string $operator = null,
@@ -593,10 +593,10 @@ class Builder extends BaseBuilder
     /**
      * Add a subquery semi join to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     * @param  Closure|self|EloquentBuilder<Model>|string  $query
      */
     public function semiJoinSub(
-        Closure|self|BaseEloquentBuilder|string $query,
+        Closure|self|EloquentBuilder|string $query,
         string $as,
         Closure|ExpressionContract|string $first,
         ?string $operator = null,
@@ -620,10 +620,10 @@ class Builder extends BaseBuilder
     /**
      * Add a subquery right semi join to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     * @param  Closure|self|EloquentBuilder<Model>|string  $query
      */
     public function rightSemiJoinSub(
-        Closure|self|BaseEloquentBuilder|string $query,
+        Closure|self|EloquentBuilder|string $query,
         string $as,
         Closure|ExpressionContract|string $first,
         ?string $operator = null,
@@ -647,10 +647,10 @@ class Builder extends BaseBuilder
     /**
      * Add a subquery anti join to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     * @param  Closure|self|EloquentBuilder<Model>|string  $query
      */
     public function antiJoinSub(
-        Closure|self|BaseEloquentBuilder|string $query,
+        Closure|self|EloquentBuilder|string $query,
         string $as,
         Closure|ExpressionContract|string $first,
         ?string $operator = null,
@@ -674,10 +674,10 @@ class Builder extends BaseBuilder
     /**
      * Add a subquery right anti join to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     * @param  Closure|self|EloquentBuilder<Model>|string  $query
      */
     public function rightAntiJoinSub(
-        Closure|self|BaseEloquentBuilder|string $query,
+        Closure|self|EloquentBuilder|string $query,
         string $as,
         Closure|ExpressionContract|string $first,
         ?string $operator = null,
@@ -701,10 +701,10 @@ class Builder extends BaseBuilder
     /**
      * Add a subquery asof join to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     * @param  Closure|self|EloquentBuilder<Model>|string  $query
      */
     public function asofJoinSub(
-        Closure|self|BaseEloquentBuilder|string $query,
+        Closure|self|EloquentBuilder|string $query,
         string $as,
         Closure|ExpressionContract|string $first,
         ?string $operator = null,
@@ -728,10 +728,10 @@ class Builder extends BaseBuilder
     /**
      * Add a subquery left asof join to the query.
      *
-     * @param  Closure|self|BaseEloquentBuilder<Model>|string  $query
+     * @param  Closure|self|EloquentBuilder<Model>|string  $query
      */
     public function leftAsofJoinSub(
-        Closure|self|BaseEloquentBuilder|string $query,
+        Closure|self|EloquentBuilder|string $query,
         string $as,
         Closure|ExpressionContract|string $first,
         ?string $operator = null,
@@ -743,10 +743,10 @@ class Builder extends BaseBuilder
     /**
      * Add a "array join" clause to the query.
      *
-     * @param  array<int|string, string>|self|BaseEloquentBuilder<Model>|string  $columns
+     * @param  array<int|string, string>|self|EloquentBuilder<Model>|string  $columns
      */
     public function arrayJoin(
-        array|string|self|BaseEloquentBuilder $columns,
+        array|string|self|EloquentBuilder $columns,
         ?string $as = null,
         string $type = 'inner'
     ): static {
@@ -776,10 +776,10 @@ class Builder extends BaseBuilder
     /**
      * Add a "array join sub" clause to the query.
      *
-     * @param  self|BaseEloquentBuilder<Model>|string  $query
+     * @param  self|EloquentBuilder<Model>|string  $query
      */
     public function arrayJoinSub(
-        self|BaseEloquentBuilder|string $query,
+        self|EloquentBuilder|string $query,
         string $as,
         string $type = 'inner'
     ): static {
@@ -796,10 +796,10 @@ class Builder extends BaseBuilder
     /**
      * Add a "left array join" clause to the query.
      *
-     * @param  array<int|string, string>|self|BaseEloquentBuilder<Model>|string  $columns
+     * @param  array<int|string, string>|self|EloquentBuilder<Model>|string  $columns
      */
     public function leftArrayJoin(
-        array|string|self|BaseEloquentBuilder $columns,
+        array|string|self|EloquentBuilder $columns,
         ?string $as = null
     ): static {
         return $this->arrayJoin($columns, $as, 'left');
@@ -808,10 +808,10 @@ class Builder extends BaseBuilder
     /**
      * Add a "left array join sub" clause to the query.
      *
-     * @param  self|BaseEloquentBuilder<Model>|string  $query
+     * @param  self|EloquentBuilder<Model>|string  $query
      */
     public function leftArrayJoinSub(
-        self|BaseEloquentBuilder|string $query,
+        self|EloquentBuilder|string $query,
         string $as
     ): static {
         return $this->arrayJoinSub($query, $as, 'left');
