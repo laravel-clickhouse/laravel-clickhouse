@@ -857,7 +857,7 @@ class BuilderTest extends TestCase
     public function testUnion()
     {
         $this->assertEquals(
-            '(select * from `table_a`) union distinct (select * from `table_b`)',
+            '(select * from `table_a`) union (select * from `table_b`)',
             $this->getBuilder()->from('table_a')->union($this->getBuilder()->from('table_b'))->toRawSql()
         );
     }
@@ -867,6 +867,14 @@ class BuilderTest extends TestCase
         $this->assertEquals(
             '(select * from `table_a`) union all (select * from `table_b`)',
             $this->getBuilder()->from('table_a')->unionAll($this->getBuilder()->from('table_b'))->toRawSql()
+        );
+    }
+
+    public function testUnionDistinct()
+    {
+        $this->assertEquals(
+            '(select * from `table_a`) union distinct (select * from `table_b`)',
+            $this->getBuilder()->from('table_a')->unionDistinct($this->getBuilder()->from('table_b'))->toRawSql()
         );
     }
 
@@ -882,7 +890,7 @@ class BuilderTest extends TestCase
 
     public function testUnionAggregate()
     {
-        $expectedSql = 'select count(*) as aggregate from ((select * from `table_a`) union distinct (select * from `table_b`)) as `temp_table`';
+        $expectedSql = 'select count(*) as aggregate from ((select * from `table_a`) union (select * from `table_b`)) as `temp_table`';
         $this->getBuilder(select: $expectedSql)->from('table_a')->union($this->getBuilder()->from('table_b'))->count();
     }
 

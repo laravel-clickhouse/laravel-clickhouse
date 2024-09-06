@@ -124,12 +124,16 @@ class Grammar extends BaseGrammar
      *
      * @param array{
      *     'query': BaseBuilder,
-     *     'all': boolean,
+     *     'all': bool|null,
      * } $union
      */
     protected function compileUnion(array $union): string
     {
-        $conjunction = $union['all'] ? ' union all ' : ' union distinct ';
+        $conjunction = match ($union['all']) {
+            true => ' union all ',
+            false => ' union distinct ',
+            default => ' union ',
+        };
 
         return $conjunction.$this->wrapUnion($union['query']->toSql());
     }

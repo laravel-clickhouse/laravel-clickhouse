@@ -79,6 +79,27 @@ class Builder extends BaseBuilder
     /**
      * {@inheritDoc}
      *
+     * @param  bool|null  $all
+     */
+    public function union($query, $all = null): static
+    {
+        // @phpstan-ignore-next-line
+        return parent::union($query, $all);
+    }
+
+    /**
+     * Add a union distinct statement to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>  $query
+     */
+    public function unionDistinct(Closure|self|BaseEloquentBuilder $query): static
+    {
+        return $this->union($query, false);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
      * @param  array<string, mixed>  $values
      */
     public function insertGetId(array $values, $sequence = null): int
