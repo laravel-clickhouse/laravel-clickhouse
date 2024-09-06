@@ -32,6 +32,7 @@ class Grammar extends BaseGrammar
         'limit',
         'offset',
         'lock',
+        'settings',
     ];
 
     /** {@inheritDoc} */
@@ -334,5 +335,23 @@ class Grammar extends BaseGrammar
         }
 
         return "{$conjunction}{$this->parameter($withQuery['expression'])} as {$this->wrap($withQuery['identifier'])}";
+    }
+
+    /**
+     * Compile the "settings" portions of the query.
+     *
+     * @param  array<string, int|float|bool|string>  $settings
+     */
+    protected function compileSettings(BaseBuilder $query, array $settings): string
+    {
+        $settings = collect($settings);
+
+        if ($settings->isEmpty()) {
+            return '';
+        }
+
+        return 'settings '.$settings->map(function ($value, $key) {
+            return "{$this->wrap($key)} = {$this->parameter($value)}";
+        })->implode(', ');
     }
 }

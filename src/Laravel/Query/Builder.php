@@ -37,6 +37,7 @@ class Builder extends BaseBuilder
         'unionOrder' => [],
         'arrayJoin' => [],
         'withQuery' => [],
+        'settings' => [],
     ];
 
     /**
@@ -61,6 +62,13 @@ class Builder extends BaseBuilder
      * }
      */
     public $withQuery = null;
+
+    /**
+     * The settings for the query.
+     *
+     * @var array<string, int|float|bool|string>
+     */
+    public $settings = [];
 
     /**
      * {@inheritDoc}
@@ -815,6 +823,37 @@ class Builder extends BaseBuilder
         string $as
     ): static {
         return $this->arrayJoinSub($query, $as, 'left');
+    }
+
+    /**
+     * Add a "settings" clause to the query.
+     *
+     * @param  string|array<string, int|float|bool|string>  $key
+     */
+    public function settings(string|array $key, int|float|bool|string|null $value = null): static
+    {
+        if (is_string($key) && is_null($value)) {
+            throw new LogicException('Value is required for settings.');
+        }
+
+        $settings = is_array($key) ? $key : [$key => $value];
+
+        foreach ($settings as $key => $value) {
+            $index = array_search($key, array_keys($this->settings));
+            $override = $index !== false;
+
+            $this->settings[$key] = $value;
+
+            if ($override) {
+                $this->bindings['settings'][$index] = $this->castBinding($value);
+
+                continue;
+            }
+
+            $this->addBinding($value, 'settings');
+        }
+
+        return $this;
     }
 
     /** {@inheritDoc} */

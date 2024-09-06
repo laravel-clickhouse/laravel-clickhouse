@@ -1009,6 +1009,45 @@ class BuilderTest extends TestCase
         );
     }
 
+    public function testSettings()
+    {
+        $this->assertEquals(
+            "select * from `table` settings `key` = 'value'",
+            $this->getBuilder()->from('table')->settings('key', 'value')->toRawSql()
+        );
+    }
+
+    public function testSettingsWithArray()
+    {
+        $this->assertEquals(
+            "select * from `table` settings `key` = 'value'",
+            $this->getBuilder()->from('table')->settings(['key' => 'value'])->toRawSql()
+        );
+    }
+
+    public function testSettingsWithoutValue()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Value is required for settings.');
+        $this->getBuilder()->from('table')->settings('key')->toRawSql();
+    }
+
+    public function testMultipleSettings()
+    {
+        $this->assertEquals(
+            "select * from `table` settings `key_a` = 'value_a', `key_b` = 'value_b'",
+            $this->getBuilder()->from('table')->settings('key_a', 'value_a')->settings(['key_b' => 'value_b'])->toRawSql()
+        );
+    }
+
+    public function testDuplicateSettings()
+    {
+        $this->assertEquals(
+            "select * from `table` settings `key` = 'value_b'",
+            $this->getBuilder()->from('table')->settings('key', 'value_a')->settings('key', 'value_b')->toRawSql()
+        );
+    }
+
     public function testInsert()
     {
         $expectedSql = 'insert into `table` (`column`) values (?)';
