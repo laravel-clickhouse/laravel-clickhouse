@@ -903,10 +903,49 @@ class BuilderTest extends TestCase
         );
     }
 
-    public function testUnionAggregate()
+    public function testUnionWithAllAndDistinct()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Cannot use all and distinct at the same time.');
+        $this->getBuilder()->from('table_a')->union($this->getBuilder()->from('table_b'), all: true, distinct: true)->toRawSql();
+    }
+
+    public function testUnionWithAggregate()
     {
         $expectedSql = 'select count(*) as aggregate from ((select * from `table_a`) union (select * from `table_b`)) as `temp_table`';
         $this->getBuilder(select: $expectedSql)->from('table_a')->union($this->getBuilder()->from('table_b'))->count();
+    }
+
+    public function testIntersect()
+    {
+        $this->assertEquals(
+            '(select * from `table_a`) intersect (select * from `table_b`)',
+            $this->getBuilder()->from('table_a')->intersect($this->getBuilder()->from('table_b'))->toRawSql()
+        );
+    }
+
+    public function testIntersectDistinct()
+    {
+        $this->assertEquals(
+            '(select * from `table_a`) intersect distinct (select * from `table_b`)',
+            $this->getBuilder()->from('table_a')->intersectDistinct($this->getBuilder()->from('table_b'))->toRawSql()
+        );
+    }
+
+    public function testExcept()
+    {
+        $this->assertEquals(
+            '(select * from `table_a`) except (select * from `table_b`)',
+            $this->getBuilder()->from('table_a')->except($this->getBuilder()->from('table_b'))->toRawSql()
+        );
+    }
+
+    public function testExceptDistinct()
+    {
+        $this->assertEquals(
+            '(select * from `table_a`) except distinct (select * from `table_b`)',
+            $this->getBuilder()->from('table_a')->exceptDistinct($this->getBuilder()->from('table_b'))->toRawSql()
+        );
     }
 
     public function testWithQuery()

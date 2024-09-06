@@ -113,17 +113,29 @@ class Builder extends BaseBuilder
      *
      * @param  bool|string  $type
      */
-    public function union($query, $type = 'union'): static
+    public function union($query, $type = 'union', bool $all = false, bool $distinct = false): static
     {
         if ($query instanceof Closure) {
             $query($query = $this->newQuery());
         }
 
         // NOTE: Compatible with Laravel's union method.
-        $type = match ($type) {
-            true => 'union all',
-            default => $type,
-        };
+        if (is_bool($type)) {
+            $type = 'union';
+            $all = $type;
+        }
+
+        if ($all && $distinct) {
+            throw new LogicException('Cannot use all and distinct at the same time.');
+        }
+
+        if ($all) {
+            $type .= ' all';
+        }
+
+        if ($distinct) {
+            $type .= ' distinct';
+        }
 
         $this->unions[] = compact('query', 'type');
 
@@ -139,7 +151,47 @@ class Builder extends BaseBuilder
      */
     public function unionDistinct(Closure|self|BaseEloquentBuilder $query): static
     {
-        return $this->union($query, 'union distinct');
+        return $this->union($query, 'union', distinct: true);
+    }
+
+    /**
+     * Add a intersect statement to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>  $query
+     */
+    public function intersect(Closure|self|BaseEloquentBuilder $query, bool $distinct = false): static
+    {
+        return $this->union($query, 'intersect', distinct: $distinct);
+    }
+
+    /**
+     * Add a intersect distinct statement to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>  $query
+     */
+    public function intersectDistinct(Closure|self|BaseEloquentBuilder $query): static
+    {
+        return $this->intersect($query, true);
+    }
+
+    /**
+     * Add a except statement to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>  $query
+     */
+    public function except(Closure|self|BaseEloquentBuilder $query, bool $distinct = false): static
+    {
+        return $this->union($query, 'except', distinct: $distinct);
+    }
+
+    /**
+     * Add a except distinct statement to the query.
+     *
+     * @param  Closure|self|BaseEloquentBuilder<Model>  $query
+     */
+    public function exceptDistinct(Closure|self|BaseEloquentBuilder $query): static
+    {
+        return $this->except($query, true);
     }
 
     /**
