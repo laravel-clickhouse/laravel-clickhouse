@@ -111,12 +111,25 @@ class Builder extends BaseBuilder
     /**
      * {@inheritDoc}
      *
-     * @param  bool|null  $all
+     * @param  bool|string  $type
      */
-    public function union($query, $all = null): static
+    public function union($query, $type = 'union'): static
     {
-        // @phpstan-ignore-next-line
-        return parent::union($query, $all);
+        if ($query instanceof Closure) {
+            $query($query = $this->newQuery());
+        }
+
+        // NOTE: Compatible with Laravel's union method.
+        $type = match ($type) {
+            true => 'union all',
+            default => $type,
+        };
+
+        $this->unions[] = compact('query', 'type');
+
+        $this->addBinding($query->getBindings(), 'union');
+
+        return $this;
     }
 
     /**
@@ -126,7 +139,7 @@ class Builder extends BaseBuilder
      */
     public function unionDistinct(Closure|self|BaseEloquentBuilder $query): static
     {
-        return $this->union($query, false);
+        return $this->union($query, 'union distinct');
     }
 
     /**
