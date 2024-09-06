@@ -56,7 +56,8 @@ class Builder extends BaseBuilder
      * @var array{
      *     'expression': ExpressionContract|string,
      *     'identifier': string,
-     *     'subquery': bool
+     *     'subquery': bool,
+     *     'recursive': bool,
      * }
      */
     public $withQuery = null;
@@ -117,15 +118,17 @@ class Builder extends BaseBuilder
     public function withQuery(
         ExpressionContract|string|self|BaseEloquentBuilder $expression,
         string $identifier,
-        bool $subquery = false,
+        bool $subquery = false
     ): static {
+        $recursive = false;
+
         if ($this->isQueryable($expression)) {
             /** @var self|BaseEloquentBuilder<Model> $expression */
             [$query, $bindings] = $this->createSub($expression);
 
             $expression = new Expression('('.$query.')');
 
-            $this->withQuery = compact('expression', 'identifier', 'subquery');
+            $this->withQuery = compact('expression', 'identifier', 'subquery', 'recursive');
 
             $this->addBinding($bindings, 'withQuery');
 
@@ -133,7 +136,7 @@ class Builder extends BaseBuilder
         }
 
         /** @var ExpressionContract|string $expression */
-        $this->withQuery = compact('expression', 'identifier', 'subquery');
+        $this->withQuery = compact('expression', 'identifier', 'subquery', 'recursive');
 
         if (! $expression instanceof ExpressionContract) {
             $this->addBinding($expression, 'withQuery');
@@ -152,8 +155,9 @@ class Builder extends BaseBuilder
         string $identifier,
         array $bindings = [],
         bool $subquery = false,
+        bool $recursive = false,
     ): static {
-        $this->withQuery = compact('expression', 'identifier', 'subquery');
+        $this->withQuery = compact('expression', 'identifier', 'subquery', 'recursive');
 
         $this->addBinding($bindings, 'withQuery');
 
@@ -168,10 +172,23 @@ class Builder extends BaseBuilder
     public function withQuerySub(
         self|BaseEloquentBuilder $expression,
         string $identifier,
+        bool $recursive = false,
     ): static {
         [$query, $bindings] = $this->createSub($expression);
 
-        return $this->withQueryRaw($query, $identifier, $bindings, true);
+        return $this->withQueryRaw($query, $identifier, $bindings, true, $recursive);
+    }
+
+    /**
+     * Add a "with recursive query" clause to the query.
+     *
+     * @param  self|BaseEloquentBuilder<Model>  $expression
+     */
+    public function withQueryRecursive(
+        self|BaseEloquentBuilder $expression,
+        string $identifier,
+    ): static {
+        return $this->withQuerySub($expression, $identifier, true);
     }
 
     /**

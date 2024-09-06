@@ -932,6 +932,29 @@ class BuilderTest extends TestCase
         );
     }
 
+    public function testWithQuerySubWithRecursive()
+    {
+        $this->assertEquals(
+            'with recursive `alias` as (select * from `table_a`) select * from `table_b`',
+            $this->getBuilder()->withQuerySub(
+                $this->getBuilder()->from('table_a'),
+                'alias',
+                true
+            )->from('table_b')->toRawSql()
+        );
+    }
+
+    public function testWithQueryRecursive()
+    {
+        $this->assertEquals(
+            'with recursive `alias` as (select * from `table_a`) select * from `table_b`',
+            $this->getBuilder()->withQueryRecursive(
+                $this->getBuilder()->from('table_a'),
+                'alias'
+            )->from('table_b')->toRawSql()
+        );
+    }
+
     public function testInsert()
     {
         $expectedSql = 'insert into `table` (`column`) values (?)';

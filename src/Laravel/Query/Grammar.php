@@ -320,7 +320,8 @@ class Grammar extends BaseGrammar
      * @param array{
      *     'expression': ExpressionContract|string,
      *     'identifier': string,
-     *     'subquery': bool
+     *     'subquery': bool,
+     *     'recursive': bool,
      * }|null $withQuery
      */
     protected function compileWithQuery(BaseBuilder $query, ?array $withQuery): string
@@ -329,10 +330,15 @@ class Grammar extends BaseGrammar
             return '';
         }
 
+        $conjunction = match ($withQuery['recursive']) {
+            true => 'with recursive ',
+            default => 'with ',
+        };
+
         if ($withQuery['subquery']) {
-            return "with {$this->wrap($withQuery['identifier'])} as ({$this->getValue($withQuery['expression'])})";
+            return "{$conjunction}{$this->wrap($withQuery['identifier'])} as ({$this->getValue($withQuery['expression'])})";
         }
 
-        return "with {$this->parameter($withQuery['expression'])} as {$this->wrap($withQuery['identifier'])}";
+        return "{$conjunction}{$this->parameter($withQuery['expression'])} as {$this->wrap($withQuery['identifier'])}";
     }
 }
