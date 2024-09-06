@@ -558,17 +558,17 @@ class Builder extends BaseBuilder
                 $as = null;
             }
 
-            if ($this->isQueryable($column)) {
-                if (! $as) {
-                    throw new LogicException('Array join with subquery must have an alias.');
-                }
-
-                $this->arrayJoinSub($column, $as);
+            if (! $this->isQueryable($column)) {
+                $this->arrayJoins[] = compact('type', 'column', 'as');
 
                 continue;
             }
 
-            $this->arrayJoins[] = compact('type', 'column', 'as');
+            if (! $as) {
+                throw new LogicException('Array join with subquery must have an alias.');
+            }
+
+            $this->arrayJoinSub($column, $as);
         }
 
         return $this;
