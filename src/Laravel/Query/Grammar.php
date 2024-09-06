@@ -3,6 +3,7 @@
 namespace SwooleTW\ClickHouse\Laravel\Query;
 
 use Carbon\Carbon;
+use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
@@ -17,6 +18,7 @@ class Grammar extends BaseGrammar
      * @var string[]
      */
     protected $selectComponents = [
+        'withQuery',
         'aggregate',
         'columns',
         'from',
@@ -143,7 +145,7 @@ class Grammar extends BaseGrammar
      *
      * @param array{
      *     'type': string,
-     *     'column': Expression|string,
+     *     'column': ExpressionContract|string,
      *     'operator': string,
      *     'value': mixed,
      *     'boolean': string,
@@ -205,7 +207,7 @@ class Grammar extends BaseGrammar
      *
      * @param array{
      *     'type': string,
-     *     'column': Expression|string,
+     *     'column': ExpressionContract|string,
      *     'boolean': string,
      * } $where
      */
@@ -219,7 +221,7 @@ class Grammar extends BaseGrammar
      *
      * @param array{
      *     'type': string,
-     *     'column': Expression|string,
+     *     'column': ExpressionContract|string,
      *     'boolean': string,
      * } $where
      */
@@ -233,7 +235,7 @@ class Grammar extends BaseGrammar
      *
      * @param array{
      *     'type': string,
-     *     'column': Expression|string,
+     *     'column': ExpressionContract|string,
      *     'boolean': string,
      * } $having
      */
@@ -251,7 +253,7 @@ class Grammar extends BaseGrammar
      *
      * @param array{
      *     'type': string,
-     *     'column': Expression|string,
+     *     'column': ExpressionContract|string,
      *     'boolean': string,
      * } $having
      */
@@ -265,7 +267,7 @@ class Grammar extends BaseGrammar
      *
      * @param array{
      *     'type': string,
-     *     'column': Expression|string,
+     *     'column': ExpressionContract|string,
      *     'boolean': string,
      * } $having
      */
@@ -279,11 +281,11 @@ class Grammar extends BaseGrammar
      *
      * @param array{
      *     'type': string,
-     *     'column': Expression|string,
+     *     'column': ExpressionContract|string,
      *     'as': string|null,
      * }[] $arrayJoins
      */
-    protected function compileArrayJoins(BaseBuilder $query, $arrayJoins): string
+    protected function compileArrayJoins(BaseBuilder $query, array $arrayJoins): string
     {
         $arrayJoins = collect($arrayJoins);
 
@@ -310,5 +312,27 @@ class Grammar extends BaseGrammar
 
             return $column.$as;
         })->implode(', ');
+    }
+
+    /**
+     * Compile the "with" portions of the query.
+     *
+     * @param array{
+     *     'expression': ExpressionContract|string,
+     *     'identifier': string,
+     *     'subquery': bool
+     * }|null $withQuery
+     */
+    protected function compileWithQuery(BaseBuilder $query, ?array $withQuery): string
+    {
+        if (! $withQuery) {
+            return '';
+        }
+
+        if ($withQuery['subquery']) {
+            return "with {$this->wrap($withQuery['identifier'])} as ({$this->getValue($withQuery['expression'])})";
+        }
+
+        return "with {$this->parameter($withQuery['expression'])} as {$this->wrap($withQuery['identifier'])}";
     }
 }

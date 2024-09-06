@@ -894,6 +894,44 @@ class BuilderTest extends TestCase
         $this->getBuilder(select: $expectedSql)->from('table_a')->union($this->getBuilder()->from('table_b'))->count();
     }
 
+    public function testWithQuery()
+    {
+        $this->assertEquals(
+            "with 'value' as `alias` select * from `table`",
+            $this->getBuilder()->withQuery('value', 'alias')->from('table')->toRawSql()
+        );
+    }
+
+    public function testWithQueryWithScalarSubquery()
+    {
+        $this->assertEquals(
+            'with (select * from `table_a`) as `alias` select * from `table_b`',
+            $this->getBuilder()->withQuery(
+                $this->getBuilder()->from('table_a'),
+                'alias'
+            )->from('table_b')->toRawSql()
+        );
+    }
+
+    public function testWithQueryRaw()
+    {
+        $this->assertEquals(
+            "with 'value' as `alias` select * from `table`",
+            $this->getBuilder()->withQueryRaw('?', 'alias', ['value'])->from('table')->toRawSql()
+        );
+    }
+
+    public function testWithQuerySub()
+    {
+        $this->assertEquals(
+            'with `alias` as (select * from `table_a`) select * from `table_b`',
+            $this->getBuilder()->withQuerySub(
+                $this->getBuilder()->from('table_a'),
+                'alias'
+            )->from('table_b')->toRawSql()
+        );
+    }
+
     public function testInsert()
     {
         $expectedSql = 'insert into `table` (`column`) values (?)';

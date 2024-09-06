@@ -36,6 +36,7 @@ class Builder extends BaseBuilder
         'union' => [],
         'unionOrder' => [],
         'arrayJoin' => [],
+        'withQuery' => [],
     ];
 
     /**
@@ -43,11 +44,22 @@ class Builder extends BaseBuilder
      *
      * @var array{
      *     'type': string,
-     *     'column': Expression|string,
+     *     'column': ExpressionContract|string,
      *     'as': string|null,
      * }[]
      */
     public $arrayJoins = [];
+
+    /**
+     * The array joins for the query.
+     *
+     * @var array{
+     *     'expression': ExpressionContract|string,
+     *     'identifier': string,
+     *     'subquery': bool
+     * }
+     */
+    public $withQuery = null;
 
     /**
      * {@inheritDoc}
@@ -95,6 +107,71 @@ class Builder extends BaseBuilder
     public function unionDistinct(Closure|self|BaseEloquentBuilder $query): static
     {
         return $this->union($query, false);
+    }
+
+    /**
+     * Add a "with" clause to the query.
+     *
+     * @param  ExpressionContract|string|self|BaseEloquentBuilder<Model>  $expression
+     */
+    public function withQuery(
+        ExpressionContract|string|self|BaseEloquentBuilder $expression,
+        string $identifier,
+        bool $subquery = false,
+    ): static {
+        if ($this->isQueryable($expression)) {
+            /** @var self|BaseEloquentBuilder<Model> $expression */
+            [$query, $bindings] = $this->createSub($expression);
+
+            $expression = new Expression('('.$query.')');
+
+            $this->withQuery = compact('expression', 'identifier', 'subquery');
+
+            $this->addBinding($bindings, 'withQuery');
+
+            return $this;
+        }
+
+        /** @var ExpressionContract|string $expression */
+        $this->withQuery = compact('expression', 'identifier', 'subquery');
+
+        if (! $expression instanceof ExpressionContract) {
+            $this->addBinding($expression, 'withQuery');
+        }
+
+        return $this;
+    }
+
+    /**
+     * Add a "raw with" clause to the query.
+     *
+     * @param  array<string|number>  $bindings
+     */
+    public function withQueryRaw(
+        string $expression,
+        string $identifier,
+        array $bindings = [],
+        bool $subquery = false,
+    ): static {
+        $this->withQuery = compact('expression', 'identifier', 'subquery');
+
+        $this->addBinding($bindings, 'withQuery');
+
+        return $this;
+    }
+
+    /**
+     * Add a "with subquery" clause to the query.
+     *
+     * @param  self|BaseEloquentBuilder<Model>  $expression
+     */
+    public function withQuerySub(
+        self|BaseEloquentBuilder $expression,
+        string $identifier,
+    ): static {
+        [$query, $bindings] = $this->createSub($expression);
+
+        return $this->withQueryRaw($query, $identifier, $bindings, true);
     }
 
     /**
