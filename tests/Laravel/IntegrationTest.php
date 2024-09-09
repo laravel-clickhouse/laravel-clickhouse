@@ -3,9 +3,12 @@
 namespace SwooleTW\ClickHouse\Tests\Laravel;
 
 use Illuminate\Database\Capsule\Manager as DB;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model as BaseSQLiteModel;
+use Illuminate\Support\Collection;
 use SwooleTW\ClickHouse\Laravel\Connection;
 use SwooleTW\ClickHouse\Laravel\Eloquent\Model as BaseClickHouseModel;
+use SwooleTW\ClickHouse\Laravel\Parallel;
 use SwooleTW\ClickHouse\Tests\TestCase;
 
 class IntegrationTest extends TestCase
@@ -94,6 +97,34 @@ class IntegrationTest extends TestCase
         $this->assertTrue($clickhouseModel->sqliteRelated->is($sqliteModel));
 
         $this->dropSQLiteTestTable();
+    }
+
+    public function testGetParallelly()
+    {
+        ClickHouseModel::create(['id' => 1, 'column' => 'value']);
+        ClickHouseModel::create(['id' => 2, 'column' => 'value']);
+        ClickHouseModel::create(['id' => 3, 'column' => 'value']);
+
+        $results = Parallel::get([
+            'one' => ClickHouseModel::where('id', 1),
+            'two' => ClickHouseModel::where('id', 2)->toBase(),
+            'three' => ClickHouseModel::where('id', 3),
+        ]);
+
+        $this->assertInstanceOf(EloquentCollection::class, $results['one']);
+        $this->assertInstanceOf(Collection::class, $results['two']);
+        $this->assertInstanceOf(EloquentCollection::class, $results['three']);
+        $this->assertInstanceOf(ClickHouseModel::class, $results['one']->first());
+        $this->assertIsArray($results['two']->first());
+        $this->assertInstanceOf(ClickHouseModel::class, $results['three']->first());
+        $this->assertEquals(
+            [
+                'one' => [['id' => 1, 'column' => 'value']],
+                'two' => [['id' => 2, 'column' => 'value']],
+                'three' => [['id' => 3, 'column' => 'value']],
+            ],
+            collect($results)->toArray()
+        );
     }
 
     private function setUpEloquent()

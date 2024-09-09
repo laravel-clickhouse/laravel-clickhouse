@@ -4,8 +4,11 @@ namespace SwooleTW\ClickHouse\Laravel;
 
 use ClickHouseDB\Client;
 use ClickHouseDB\Quote\ValueFormatter;
+use ClickHouseDB\Statement;
 use Exception;
 use Illuminate\Database\Connection as BaseConnection;
+use Illuminate\Database\QueryException;
+use SwooleTW\ClickHouse\Exceptions\ParallelQueryException;
 use SwooleTW\ClickHouse\Laravel\Query\Builder;
 use SwooleTW\ClickHouse\Laravel\Query\Grammar;
 
@@ -54,6 +57,56 @@ class Connection extends BaseConnection
 
             return $statement->rows();
         });
+    }
+
+    /**
+     * Run select statements parallelly against the database.
+     *
+     * @param array<int|string, array{
+     *     sql: string,
+     *     bindings: mixed[],
+     * }> $queries
+     * @return array<int|string, array<string, mixed>[]>
+     */
+    public function selectParallelly(array $queries): array
+    {
+        /**
+         * @var array<int|string, array{
+         *     sql: string,
+         *     bindings: mixed[],
+         *     statement: Statement,
+         * }> $queries
+         */
+        $queries = array_map(function ($query) {
+            foreach ($this->beforeExecutingCallbacks as $beforeExecutingCallback) {
+                $beforeExecutingCallback($query['sql'], $query['bindings'], $this);
+            }
+
+            $sql = $this->toRawSql($query['sql'], $query['bindings']);
+            $statement = $this->client->selectAsync($sql);
+
+            return array_merge($query, compact('statement'));
+        }, $queries);
+
+        $this->client->executeAsync();
+
+        $results = collect($queries)->reduce(function ($results, $query, $key) {
+            $this->logQuery($query['sql'], $query['bindings']);
+
+            try {
+                $results['results'][$key] = $query['statement']->rows();
+            } catch (Exception $e) {
+                $results['errors'][$key] = new QueryException($this->getName() ?: '', $query['sql'], $query['bindings'], $e);
+            }
+
+            return $results;
+        }, ['results' => [], 'errors' => []]);
+
+        if (count($results['errors'])) {
+            throw new ParallelQueryException($results['results'], $results['errors']);
+        }
+
+        return $results['results'];
     }
 
     /**
