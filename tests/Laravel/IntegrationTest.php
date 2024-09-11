@@ -132,11 +132,10 @@ class IntegrationTest extends TestCase
         $this->db = new DB;
 
         $this->db->getDatabaseManager()->extend('clickhouse', function ($config, $name) {
-            $config['name'] = $name;
-
-            unset($config['database']);
-
-            return new Connection(database: $config['database'] ?? '', config: $config);
+            return new Connection(
+                database: $config['database'] ?? '',
+                config: array_merge($config, compact('name'))
+            );
         });
 
         $this->addClickHouseConnection();
