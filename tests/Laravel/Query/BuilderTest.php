@@ -43,6 +43,22 @@ class BuilderTest extends TestCase
         );
     }
 
+    public function testSelectFromWithSubquery()
+    {
+        $this->assertEquals(
+            'select * from (select * from `table`)',
+            $this->getBuilder()->from($this->getBuilder()->from('table'))->toRawSql()
+        );
+    }
+
+    public function testSelectFromWithSubqueryAndAlias()
+    {
+        $this->assertEquals(
+            'select * from (select * from `table`) as `alias`',
+            $this->getBuilder()->from($this->getBuilder()->from('table'), 'alias')->toRawSql()
+        );
+    }
+
     public function testSelectFromFinal()
     {
         $this->assertEquals(

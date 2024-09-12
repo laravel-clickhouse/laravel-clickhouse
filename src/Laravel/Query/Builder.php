@@ -91,6 +91,22 @@ class Builder extends BaseBuilder
 
     /**
      * {@inheritDoc}
+     */
+    public function fromSub($query, $as): static
+    {
+        [$query, $bindings] = $this->createSub($query);
+
+        $expression = "({$query})";
+
+        if ($as) {
+            $expression .= ' as '.$this->grammar->wrapTable($as);
+        }
+
+        return $this->fromRaw($expression, $bindings);
+    }
+
+    /**
+     * {@inheritDoc}
      *
      * NOTE: alias no function when using exists method, clickhouse's bug?
      */
