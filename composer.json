@@ -38,6 +38,13 @@
             "SwooleTW\\ClickHouse\\Tests\\": "tests/"
         }
     },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "SwooleTW\\ClickHouse\\Laravel\\ClickHouseServiceProvider"
+            ]
+        }
+    },
     "scripts": {
       "test": "phpunit --colors",
       "phpstan": "phpstan analyse",
