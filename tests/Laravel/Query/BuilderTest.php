@@ -1002,6 +1002,17 @@ class BuilderTest extends TestCase
         );
     }
 
+    public function testWithQuerySubWithBindings()
+    {
+        $this->assertEquals(
+            "with `alias` as (select * from `table_a` where `column_a` = 'value_a') select * from `table_b` where `column_b` = 'value_b'",
+            $this->getBuilder()->withQuerySub(
+                $this->getBuilder()->from('table_a')->where('column_a', 'value_a'),
+                'alias'
+            )->from('table_b')->where('column_b', 'value_b')->toRawSql()
+        );
+    }
+
     public function testWithQuerySubWithRecursive()
     {
         $this->assertEquals(

@@ -26,17 +26,17 @@ class Builder extends BaseBuilder
      * @var array<string, mixed[]>
      */
     public $bindings = [
+        'withQuery' => [],
         'select' => [],
         'from' => [],
         'join' => [],
+        'arrayJoin' => [],
         'where' => [],
         'groupBy' => [],
         'having' => [],
         'order' => [],
         'union' => [],
         'unionOrder' => [],
-        'arrayJoin' => [],
-        'withQuery' => [],
         'settings' => [],
     ];
 
