@@ -157,12 +157,12 @@ class IntegrationTest extends TestCase
 
     private function createClickHouseTestTable()
     {
-        $this->clickhouseClient()->write('CREATE TABLE IF NOT EXISTS `test` (`id` UInt32, `column` String) ENGINE = Memory');
+        $this->clickhouseClient()->exec('CREATE TABLE IF NOT EXISTS `test` (`id` UInt32, `column` String) ENGINE = Memory');
     }
 
     private function dropClickHouseTestTable()
     {
-        $this->clickhouseClient()->write('DROP TABLE IF EXISTS `test`');
+        $this->clickhouseClient()->exec('DROP TABLE IF EXISTS `test`');
     }
 
     private function addSQLiteConnection()

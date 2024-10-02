@@ -5,10 +5,13 @@ namespace SwooleTW\ClickHouse\Exceptions;
 use RuntimeException;
 use Throwable;
 
+/**
+ * @template T
+ */
 class ParallelQueryException extends RuntimeException
 {
     /**
-     * @param  array<int|string, array<string, mixed>[]>  $results
+     * @param  array<int|string, T>  $results
      * @param  array<int|string, Throwable>  $errors
      */
     public function __construct(protected array $results, protected array $errors)
@@ -18,7 +21,7 @@ class ParallelQueryException extends RuntimeException
         }, $this->errors));
     }
 
-    /** @return array<int|string, array<string, mixed>[]> */
+    /** @return array<int|string, T> */
     public function getResults(): array
     {
         return $this->results;

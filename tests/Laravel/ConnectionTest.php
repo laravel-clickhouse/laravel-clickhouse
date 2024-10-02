@@ -2,10 +2,11 @@
 
 namespace SwooleTW\ClickHouse\Tests\Laravel;
 
-use ClickHouseDB\Client;
-use ClickHouseDB\Statement;
 use Exception;
 use Illuminate\Database\QueryException;
+use PDO;
+use SwooleTW\ClickHouse\Client\Client;
+use SwooleTW\ClickHouse\Client\Statement;
 use SwooleTW\ClickHouse\Exceptions\ParallelQueryException;
 use SwooleTW\ClickHouse\Laravel\Connection;
 use SwooleTW\ClickHouse\Tests\TestCase;
@@ -20,10 +21,15 @@ class ConnectionTest extends TestCase
         $statement = $this->mock(Statement::class);
         $connection = new Connection(client: $client);
 
-        $client->shouldReceive('select')->with("select * from `table` where `column` = 'value'")->once()->andReturn($statement);
-        $statement->shouldReceive('rows')->withNoArgs()->once()->andReturn($expected);
+        $query = 'select * from `table` where `column` = ?';
+        $bindings = ['value'];
 
-        $actual = $connection->select('select * from `table` where `column` = ?', ['value']);
+        $client->shouldReceive('prepare')->with($query)->once()->andReturn($statement);
+        $statement->shouldReceive('bindValue')->with(1, $bindings[0], PDO::PARAM_STR)->once();
+        $statement->shouldReceive('execute')->withNoArgs()->once();
+        $statement->shouldReceive('fetchAll')->withNoArgs()->once()->andReturn($expected);
+
+        $actual = $connection->select($query, $bindings);
 
         $this->assertEquals($expected, $actual);
     }
@@ -31,11 +37,17 @@ class ConnectionTest extends TestCase
     public function testInsert()
     {
         $client = $this->mock(Client::class);
+        $statement = $this->mock(Statement::class);
         $connection = new Connection(client: $client);
 
-        $client->shouldReceive('write')->with("insert into `table` (`column`) values ('value')")->once();
+        $query = 'insert into `table` (`column`) values (?)';
+        $bindings = ['value'];
 
-        $actual = $connection->insert('insert into `table` (`column`) values (?)', ['value']);
+        $client->shouldReceive('prepare')->with($query)->once()->andReturn($statement);
+        $statement->shouldReceive('bindValue')->with(1, $bindings[0], PDO::PARAM_STR)->once();
+        $statement->shouldReceive('execute')->withNoArgs()->once()->andReturnTrue();
+
+        $actual = $connection->insert($query, $bindings);
 
         $this->assertTrue($actual);
     }
@@ -43,27 +55,40 @@ class ConnectionTest extends TestCase
     public function testUpdate()
     {
         $client = $this->mock(Client::class);
+        $statement = $this->mock(Statement::class);
         $connection = new Connection(client: $client);
 
-        $client->shouldReceive('write')->with("alter table `table` update `column` = 'value_b' where `column` = 'value_a'")->once();
+        $query = 'alter table `table` update `column` = ? where `column` = ?';
+        $bindings = ['value_b', 'value_a'];
 
-        $actual = $connection->update('alter table `table` update `column` = ? where `column` = ?', ['value_b', 'value_a']);
+        $client->shouldReceive('prepare')->with($query)->once()->andReturn($statement);
+        $statement->shouldReceive('bindValue')->with(1, $bindings[0], PDO::PARAM_STR)->once();
+        $statement->shouldReceive('bindValue')->with(2, $bindings[1], PDO::PARAM_STR)->once();
+        $statement->shouldReceive('execute')->withNoArgs()->once()->andReturnTrue();
+        $statement->shouldReceive('rowCount')->withNoArgs()->once()->andReturn($rowCount = 1);
 
-        // TODO: correct affected rows
-        $this->assertEquals(1, $actual);
+        $actual = $connection->update($query, $bindings);
+
+        $this->assertEquals($rowCount, $actual);
     }
 
     public function testDelete()
     {
         $client = $this->mock(Client::class);
+        $statement = $this->mock(Statement::class);
         $connection = new Connection(client: $client);
 
-        $client->shouldReceive('write')->with("alter table `table` delete where `column` = 'value'")->once();
+        $query = 'alter table `table` delete where `column` = ?';
+        $bindings = ['value'];
 
-        $actual = $connection->delete('alter table `table` delete where `column` = ?', ['value']);
+        $client->shouldReceive('prepare')->with($query)->once()->andReturn($statement);
+        $statement->shouldReceive('bindValue')->with(1, $bindings[0], PDO::PARAM_STR)->once();
+        $statement->shouldReceive('execute')->withNoArgs()->once()->andReturnTrue();
+        $statement->shouldReceive('rowCount')->withNoArgs()->once()->andReturn($rowCount = 1);
 
-        // TODO: correct affected rows
-        $this->assertEquals(1, $actual);
+        $actual = $connection->delete($query, $bindings);
+
+        $this->assertEquals($rowCount, $actual);
     }
 
     public function testSelectParallelly()
@@ -72,18 +97,21 @@ class ConnectionTest extends TestCase
         $expectedB = [['column' => 'value_b']];
 
         $client = $this->mock(Client::class);
-        $statement = $this->mock(Statement::class);
+        $statementA = $this->mock(Statement::class);
+        $statementB = $this->mock(Statement::class);
         $connection = new Connection(client: $client);
 
-        $client->shouldReceive('selectAsync')->with("select * from `table_a` where `column_a` = 'value_a'")->once()->andReturn($statement);
-        $client->shouldReceive('selectAsync')->with("select * from `table_b` where `column_b` = 'value_b'")->once()->andReturn($statement);
-        $client->shouldReceive('executeAsync')->withNoArgs()->once();
-        $statement->shouldReceive('rows')->withNoArgs()->once()->andReturn($expectedA);
-        $statement->shouldReceive('rows')->withNoArgs()->once()->andReturn($expectedB);
+        $client->shouldReceive('prepare')->with($sqlA = 'select * from `table_a` where `column_a` = ?')->once()->andReturn($statementA);
+        $client->shouldReceive('prepare')->with($sqlB = 'select * from `table_b` where `column_b` = ?')->once()->andReturn($statementB);
+        $client->shouldReceive('parallel')->with(['a' => $statementA, 'b' => $statementB])->once();
+        $statementA->shouldReceive('bindValue')->with(1, $bindingA = 'value_a', PDO::PARAM_STR)->once();
+        $statementA->shouldReceive('fetchAll')->withNoArgs()->once()->andReturn($expectedA);
+        $statementB->shouldReceive('bindValue')->with(1, $bindingB = 'value_b', PDO::PARAM_STR)->once();
+        $statementB->shouldReceive('fetchAll')->withNoArgs()->once()->andReturn($expectedB);
 
         $actual = $connection->selectParallelly([
-            'a' => ['sql' => 'select * from `table_a` where `column_a` = ?', 'bindings' => ['value_a']],
-            'b' => ['sql' => 'select * from `table_b` where `column_b` = ?', 'bindings' => ['value_b']],
+            'a' => ['sql' => $sqlA, 'bindings' => [$bindingA]],
+            'b' => ['sql' => $sqlB, 'bindings' => [$bindingB]],
         ]);
 
         $this->assertEquals([
@@ -97,19 +125,21 @@ class ConnectionTest extends TestCase
         $expectedA = [['column' => 'value_a']];
 
         $client = $this->mock(Client::class);
-        $statement = $this->mock(Statement::class);
+        $statementA = $this->mock(Statement::class);
+        $statementB = $this->mock(Statement::class);
         $connection = new Connection(client: $client);
+        $exception = new ParallelQueryException(['a' => $expectedA], ['b' => new Exception('error')]);
 
-        $client->shouldReceive('selectAsync')->with("select * from `table_a` where `column_a` = 'value_a'")->once()->andReturn($statement);
-        $client->shouldReceive('selectAsync')->with("select * from `table_b` where `column_b` = 'value_b'")->once()->andReturn($statement);
-        $client->shouldReceive('executeAsync')->withNoArgs()->once();
-        $statement->shouldReceive('rows')->withNoArgs()->once()->andReturn($expectedA);
-        $statement->shouldReceive('rows')->withNoArgs()->once()->andThrow(new Exception('error'));
+        $client->shouldReceive('prepare')->with($sqlA = 'select * from `table_a` where `column_a` = ?')->once()->andReturn($statementA);
+        $client->shouldReceive('prepare')->with($sqlB = 'select * from `table_b` where `column_b` = ?')->once()->andReturn($statementB);
+        $client->shouldReceive('parallel')->with(['a' => $statementA, 'b' => $statementB])->once()->andThrow($exception);
+        $statementA->shouldReceive('bindValue')->with(1, $bindingA = 'value_a', PDO::PARAM_STR)->once();
+        $statementB->shouldReceive('bindValue')->with(1, $bindingB = 'value_b', PDO::PARAM_STR)->once();
 
         try {
             $connection->selectParallelly([
-                'a' => ['sql' => 'select * from `table_a` where `column_a` = ?', 'bindings' => ['value_a']],
-                'b' => ['sql' => 'select * from `table_b` where `column_b` = ?', 'bindings' => ['value_b']],
+                'a' => ['sql' => $sqlA, 'bindings' => [$bindingA]],
+                'b' => ['sql' => $sqlB, 'bindings' => [$bindingB]],
             ]);
         } catch (ParallelQueryException $e) {
             $this->assertEquals(['a' => $expectedA], $e->getResults());

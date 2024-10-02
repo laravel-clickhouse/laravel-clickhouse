@@ -2,12 +2,12 @@
 
 namespace SwooleTW\ClickHouse\Laravel;
 
-use ClickHouseDB\Client;
 use ClickHouseDB\Quote\ValueFormatter;
-use ClickHouseDB\Statement;
 use Exception;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
+use SwooleTW\ClickHouse\Client\Client;
+use SwooleTW\ClickHouse\Client\Statement;
 use SwooleTW\ClickHouse\Exceptions\ParallelQueryException;
 use SwooleTW\ClickHouse\Laravel\Query\Builder;
 use SwooleTW\ClickHouse\Laravel\Query\Grammar;
@@ -22,11 +22,17 @@ class Connection extends BaseConnection
     /**
      * Create a new database connection instance.
      *
-     * @param  array<string, mixed>  $config
+     * @param  array{
+     *     host?: string,
+     *     port?: int,
+     *     username?: string,
+     *     password?: string,
+     *     transport?: string,
+     * }  $config
      */
     public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null)
     {
-        $this->database = $database;
+        $this->database = $database ?: 'default';
         $this->tablePrefix = $tablePrefix;
         $this->config = $config;
         $this->client = $client ?? $this->getDefaultClient($database, $config);
@@ -51,11 +57,14 @@ class Connection extends BaseConnection
     {
         // @phpstan-ignore-next-line
         return $this->run($query, $bindings, function (string $query, array $bindings) {
-            $sql = $this->toRawSql($query, $bindings);
+            $statement = $this->client->prepare($query);
 
-            $statement = $this->client->select($sql);
+            // @phpstan-ignore-next-line
+            $this->bindValues($statement, $this->prepareBindings($bindings));
 
-            return $statement->rows();
+            $statement->execute();
+
+            return $statement->fetchAll();
         });
     }
 
@@ -67,46 +76,44 @@ class Connection extends BaseConnection
      *     bindings: mixed[],
      * }> $queries
      * @return array<int|string, array<string, mixed>[]>
+     *
+     * @throws ParallelQueryException<Statement>
      */
     public function selectParallelly(array $queries): array
     {
-        /**
-         * @var array<int|string, array{
-         *     sql: string,
-         *     bindings: mixed[],
-         *     statement: Statement,
-         * }> $queries
-         */
-        $queries = array_map(function ($query) {
+        $statements = array_map(function ($query) {
             foreach ($this->beforeExecutingCallbacks as $beforeExecutingCallback) {
                 $beforeExecutingCallback($query['sql'], $query['bindings'], $this);
             }
 
-            $sql = $this->toRawSql($query['sql'], $query['bindings']);
-            $statement = $this->client->selectAsync($sql);
+            $statement = $this->client->prepare($query['sql']);
 
-            return array_merge($query, compact('statement'));
+            // @phpstan-ignore-next-line
+            $this->bindValues($statement, $this->prepareBindings($query['bindings']));
+
+            return $statement;
         }, $queries);
 
-        $this->client->executeAsync();
+        try {
+            $this->client->parallel($statements);
+        } catch (ParallelQueryException $e) {
+            $errors = collect($e->getErrors())->map(function ($error, $key) use ($queries) {
+                return new QueryException(
+                    $this->getName() ?: '',
+                    $queries[$key]['sql'],
+                    $queries[$key]['bindings'],
+                    $error
+                );
+            })->all();
 
-        $results = collect($queries)->reduce(function ($results, $query, $key) {
-            $this->logQuery($query['sql'], $query['bindings']);
-
-            try {
-                $results['results'][$key] = $query['statement']->rows();
-            } catch (Exception $e) {
-                $results['errors'][$key] = new QueryException($this->getName() ?: '', $query['sql'], $query['bindings'], $e);
-            }
-
-            return $results;
-        }, ['results' => [], 'errors' => []]);
-
-        if (count($results['errors'])) {
-            throw new ParallelQueryException($results['results'], $results['errors']);
+            throw new ParallelQueryException($e->getResults(), $errors);
         }
 
-        return $results['results'];
+        return collect($statements)->map(function ($statement, $key) use ($queries) {
+            $this->logQuery($queries[$key]['sql'], $queries[$key]['bindings']);
+
+            return $statement->fetchAll() ?: [];
+        })->all();
     }
 
     /**
@@ -118,11 +125,12 @@ class Connection extends BaseConnection
     {
         // @phpstan-ignore-next-line
         return $this->run($query, $bindings, function ($query, $bindings) {
-            $sql = $this->toRawSql($query, $bindings);
+            $statement = $this->client->prepare($query);
 
-            $this->client->write($sql);
+            // @phpstan-ignore-next-line
+            $this->bindValues($statement, $this->prepareBindings($bindings));
 
-            return true;
+            return $statement->execute();
         });
     }
 
@@ -135,18 +143,21 @@ class Connection extends BaseConnection
     {
         // @phpstan-ignore-next-line
         return $this->run($query, $bindings, function ($query, $bindings) {
-            $sql = $this->toRawSql($query, $bindings);
+            $statement = $this->client->prepare($query);
 
-            $this->client->write($sql);
+            // @phpstan-ignore-next-line
+            $this->bindValues($statement, $this->prepareBindings($bindings));
 
-            // TODO: correct affected rows
-            return 1;
+            $statement->execute();
+
+            return $statement->rowCount();
         });
     }
 
     /** {@inheritDoc} */
     public function escape($value, $binary = false): string
     {
+        // TODO: implement escape
         // @phpstan-ignore-next-line
         return (string) ValueFormatter::formatValue($value);
     }
@@ -188,29 +199,23 @@ class Connection extends BaseConnection
     /**
      * Get the default ClickHouse client.
      *
-     * @param  array<string, mixed>  $config
+     * @param  array{
+     *     host?: string,
+     *     port?: int,
+     *     username?: string,
+     *     password?: string,
+     *     transport?: string,
+     * }  $config
      */
     protected function getDefaultClient(string $database, array $config): Client
     {
-        $client = new Client($config);
-
-        if ($database) {
-            $client->database($database);
-        }
-
-        return $client;
-    }
-
-    /**
-     * Get the raw SQL representation with bindings.
-     *
-     * @param  mixed[]  $bindings
-     */
-    protected function toRawSql(string $query, array $bindings): string
-    {
-        return $this->queryGrammar->substituteBindingsIntoRawSql(
-            $query,
-            $this->prepareBindings($bindings)
+        return new Client(
+            host: $config['host'] ?? '127.0.0.1',
+            port: $config['port'] ?? 8123,
+            database: $database,
+            username: $config['username'] ?? 'default',
+            password: $config['password'] ?? 'default',
+            transport: $config['transport'] ?? 'curl',
         );
     }
 }
