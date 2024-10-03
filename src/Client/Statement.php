@@ -2,8 +2,6 @@
 
 namespace SwooleTW\ClickHouse\Client;
 
-use ClickHouseDB\Quote\ValueFormatter;
-
 class Statement
 {
     /**
@@ -84,12 +82,6 @@ class Statement
 
     protected function escape(mixed $value): string
     {
-        if (is_string($value)) {
-            return $this->client->quote($value);
-        }
-
-        // TODO: escape other types
-        // @phpstan-ignore-next-line
-        return (string) ValueFormatter::formatValue($value);
+        return $this->client->getEscaper()->escape($value);
     }
 }

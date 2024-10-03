@@ -2,7 +2,6 @@
 
 namespace SwooleTW\ClickHouse\Laravel;
 
-use ClickHouseDB\Quote\ValueFormatter;
 use Exception;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
@@ -11,6 +10,7 @@ use SwooleTW\ClickHouse\Client\Statement;
 use SwooleTW\ClickHouse\Exceptions\ParallelQueryException;
 use SwooleTW\ClickHouse\Laravel\Query\Builder;
 use SwooleTW\ClickHouse\Laravel\Query\Grammar;
+use SwooleTW\ClickHouse\Support\Escaper;
 
 class Connection extends BaseConnection
 {
@@ -18,6 +18,11 @@ class Connection extends BaseConnection
      * The ClickHouse client.
      */
     protected Client $client;
+
+    /**
+     * The value escaper.
+     */
+    protected Escaper $escaper;
 
     /**
      * Create a new database connection instance.
@@ -30,12 +35,13 @@ class Connection extends BaseConnection
      *     transport?: string,
      * }  $config
      */
-    public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null)
+    public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null, ?Escaper $escaper = null)
     {
         $this->database = $database ?: 'default';
         $this->tablePrefix = $tablePrefix;
         $this->config = $config;
         $this->client = $client ?? $this->getDefaultClient($database, $config);
+        $this->escaper = $escaper ?? new Escaper;
 
         $this->useDefaultQueryGrammar();
         $this->useDefaultPostProcessor();
@@ -157,9 +163,7 @@ class Connection extends BaseConnection
     /** {@inheritDoc} */
     public function escape($value, $binary = false): string
     {
-        // TODO: implement escape
-        // @phpstan-ignore-next-line
-        return (string) ValueFormatter::formatValue($value);
+        return $this->escaper->escape($value, $binary);
     }
 
     /** {@inheritDoc} */

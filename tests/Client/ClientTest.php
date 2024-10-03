@@ -124,13 +124,6 @@ class ClientTest extends TestCase
         $this->assertEquals($transport, $client->getTransport());
     }
 
-    public function testQuote()
-    {
-        $client = $this->getClient();
-
-        $this->assertEquals("'str\\\\ing'", $client->quote('str\ing'));
-    }
-
     private function getClient(?Transport $transport = null): Client
     {
         $factory = $this->mock(TransportFactory::class);

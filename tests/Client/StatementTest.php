@@ -6,6 +6,7 @@ use SwooleTW\ClickHouse\Client\Client;
 use SwooleTW\ClickHouse\Client\Contracts\Transport;
 use SwooleTW\ClickHouse\Client\Response;
 use SwooleTW\ClickHouse\Client\Statement;
+use SwooleTW\ClickHouse\Support\Escaper;
 use SwooleTW\ClickHouse\Tests\TestCase;
 
 class StatementTest extends TestCase
@@ -13,6 +14,7 @@ class StatementTest extends TestCase
     public function testExecute()
     {
         $client = $this->mock(Client::class);
+        $escaper = $this->mock(Escaper::class);
         $transport = $this->mock(Transport::class);
         $response = $this->mock(Response::class);
 
@@ -22,12 +24,17 @@ class StatementTest extends TestCase
             ->once()
             ->andReturn($transport);
         $client
-            ->shouldReceive('quote')
+            ->shouldReceive('getEscaper')
+            ->withNoArgs()
+            ->twice()
+            ->andReturn($escaper);
+        $escaper
+            ->shouldReceive('escape')
             ->with('value_a')
             ->once()
             ->andReturn("'value_a'");
-        $client
-            ->shouldReceive('quote')
+        $escaper
+            ->shouldReceive('escape')
             ->with('value_b')
             ->once()
             ->andReturn("'value_b'");

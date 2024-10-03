@@ -4,10 +4,13 @@ namespace SwooleTW\ClickHouse\Client;
 
 use SwooleTW\ClickHouse\Client\Contracts\Transport;
 use SwooleTW\ClickHouse\Exceptions\ParallelQueryException;
+use SwooleTW\ClickHouse\Support\Escaper;
 
 class Client
 {
     protected TransportFactory $transportFactory;
+
+    protected Escaper $escaper;
 
     public function __construct(
         protected string $host,
@@ -17,8 +20,10 @@ class Client
         protected string $password,
         protected string $transport,
         ?TransportFactory $transportFactory = null,
+        ?Escaper $escaper = null,
     ) {
         $this->transportFactory = $transportFactory ?? new TransportFactory($host, $port, $database, $username, $password);
+        $this->escaper = $escaper ?? new Escaper;
     }
 
     public function exec(string $query): int
@@ -68,8 +73,8 @@ class Client
         return $this->transportFactory->make($this->transport);
     }
 
-    public function quote(string $string): string
+    public function getEscaper(): Escaper
     {
-        return sprintf("'%s'", addslashes($string));
+        return $this->escaper;
     }
 }
