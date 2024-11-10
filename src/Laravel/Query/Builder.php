@@ -31,6 +31,7 @@ class Builder extends BaseBuilder
         'from' => [],
         'join' => [],
         'arrayJoin' => [],
+        'partition' => [],
         'where' => [],
         'groupBy' => [],
         'having' => [],
@@ -316,7 +317,7 @@ class Builder extends BaseBuilder
     /**
      * {@inheritDoc}
      */
-    public function delete($id = null, ?bool $lightweight = null): int
+    public function delete($id = null, ?bool $lightweight = null, mixed $partition = null): int
     {
         // If an ID is passed to the method, we will set the where clause to check the
         // ID to let developers to simply and quickly remove a single row from this
@@ -326,10 +327,14 @@ class Builder extends BaseBuilder
             $this->where($this->from.'.id', '=', $id);
         }
 
+        if ($partition && ! $partition instanceof ExpressionContract) {
+            $this->addBinding($partition, 'partition');
+        }
+
         $this->applyBeforeQueryCallbacks();
 
         return $this->connection->delete(
-            $this->grammar->compileDelete($this, $lightweight), $this->cleanBindings(
+            $this->grammar->compileDelete($this, $lightweight, $partition), $this->cleanBindings(
                 $this->grammar->prepareBindingsForDelete($this->bindings)
             )
         );

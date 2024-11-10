@@ -98,7 +98,7 @@ class Grammar extends BaseGrammar
     }
 
     /** {@inheritDoc} */
-    public function compileDelete(BaseBuilder $query, ?bool $lightweight = null): string
+    public function compileDelete(BaseBuilder $query, ?bool $lightweight = null, mixed $partition = null): string
     {
         $table = $this->wrapTable($query->from);
 
@@ -107,8 +107,8 @@ class Grammar extends BaseGrammar
         return trim(
             // @phpstan-ignore-next-line
             isset($query->joins)
-                ? $this->compileDeleteWithJoins($query, $table, $where, $lightweight)
-                : $this->compileDeleteWithoutJoins($query, $table, $where, $lightweight)
+                ? $this->compileDeleteWithJoins($query, $table, $where, $lightweight, $partition)
+                : $this->compileDeleteWithoutJoins($query, $table, $where, $lightweight, $partition)
         );
     }
 
@@ -179,20 +179,22 @@ class Grammar extends BaseGrammar
     }
 
     /** {@inheritDoc} */
-    protected function compileDeleteWithoutJoins(BaseBuilder $query, $table, $where, ?bool $lightweight = null): string
+    protected function compileDeleteWithoutJoins(BaseBuilder $query, $table, $where, ?bool $lightweight = null, mixed $partition = null): string
     {
         /** @var Connection $connection */
         $connection = $query->connection;
 
+        $partitionClause = $partition ? " in partition {$this->parameter($partition)}" : '';
+
         if ((! is_null($lightweight) && $lightweight) || $connection->getConfig('use_lightweight_delete')) {
-            return "delete from {$table} {$where}";
+            return "delete from {$table}{$partitionClause} {$where}";
         }
 
-        return "alter table {$table} delete {$where}";
+        return "alter table {$table} delete{$partitionClause} {$where}";
     }
 
     /** {@inheritDoc} */
-    protected function compileDeleteWithJoins(BaseBuilder $query, $table, $where, ?bool $lightweight = null): string
+    protected function compileDeleteWithJoins(BaseBuilder $query, $table, $where, ?bool $lightweight = null, mixed $partition = null): string
     {
         throw new LogicException('ClickHouse does not support delete with join.');
     }

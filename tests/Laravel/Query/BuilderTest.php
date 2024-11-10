@@ -1143,6 +1143,23 @@ class BuilderTest extends TestCase
         $builder->from('table')->where('column', 'value')->delete();
     }
 
+    public function testDeleteWithPartition()
+    {
+        $expectedSql = 'alter table `table` delete in partition ? where `column` = ?';
+        $bindings = ['partition', 'value'];
+        $builder = $this->getBuilder(delete: $expectedSql, bindings: $bindings);
+        $builder->getConnection()->shouldReceive('getConfig')->with('use_lightweight_delete')->once()->andReturn(null);
+        $builder->from('table')->where('column', 'value')->delete(partition: 'partition');
+    }
+
+    public function testLightweightDeleteWithPartition()
+    {
+        $expectedSql = 'delete from `table` in partition ? where `column` = ?';
+        $bindings = ['partition', 'value'];
+        $builder = $this->getBuilder(delete: $expectedSql, bindings: $bindings);
+        $builder->from('table')->where('column', 'value')->delete(lightweight: true, partition: 'partition');
+    }
+
     public function testDeleteWithJoin()
     {
         $this->expectException(LogicException::class);
