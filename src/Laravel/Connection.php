@@ -180,7 +180,7 @@ class Connection extends BaseConnection
     }
 
     /**
-     * get the ClickHouse client
+     * Get the ClickHouse client
      */
     public function getClient(): Client
     {
