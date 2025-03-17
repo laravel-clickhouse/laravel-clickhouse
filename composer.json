@@ -1,10 +1,9 @@
 {
     "name": "laravel-clickhouse/laravel-clickhouse",
-    "description": "A ClickHouse based Eloquent model and Query builder for Laravel and Hyperf",
+    "description": "A ClickHouse based Eloquent model and Query builder for Laravel",
     "keywords": [
         "php",
         "laravel",
-        "hyperf",
         "eloquent",
         "clickhouse",
         "database",
