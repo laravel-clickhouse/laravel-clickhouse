@@ -1,13 +1,13 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Client\Transports;
+namespace ClickHouse\Client\Transports;
 
+use ClickHouse\Client\Contracts\Transport;
+use ClickHouse\Client\Response;
+use ClickHouse\Exceptions\ParallelQueryException;
 use ClickHouseDB\Client;
 use ClickHouseDB\Statement as ClickHouseDBStatement;
 use Exception;
-use SwooleTW\ClickHouse\Client\Contracts\Transport;
-use SwooleTW\ClickHouse\Client\Response;
-use SwooleTW\ClickHouse\Exceptions\ParallelQueryException;
 
 class Curl implements Transport
 {

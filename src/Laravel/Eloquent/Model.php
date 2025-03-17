@@ -1,6 +1,6 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Laravel\Eloquent;
+namespace ClickHouse\Laravel\Eloquent;
 
 use Illuminate\Database\Eloquent\Model as BaseModel;
 

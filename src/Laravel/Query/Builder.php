@@ -1,15 +1,15 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Laravel\Query;
+namespace ClickHouse\Laravel\Query;
 
+use ClickHouse\Laravel\Eloquent\Builder as EloquentBuilder;
+use ClickHouse\Laravel\Eloquent\Model;
 use Closure;
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Arr;
 use LogicException;
-use SwooleTW\ClickHouse\Laravel\Eloquent\Builder as EloquentBuilder;
-use SwooleTW\ClickHouse\Laravel\Eloquent\Model;
 
 class Builder extends BaseBuilder
 {

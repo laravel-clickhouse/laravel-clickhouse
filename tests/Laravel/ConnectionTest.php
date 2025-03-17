@@ -1,15 +1,15 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Tests\Laravel;
+namespace ClickHouse\Tests\Laravel;
 
+use ClickHouse\Client\Client;
+use ClickHouse\Client\Statement;
+use ClickHouse\Exceptions\ParallelQueryException;
+use ClickHouse\Laravel\Connection;
+use ClickHouse\Tests\TestCase;
 use Exception;
 use Illuminate\Database\QueryException;
 use PDO;
-use SwooleTW\ClickHouse\Client\Client;
-use SwooleTW\ClickHouse\Client\Statement;
-use SwooleTW\ClickHouse\Exceptions\ParallelQueryException;
-use SwooleTW\ClickHouse\Laravel\Connection;
-use SwooleTW\ClickHouse\Tests\TestCase;
 
 class ConnectionTest extends TestCase
 {

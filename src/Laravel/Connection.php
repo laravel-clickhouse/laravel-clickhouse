@@ -1,16 +1,16 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Laravel;
+namespace ClickHouse\Laravel;
 
+use ClickHouse\Client\Client;
+use ClickHouse\Client\Statement;
+use ClickHouse\Exceptions\ParallelQueryException;
+use ClickHouse\Laravel\Query\Builder;
+use ClickHouse\Laravel\Query\Grammar;
+use ClickHouse\Support\Escaper;
 use Exception;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
-use SwooleTW\ClickHouse\Client\Client;
-use SwooleTW\ClickHouse\Client\Statement;
-use SwooleTW\ClickHouse\Exceptions\ParallelQueryException;
-use SwooleTW\ClickHouse\Laravel\Query\Builder;
-use SwooleTW\ClickHouse\Laravel\Query\Grammar;
-use SwooleTW\ClickHouse\Support\Escaper;
 
 class Connection extends BaseConnection
 {

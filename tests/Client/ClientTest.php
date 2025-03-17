@@ -1,15 +1,15 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Tests\Client;
+namespace ClickHouse\Tests\Client;
 
+use ClickHouse\Client\Client;
+use ClickHouse\Client\Contracts\Transport;
+use ClickHouse\Client\Response;
+use ClickHouse\Client\Statement;
+use ClickHouse\Client\TransportFactory;
+use ClickHouse\Exceptions\ParallelQueryException;
+use ClickHouse\Tests\TestCase;
 use Exception;
-use SwooleTW\ClickHouse\Client\Client;
-use SwooleTW\ClickHouse\Client\Contracts\Transport;
-use SwooleTW\ClickHouse\Client\Response;
-use SwooleTW\ClickHouse\Client\Statement;
-use SwooleTW\ClickHouse\Client\TransportFactory;
-use SwooleTW\ClickHouse\Exceptions\ParallelQueryException;
-use SwooleTW\ClickHouse\Tests\TestCase;
 
 class ClientTest extends TestCase
 {

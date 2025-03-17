@@ -1,10 +1,10 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Client;
+namespace ClickHouse\Client;
 
-use SwooleTW\ClickHouse\Client\Contracts\Transport;
-use SwooleTW\ClickHouse\Exceptions\ParallelQueryException;
-use SwooleTW\ClickHouse\Support\Escaper;
+use ClickHouse\Client\Contracts\Transport;
+use ClickHouse\Exceptions\ParallelQueryException;
+use ClickHouse\Support\Escaper;
 
 class Client
 {

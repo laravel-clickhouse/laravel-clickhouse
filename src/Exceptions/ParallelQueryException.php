@@ -1,6 +1,6 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Exceptions;
+namespace ClickHouse\Exceptions;
 
 use RuntimeException;
 use Throwable;

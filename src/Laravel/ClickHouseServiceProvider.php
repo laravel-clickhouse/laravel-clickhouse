@@ -1,9 +1,9 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Laravel;
+namespace ClickHouse\Laravel;
 
+use ClickHouse\Laravel\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
-use SwooleTW\ClickHouse\Laravel\Eloquent\Model;
 
 class ClickHouseServiceProvider extends ServiceProvider
 {

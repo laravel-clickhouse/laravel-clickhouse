@@ -1,13 +1,13 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Tests\Laravel\Query;
+namespace ClickHouse\Tests\Laravel\Query;
 
+use ClickHouse\Laravel\Query\Builder;
+use ClickHouse\Laravel\Query\Grammar;
+use ClickHouse\Tests\TestCase;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Processors\Processor;
 use LogicException;
-use SwooleTW\ClickHouse\Laravel\Query\Builder;
-use SwooleTW\ClickHouse\Laravel\Query\Grammar;
-use SwooleTW\ClickHouse\Tests\TestCase;
 
 class BuilderTest extends TestCase
 {

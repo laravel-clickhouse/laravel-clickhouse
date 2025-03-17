@@ -1,9 +1,9 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Tests\Support;
+namespace ClickHouse\Tests\Support;
 
-use SwooleTW\ClickHouse\Support\Escaper;
-use SwooleTW\ClickHouse\Tests\TestCase;
+use ClickHouse\Support\Escaper;
+use ClickHouse\Tests\TestCase;
 
 class EscaperTest extends TestCase
 {

@@ -1,15 +1,15 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Tests\Laravel;
+namespace ClickHouse\Tests\Laravel;
 
+use ClickHouse\Laravel\Connection;
+use ClickHouse\Laravel\Eloquent\Model as BaseClickHouseModel;
+use ClickHouse\Laravel\Parallel;
+use ClickHouse\Tests\TestCase;
 use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model as BaseSQLiteModel;
 use Illuminate\Support\Collection;
-use SwooleTW\ClickHouse\Laravel\Connection;
-use SwooleTW\ClickHouse\Laravel\Eloquent\Model as BaseClickHouseModel;
-use SwooleTW\ClickHouse\Laravel\Parallel;
-use SwooleTW\ClickHouse\Tests\TestCase;
 
 class IntegrationTest extends TestCase
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Laravel\Query;
+namespace ClickHouse\Laravel\Query;
 
 use Carbon\Carbon;
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;

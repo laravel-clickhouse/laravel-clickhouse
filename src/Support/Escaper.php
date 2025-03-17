@@ -1,6 +1,6 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Support;
+namespace ClickHouse\Support;
 
 use DateTimeInterface;
 use RuntimeException;

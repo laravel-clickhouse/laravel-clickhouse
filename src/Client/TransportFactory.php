@@ -1,10 +1,10 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Client;
+namespace ClickHouse\Client;
 
+use ClickHouse\Client\Contracts\Transport;
+use ClickHouse\Client\Transports\Curl;
 use InvalidArgumentException;
-use SwooleTW\ClickHouse\Client\Contracts\Transport;
-use SwooleTW\ClickHouse\Client\Transports\Curl;
 
 class TransportFactory
 {

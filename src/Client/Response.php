@@ -1,6 +1,6 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Client;
+namespace ClickHouse\Client;
 
 class Response
 {

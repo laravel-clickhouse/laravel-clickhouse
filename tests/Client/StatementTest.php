@@ -1,13 +1,13 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Tests\Client;
+namespace ClickHouse\Tests\Client;
 
-use SwooleTW\ClickHouse\Client\Client;
-use SwooleTW\ClickHouse\Client\Contracts\Transport;
-use SwooleTW\ClickHouse\Client\Response;
-use SwooleTW\ClickHouse\Client\Statement;
-use SwooleTW\ClickHouse\Support\Escaper;
-use SwooleTW\ClickHouse\Tests\TestCase;
+use ClickHouse\Client\Client;
+use ClickHouse\Client\Contracts\Transport;
+use ClickHouse\Client\Response;
+use ClickHouse\Client\Statement;
+use ClickHouse\Support\Escaper;
+use ClickHouse\Tests\TestCase;
 
 class StatementTest extends TestCase
 {

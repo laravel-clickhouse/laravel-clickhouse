@@ -1,6 +1,6 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Tests;
+namespace ClickHouse\Tests;
 
 use Closure;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;

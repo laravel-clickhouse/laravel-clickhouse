@@ -1,12 +1,12 @@
 <?php
 
-namespace SwooleTW\ClickHouse\Laravel;
+namespace ClickHouse\Laravel;
 
+use ClickHouse\Laravel\Eloquent\Model;
+use ClickHouse\Laravel\Query\Builder as QueryBuilder;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
-use SwooleTW\ClickHouse\Laravel\Eloquent\Model;
-use SwooleTW\ClickHouse\Laravel\Query\Builder as QueryBuilder;
 
 class Parallel
 {
