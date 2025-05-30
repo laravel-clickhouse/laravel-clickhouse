@@ -5,12 +5,15 @@ namespace ClickHouse\Laravel;
 use ClickHouse\Client\Client;
 use ClickHouse\Client\Statement;
 use ClickHouse\Exceptions\ParallelQueryException;
-use ClickHouse\Laravel\Query\Builder;
-use ClickHouse\Laravel\Query\Grammar;
+use ClickHouse\Laravel\Query\Builder as QueryBuilder;
+use ClickHouse\Laravel\Query\Grammar as QueryGrammar;
+use ClickHouse\Laravel\Schema\Grammar as SchemaGrammar;
 use ClickHouse\Support\Escaper;
-use Exception;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
+use Illuminate\Database\Schema\Builder as SchemaBuilder;
+use RuntimeException;
 
 class Connection extends BaseConnection
 {
@@ -50,7 +53,7 @@ class Connection extends BaseConnection
     /** {@inheritDoc} */
     public function query()
     {
-        return new Builder($this, $this->getQueryGrammar(), $this->getPostProcessor());
+        return new QueryBuilder($this, $this->getQueryGrammar(), $this->getPostProcessor());
     }
 
     /**
@@ -175,8 +178,20 @@ class Connection extends BaseConnection
     /** {@inheritDoc} */
     public function getSchemaBuilder()
     {
-        // TODO: implement schema builder
-        throw new Exception('Not supported yet');
+        // @phpstan-ignore-next-line
+        if (is_null($this->schemaGrammar)) {
+            $this->useDefaultSchemaGrammar();
+        }
+
+        return new SchemaBuilder($this);
+    }
+
+    /**
+     * Get the schema state for the connection.
+     */
+    public function getSchemaState(?Filesystem $files = null, ?callable $processFactory = null): never
+    {
+        throw new RuntimeException('Schema dumping is not supported when using ClickHouse.');
     }
 
     /**
@@ -190,14 +205,15 @@ class Connection extends BaseConnection
     /** {@inheritDoc} */
     protected function getDefaultQueryGrammar()
     {
-        return (new Grammar)->setConnection($this);
+        return (new QueryGrammar)->setConnection($this);
     }
 
     /** {@inheritDoc} */
     protected function getDefaultSchemaGrammar()
     {
-        // TODO: implement schema builder
-        throw new Exception('Not supported yet');
+        ($grammar = new SchemaGrammar)->setConnection($this);
+
+        return $this->withTablePrefix($grammar);
     }
 
     /**

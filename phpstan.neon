@@ -1,4 +1,38 @@
 parameters:
-	level: 9
-	paths:
-		- src
+  level: 9
+  paths:
+    - src
+  reportUnmatchedIgnoredErrors: false
+  excludePaths:
+  ignoreErrors:
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$column\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$to\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$shouldBeSkipped\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$algorithm\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$index\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$columns\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$granularity\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$autoIncrement\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$first\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$after\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$virtualAsJson\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$virtualAs\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$storedAsJson\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$storedAs\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$invisible\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$default\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$comment\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$unsigned\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$nullable\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$places\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$total\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$allowed\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$precision\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$useCurrent\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$useCurrentOnUpdate\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$length\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$fixed\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$subtype\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$srid\.#'
+    - '#Call to an undefined method Illuminate\\Support\\Fluent<string, string>::default\(\)\.#'
+    - '#Access to an undefined property Illuminate\\Database\\Schema\\ColumnDefinition::\$name\.#'

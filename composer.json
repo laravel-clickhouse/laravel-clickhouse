@@ -45,7 +45,7 @@
     },
     "scripts": {
       "test": "phpunit --colors",
-      "phpstan": "phpstan analyse",
+      "phpstan": "phpstan analyse --memory-limit=-1",
       "cs": "pint src tests --test",
       "cs:fix": "pint src tests"
     }
