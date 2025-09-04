@@ -10,7 +10,7 @@ class Blueprint extends BaseBlueprint
     /**
      * Set the PARTITION BY clause for the table.
      *
-     * @return Fluent<string, mixed>
+     * @return Fluent<string, string>
      */
     public function partitionBy(string $expression): Fluent
     {
@@ -21,7 +21,7 @@ class Blueprint extends BaseBlueprint
      * Set the ORDER BY clause for the table.
      *
      * @param  array<string>|string  ...$columns
-     * @return Fluent<string, mixed>
+     * @return Fluent<string, string>
      */
     public function orderBy(array|string ...$columns): Fluent
     {
@@ -33,7 +33,7 @@ class Blueprint extends BaseBlueprint
     /**
      * Create a new LowCardinality column on the table.
      *
-     * @return Fluent<string, mixed>
+     * @return Fluent<string, string>
      */
     public function lowCardinality(string $column, string $type): Fluent
     {
@@ -43,10 +43,81 @@ class Blueprint extends BaseBlueprint
     /**
      * Create a new Array column on the table.
      *
-     * @return Fluent<string, mixed>
+     * @return Fluent<string, string>
      */
     public function array(string $column, string $type): Fluent
     {
         return $this->addColumn('array', $column, ['innerType' => $type]);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param  string|string[]  $columns
+     * @return IndexDefinition
+     */
+    public function primary($columns, $name = null, $algorithm = null)
+    {
+        // @phpstan-ignore-next-line
+        return parent::primary($columns, $name, $algorithm);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param  string|string[]  $columns
+     * @return IndexDefinition
+     */
+    public function unique($columns, $name = null, $algorithm = null)
+    {
+        // @phpstan-ignore-next-line
+        return parent::unique($columns, $name, $algorithm);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param  string|string[]  $columns
+     * @return IndexDefinition
+     */
+    public function index($columns, $name = null, $algorithm = null)
+    {
+        // @phpstan-ignore-next-line
+        return parent::index($columns, $name, $algorithm);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param  string|string[]  $columns
+     * @return IndexDefinition
+     */
+    public function fullText($columns, $name = null, $algorithm = null)
+    {
+        // @phpstan-ignore-next-line
+        return parent::fullText($columns, $name, $algorithm);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param  string|string[]  $columns
+     * @return IndexDefinition
+     */
+    public function spatialIndex($columns, $name = null)
+    {
+        // @phpstan-ignore-next-line
+        return parent::spatialIndex($columns, $name);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return IndexDefinition
+     */
+    public function rawIndex($expression, $name)
+    {
+        // @phpstan-ignore-next-line
+        return parent::rawIndex($expression, $name);
     }
 }
