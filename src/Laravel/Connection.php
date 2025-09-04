@@ -7,12 +7,12 @@ use ClickHouse\Client\Statement;
 use ClickHouse\Exceptions\ParallelQueryException;
 use ClickHouse\Laravel\Query\Builder as QueryBuilder;
 use ClickHouse\Laravel\Query\Grammar as QueryGrammar;
+use ClickHouse\Laravel\Schema\Builder as SchemaBuilder;
 use ClickHouse\Laravel\Schema\Grammar as SchemaGrammar;
 use ClickHouse\Support\Escaper;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
-use Illuminate\Database\Schema\Builder as SchemaBuilder;
 use RuntimeException;
 
 class Connection extends BaseConnection

@@ -5,10 +5,12 @@ namespace ClickHouse\Tests\Laravel;
 use ClickHouse\Laravel\Connection;
 use ClickHouse\Laravel\Eloquent\Model as BaseClickHouseModel;
 use ClickHouse\Laravel\Parallel;
+use ClickHouse\Laravel\Schema\Blueprint as ClickHouseBlueprint;
 use ClickHouse\Tests\TestCase;
 use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model as BaseSQLiteModel;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Collection;
 
 class IntegrationTest extends TestCase
@@ -157,12 +159,18 @@ class IntegrationTest extends TestCase
 
     private function createClickHouseTestTable()
     {
-        $this->clickhouseClient()->exec('CREATE TABLE IF NOT EXISTS `test` (`id` UInt32, `column` String) ENGINE = Memory');
+        $schema = $this->db->getConnection('clickhouse')->getSchemaBuilder();
+        $schema->create('test', function (ClickHouseBlueprint $table) {
+            $table->unsignedInteger('id');
+            $table->text('column');
+            $table->engine('Memory');
+        });
     }
 
     private function dropClickHouseTestTable()
     {
-        $this->clickhouseClient()->exec('DROP TABLE IF EXISTS `test`');
+        $schema = $this->db->getConnection('clickhouse')->getSchemaBuilder();
+        $schema->drop('test');
     }
 
     private function addSQLiteConnection()
@@ -175,17 +183,17 @@ class IntegrationTest extends TestCase
 
     private function createSQLiteTestTable()
     {
-        $this->db->getConnection('sqlite')->statement('CREATE TABLE IF NOT EXISTS test(id INTEGER, column TEXT)');
+        $schema = $this->db->getConnection('sqlite')->getSchemaBuilder();
+        $schema->create('test', function (Blueprint $table) {
+            $table->unsignedInteger('id');
+            $table->text('column');
+        });
     }
 
     private function dropSQLiteTestTable()
     {
-        $this->db->getConnection('sqlite')->statement('DROP TABLE IF EXISTS test');
-    }
-
-    private function clickhouseClient()
-    {
-        return $this->db->getConnection('clickhouse')->getClient();
+        $schema = $this->db->getConnection('sqlite')->getSchemaBuilder();
+        $schema->drop('test');
     }
 }
 
