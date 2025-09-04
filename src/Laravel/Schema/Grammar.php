@@ -270,15 +270,24 @@ class Grammar extends BaseGrammar
     {
         // @phpstan-ignore-next-line
         if (isset($blueprint->engine)) {
-            return "{$sql} ENGINE = {$blueprint->engine}";
+            $sql = "{$sql} ENGINE = {$blueprint->engine}";
+        } elseif (! is_null($engine = $connection->getConfig('engine'))) {
+            // @phpstan-ignore-next-line
+            $sql = "{$sql} ENGINE = {$engine}";
+        } else {
+            $sql = "{$sql} ENGINE = Memory";
         }
 
-        // @phpstan-ignore-next-line
-        if (! is_null($engine = $connection->getConfig('engine'))) {
-            return "{$sql} ENGINE = {$engine}";
+        if ($partitionBy = $this->getCommandByName($blueprint, 'partitionBy')) {
+            $sql .= " PARTITION BY {$partitionBy->expression}";
         }
 
-        return "{$sql} ENGINE = Memory";
+        if ($orderBy = $this->getCommandByName($blueprint, 'orderBy')) {
+            $columns = implode(', ', $orderBy->columns);
+            $sql .= " ORDER BY ({$columns})";
+        }
+
+        return $sql;
     }
 
     /**
@@ -877,6 +886,26 @@ class Grammar extends BaseGrammar
         return isset($column->dimensions) && $column->dimensions !== ''
             ? "vector({$column->dimensions})"
             : 'vector';
+    }
+
+    /**
+     * Create the column definition for a LowCardinality type.
+     *
+     * @param  Fluent<string, string>  $column
+     */
+    protected function typeLowCardinality(Fluent $column): string
+    {
+        return "LowCardinality({$column->innerType})";
+    }
+
+    /**
+     * Create the column definition for an Array type.
+     *
+     * @param  Fluent<string, string>  $column
+     */
+    protected function typeArray(Fluent $column): string
+    {
+        return "Array({$column->innerType})";
     }
 
     /**

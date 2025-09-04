@@ -3,10 +3,10 @@
 namespace ClickHouse\Tests\Laravel\Schema;
 
 use ClickHouse\Laravel\Connection;
+use ClickHouse\Laravel\Schema\Blueprint;
 use ClickHouse\Laravel\Schema\Grammar;
 use ClickHouse\Tests\TestCase;
 use Illuminate\Database\Query\Expression;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\ForeignIdColumnDefinition;
 use RuntimeException;
 
@@ -1385,6 +1385,86 @@ class GrammarTest extends TestCase
         $c = $this->getGrammar()::compileReplace();
 
         $this->assertTrue($c);
+    }
+
+    public function testEngineCreateTableWithParams()
+    {
+        $blueprint = new Blueprint('users');
+        $blueprint->create();
+        $blueprint->unsignedInteger('id');
+        $blueprint->engine("ReplicatedReplacingMergeTree('/clickhouse/tables/{shard}/{database}/{table}', '{replica}', updated_at)");
+
+        $conn = $this->getConnection();
+
+        $statements = $blueprint->toSql($conn, $this->getGrammar());
+
+        $this->assertCount(1, $statements);
+        $this->assertSame("CREATE TABLE users (id UInt32) ENGINE = ReplicatedReplacingMergeTree('/clickhouse/tables/{shard}/{database}/{table}', '{replica}', updated_at)", $statements[0]);
+    }
+
+    public function testPartitionByCreateTable()
+    {
+        $blueprint = new Blueprint('users');
+        $blueprint->create();
+        $blueprint->unsignedInteger('id');
+        $blueprint->engine('MergeTree');
+        $blueprint->partitionBy('toYYYYMM(created_at)');
+
+        $conn = $this->getConnection();
+
+        $statements = $blueprint->toSql($conn, $this->getGrammar());
+
+        $this->assertCount(1, $statements);
+        $this->assertSame('CREATE TABLE users (id UInt32) ENGINE = MergeTree PARTITION BY toYYYYMM(created_at)', $statements[0]);
+    }
+
+    public function testOrderByCreateTable()
+    {
+        $blueprint = new Blueprint('users');
+        $blueprint->create();
+        $blueprint->unsignedInteger('id');
+        $blueprint->engine('MergeTree');
+        $blueprint->orderBy(['id', 'email']);
+
+        $conn = $this->getConnection();
+
+        $statements = $blueprint->toSql($conn, $this->getGrammar());
+
+        $this->assertCount(1, $statements);
+        $this->assertSame('CREATE TABLE users (id UInt32) ENGINE = MergeTree ORDER BY (id, email)', $statements[0]);
+
+        $blueprint = new Blueprint('users');
+        $blueprint->create();
+        $blueprint->unsignedInteger('id');
+        $blueprint->engine('MergeTree');
+        $blueprint->orderBy('id', 'email');
+
+        $conn = $this->getConnection();
+
+        $statements = $blueprint->toSql($conn, $this->getGrammar());
+
+        $this->assertCount(1, $statements);
+        $this->assertSame('CREATE TABLE users (id UInt32) ENGINE = MergeTree ORDER BY (id, email)', $statements[0]);
+    }
+
+    public function testAddingLowCardinality()
+    {
+        $blueprint = new Blueprint('users');
+        $blueprint->lowCardinality('foo', 'String');
+        $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar());
+
+        $this->assertCount(1, $statements);
+        $this->assertSame('ALTER TABLE users ADD COLUMN foo LowCardinality(String)', $statements[0]);
+    }
+
+    public function testAddingArray()
+    {
+        $blueprint = new Blueprint('users');
+        $blueprint->array('foo', 'UInt32');
+        $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar());
+
+        $this->assertCount(1, $statements);
+        $this->assertSame('ALTER TABLE users ADD COLUMN foo Array(UInt32)', $statements[0]);
     }
 
     private function getConnection()
