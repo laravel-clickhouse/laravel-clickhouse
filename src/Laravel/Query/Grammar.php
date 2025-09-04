@@ -51,7 +51,6 @@ class Grammar extends BaseGrammar
         // If a "group limit" is in place, we will need to compile the SQL to use a
         // different syntax. This primarily supports limits on eager loads using
         // Eloquent. We'll also set the columns if they have not been defined.
-        // @phpstan-ignore-next-line
         if (isset($query->groupLimit)) {
             if (is_null($query->columns)) {
                 $query->columns = ['*'];
@@ -63,7 +62,6 @@ class Grammar extends BaseGrammar
         // If the query does not have any columns set, we'll set the columns to the
         // * character to just get all of the columns from the database. Then we
         // can build the query and concatenate all the pieces together as one.
-        // @phpstan-ignore-next-line
         $original = $query->columns;
 
         if (is_null($query->columns)) {
@@ -105,7 +103,6 @@ class Grammar extends BaseGrammar
         $where = $this->compileWheres($query);
 
         return trim(
-            // @phpstan-ignore-next-line
             isset($query->joins)
                 ? $this->compileDeleteWithJoins($query, $table, $where, $lightweight, $partition)
                 : $this->compileDeleteWithoutJoins($query, $table, $where, $lightweight, $partition)

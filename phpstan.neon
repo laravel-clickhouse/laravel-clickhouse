@@ -2,7 +2,7 @@ parameters:
   level: 9
   paths:
     - src
-  reportUnmatchedIgnoredErrors: false
+  reportUnmatchedIgnoredErrors: true
   excludePaths:
   ignoreErrors:
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$column\.#'
