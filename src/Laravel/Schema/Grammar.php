@@ -35,6 +35,22 @@ class Grammar extends BaseGrammar
     }
 
     /**
+     * Compile the query to determine the tables.
+     */
+    public function compileTables(): string
+    {
+        return "SELECT name AS name, total_bytes AS size, comment AS comment, engine AS engine, '' AS collation FROM system.tables WHERE database = currentDatabase() AND engine NOT LIKE '%View'";
+    }
+
+    /**
+     * Compile the query to determine the views.
+     */
+    public function compileViews(): string
+    {
+        return "SELECT name AS name, total_bytes AS size, comment AS comment, engine AS engine, '' AS collation FROM system.tables WHERE database = currentDatabase() AND engine LIKE '%View'";
+    }
+
+    /**
      * Compile a create table command.
      *
      * @param  Fluent<string, string>  $command
