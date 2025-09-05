@@ -2,6 +2,7 @@
 
 namespace ClickHouse\Laravel\Schema;
 
+use BackedEnum;
 use ClickHouse\Laravel\Connection;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Database\Schema\Blueprint;
@@ -951,5 +952,27 @@ class Grammar extends BaseGrammar
         }
 
         return $type;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    protected function getDefaultValue($value)
+    {
+        if ($value instanceof Expression) {
+            // @phpstan-ignore-next-line
+            return $this->getValue($value);
+        }
+
+        if ($value instanceof BackedEnum) {
+            return "'{$value->value}'";
+        }
+
+        return match (true) {
+            is_bool($value) => $value ? '1' : '0',
+            is_int($value), is_float($value) => (string) $value,
+            // @phpstan-ignore-next-line
+            default => "'".(string) $value."'",
+        };
     }
 }

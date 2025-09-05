@@ -611,6 +611,13 @@ class GrammarTest extends TestCase
         $this->assertSame('ALTER TABLE users ADD COLUMN foo Int32', $statements[0]);
 
         $blueprint = new Blueprint('users');
+        $blueprint->integer('foo')->nullable()->default(0);
+        $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar());
+
+        $this->assertCount(1, $statements);
+        $this->assertSame('ALTER TABLE users ADD COLUMN foo Nullable(Int32) DEFAULT 0', $statements[0]);
+
+        $blueprint = new Blueprint('users');
         $blueprint->integer('foo', true);
 
         $this->expectException(RuntimeException::class);
