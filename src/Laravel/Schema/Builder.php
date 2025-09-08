@@ -6,8 +6,43 @@ use Closure;
 use Illuminate\Container\Container;
 use Illuminate\Database\Schema\Builder as BaseBuilder;
 
+/**
+ * @property Grammar $grammar
+ */
 class Builder extends BaseBuilder
 {
+    /**
+     * {@inheritDoc}
+     */
+    public function dropAllTables()
+    {
+        $tables = array_column($this->getTables(), 'name');
+
+        if (empty($tables)) {
+            return;
+        }
+
+        $this->connection->statement(
+            $this->grammar->compileDropAllTables($tables)
+        );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function dropAllViews()
+    {
+        $views = array_column($this->getViews(), 'name');
+
+        if (empty($views)) {
+            return;
+        }
+
+        $this->connection->statement(
+            $this->grammar->compileDropAllViews($views)
+        );
+    }
+
     /**
      * {@inheritDoc}
      */
