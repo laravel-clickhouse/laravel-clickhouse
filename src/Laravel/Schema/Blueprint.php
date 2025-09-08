@@ -41,6 +41,8 @@ use Illuminate\Support\Fluent;
  * @method IndexDefinition fullText(string|string[] $columns, string|null $name = null, string|null $algorithm = null)
  * @method IndexDefinition spatialIndex(string|string[] $columns, string|null $name = null)
  * @method IndexDefinition rawIndex(string $expression, string $name)
+ * @method CommandDefinition drop()
+ * @method CommandDefinition dropIfExists()
  */
 class Blueprint extends BaseBlueprint
 {

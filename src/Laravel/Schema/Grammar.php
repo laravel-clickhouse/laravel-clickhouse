@@ -144,7 +144,14 @@ class Grammar extends BaseGrammar
      */
     public function compileDrop(Blueprint $blueprint, Fluent $command): string
     {
-        return 'DROP TABLE '.$this->wrapTable($blueprint);
+        $sql = 'DROP TABLE '.$this->wrapTable($blueprint);
+
+        // @phpstan-ignore-next-line
+        if ($command->sync) {
+            $sql .= ' SYNC';
+        }
+
+        return $sql;
     }
 
     /**
@@ -154,7 +161,14 @@ class Grammar extends BaseGrammar
      */
     public function compileDropIfExists(Blueprint $blueprint, Fluent $command): string
     {
-        return 'DROP TABLE IF EXISTS '.$this->wrapTable($blueprint);
+        $sql = 'DROP TABLE IF EXISTS '.$this->wrapTable($blueprint);
+
+        // @phpstan-ignore-next-line
+        if ($command->sync) {
+            $sql .= ' SYNC';
+        }
+
+        return $sql;
     }
 
     /**

@@ -133,6 +133,13 @@ class GrammarTest extends TestCase
 
         $this->assertCount(1, $statements);
         $this->assertSame('DROP TABLE users', $statements[0]);
+
+        $blueprint = new Blueprint('users');
+        $blueprint->drop()->sync();
+        $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar());
+
+        $this->assertCount(1, $statements);
+        $this->assertSame('DROP TABLE users SYNC', $statements[0]);
     }
 
     public function testDropTableIfExists()
@@ -143,6 +150,13 @@ class GrammarTest extends TestCase
 
         $this->assertCount(1, $statements);
         $this->assertSame('DROP TABLE IF EXISTS users', $statements[0]);
+
+        $blueprint = new Blueprint('users');
+        $blueprint->dropIfExists()->sync();
+        $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar());
+
+        $this->assertCount(1, $statements);
+        $this->assertSame('DROP TABLE IF EXISTS users SYNC', $statements[0]);
     }
 
     public function testDropColumn()
