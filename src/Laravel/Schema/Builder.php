@@ -2,11 +2,13 @@
 
 namespace ClickHouse\Laravel\Schema;
 
+use ClickHouse\Laravel\Connection;
 use Closure;
 use Illuminate\Container\Container;
 use Illuminate\Database\Schema\Builder as BaseBuilder;
 
 /**
+ * @property Connection $connection
  * @property Grammar $grammar
  */
 class Builder extends BaseBuilder
@@ -22,9 +24,11 @@ class Builder extends BaseBuilder
             return;
         }
 
-        $this->connection->statement(
-            $this->grammar->compileDropAllTables($tables)
-        );
+        foreach ($tables as $table) {
+            $this->connection->statement(
+                'DROP TABLE IF EXISTS '.$this->grammar->wrapTable($table).' SYNC'
+            );
+        }
     }
 
     /**
@@ -38,9 +42,11 @@ class Builder extends BaseBuilder
             return;
         }
 
-        $this->connection->statement(
-            $this->grammar->compileDropAllViews($views)
-        );
+        foreach ($views as $view) {
+            $this->connection->statement(
+                'DROP VIEW IF EXISTS '.$this->grammar->wrapTable($view).' SYNC'
+            );
+        }
     }
 
     /**

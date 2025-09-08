@@ -53,7 +53,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a create table command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileCreate(Blueprint $blueprint, Fluent $command, Connection $connection): string
     {
@@ -67,7 +67,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile an add column command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileAdd(Blueprint $blueprint, Fluent $command): string
     {
@@ -80,7 +80,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a primary key command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compilePrimary(Blueprint $blueprint, Fluent $command): never
     {
@@ -90,7 +90,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a unique key command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileUnique(Blueprint $blueprint, Fluent $command): never
     {
@@ -100,7 +100,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a plain index key command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileIndex(Blueprint $blueprint, Fluent $command): string
     {
@@ -110,7 +110,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a unique key command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileFulltext(Blueprint $blueprint, Fluent $command): never
     {
@@ -120,7 +120,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a unique key command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileSpatialIndex(Blueprint $blueprint, Fluent $command): never
     {
@@ -130,7 +130,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a foreign key command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileForeign(Blueprint $blueprint, Fluent $command): never
     {
@@ -140,7 +140,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a drop table command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileDrop(Blueprint $blueprint, Fluent $command): string
     {
@@ -157,7 +157,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a drop table (if exists) command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileDropIfExists(Blueprint $blueprint, Fluent $command): string
     {
@@ -174,7 +174,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a drop column command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      * @return string[]
      */
     public function compileDropColumn(Blueprint $blueprint, Fluent $command): array
@@ -190,7 +190,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a drop primary key command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileDropPrimary(Blueprint $blueprint, Fluent $command): never
     {
@@ -200,7 +200,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a drop unique key command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileDropUnique(Blueprint $blueprint, Fluent $command): never
     {
@@ -210,7 +210,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a drop index command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileDropIndex(Blueprint $blueprint, Fluent $command): string
     {
@@ -223,7 +223,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a drop spatial index command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileDropSpatialIndex(Blueprint $blueprint, Fluent $command): never
     {
@@ -233,7 +233,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a drop foreign key command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileDropForeign(Blueprint $blueprint, Fluent $command): never
     {
@@ -243,7 +243,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a rename table command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileRename(Blueprint $blueprint, Fluent $command): string
     {
@@ -256,7 +256,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a rename index command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     public function compileRenameIndex(Blueprint $blueprint, Fluent $command): never
     {
@@ -266,7 +266,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the main create table clause.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     protected function compileCreateTable(Blueprint $blueprint, Fluent $command, Connection $connection): string
     {
@@ -324,7 +324,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile an index creation command.
      *
-     * @param  Fluent<string, string>  $command
+     * @param  Fluent<string, mixed>  $command
      */
     protected function compileKey(Blueprint $blueprint, Fluent $command, string $type): string
     {
@@ -367,29 +367,9 @@ class Grammar extends BaseGrammar
     }
 
     /**
-     * Compile the SQL needed to drop all tables.
-     *
-     * @param  string[]  $tables
-     */
-    public function compileDropAllTables(array $tables): string
-    {
-        return 'DROP TABLE '.implode(', ', $this->wrapArray($tables));
-    }
-
-    /**
-     * Compile the SQL needed to drop all views.
-     *
-     * @param  string[]  $views
-     */
-    public function compileDropAllViews(array $views): string
-    {
-        return 'DROP VIEW '.implode(', ', $this->wrapArray($views));
-    }
-
-    /**
      * Get the SQL for an auto-increment column modifier.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function modifyIncrement(Blueprint $blueprint, Fluent $column): void
     {
@@ -401,7 +381,7 @@ class Grammar extends BaseGrammar
     /**
      * Get the SQL for a "first" column modifier.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function modifyFirst(Blueprint $blueprint, Fluent $column): ?string
     {
@@ -415,7 +395,7 @@ class Grammar extends BaseGrammar
     /**
      * Get the SQL for an "after" column modifier.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function modifyAfter(Blueprint $blueprint, Fluent $column): ?string
     {
@@ -429,7 +409,7 @@ class Grammar extends BaseGrammar
     /**
      * Get the SQL for a generated virtual column modifier.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function modifyVirtualAs(Blueprint $blueprint, Fluent $column): ?string
     {
@@ -451,7 +431,7 @@ class Grammar extends BaseGrammar
     /**
      * Get the SQL for a generated stored column modifier.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function modifyStoredAs(Blueprint $blueprint, Fluent $column): ?string
     {
@@ -473,7 +453,7 @@ class Grammar extends BaseGrammar
     /**
      * Get the SQL for an invisible column modifier.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function modifyInvisible(Blueprint $blueprint, Fluent $column): void
     {
@@ -485,7 +465,7 @@ class Grammar extends BaseGrammar
     /**
      * Get the SQL for a default column modifier.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function modifyDefault(Blueprint $blueprint, Fluent $column): ?string
     {
@@ -499,7 +479,7 @@ class Grammar extends BaseGrammar
     /**
      * Get the SQL for a comment column modifier.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function modifyComment(Blueprint $blueprint, Fluent $column): void
     {
@@ -511,7 +491,7 @@ class Grammar extends BaseGrammar
     /**
      * Get the SQL for an unsigned column decorator.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function decorateUnsigned(Blueprint $blueprint, Fluent $column, string $type): string
     {
@@ -525,7 +505,7 @@ class Grammar extends BaseGrammar
     /**
      * Get the SQL for a nullable column decorator.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function decorateNullable(Blueprint $blueprint, Fluent $column, string $type): string
     {
@@ -539,7 +519,7 @@ class Grammar extends BaseGrammar
     /**
      * Get the SQL for a low cardinality column decorator.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function decorateLowCardinality(Blueprint $blueprint, Fluent $column, string $type): string
     {
@@ -553,7 +533,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a char type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeChar(Fluent $column): string
     {
@@ -563,7 +543,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a string type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeString(Fluent $column): string
     {
@@ -573,7 +553,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a tiny text type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeTinyText(Fluent $column): string
     {
@@ -583,7 +563,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a text type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeText(Fluent $column): string
     {
@@ -593,7 +573,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a medium text type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeMediumText(Fluent $column): string
     {
@@ -603,7 +583,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a long text type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeLongText(Fluent $column): string
     {
@@ -613,7 +593,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a big integer type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeBigInteger(Fluent $column): string
     {
@@ -623,7 +603,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for an integer type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeInteger(Fluent $column): string
     {
@@ -633,7 +613,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a medium integer type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeMediumInteger(Fluent $column): string
     {
@@ -643,7 +623,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a small integer type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeSmallInteger(Fluent $column): string
     {
@@ -653,7 +633,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a tiny integer type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeTinyInteger(Fluent $column): string
     {
@@ -663,7 +643,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a float type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeFloat(Fluent $column): string
     {
@@ -673,7 +653,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a double type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeDouble(Fluent $column): string
     {
@@ -683,7 +663,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a decimal type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeDecimal(Fluent $column): string
     {
@@ -693,7 +673,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a boolean type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeBoolean(Fluent $column): string
     {
@@ -703,7 +683,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for an enumeration type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeEnum(Fluent $column): string
     {
@@ -713,7 +693,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a set enumeration type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeSet(Fluent $column): void
     {
@@ -723,7 +703,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a json type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeJson(Fluent $column): void
     {
@@ -733,7 +713,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a jsonb type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeJsonb(Fluent $column): void
     {
@@ -743,7 +723,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a date type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeDate(Fluent $column): string
     {
@@ -753,7 +733,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a date-time type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeDateTime(Fluent $column): string
     {
@@ -773,7 +753,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a date-time (with time zone) type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeDateTimeTz(Fluent $column): string
     {
@@ -783,7 +763,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a time type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeTime(Fluent $column): void
     {
@@ -793,7 +773,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a time (with time zone) type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeTimeTz(Fluent $column): void
     {
@@ -803,7 +783,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a timestamp type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeTimestamp(Fluent $column): string
     {
@@ -813,7 +793,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a timestamp (with time zone) type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeTimestampTz(Fluent $column): string
     {
@@ -823,7 +803,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a year type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeYear(Fluent $column): void
     {
@@ -833,7 +813,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a binary type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeBinary(Fluent $column): string
     {
@@ -847,7 +827,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a uuid type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeUuid(Fluent $column): string
     {
@@ -857,7 +837,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for an IP address type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeIpAddress(Fluent $column): string
     {
@@ -867,7 +847,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a MAC address type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      * @return string
      */
     protected function typeMacAddress(Fluent $column)
@@ -878,7 +858,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a spatial Geometry type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      * @return string
      */
     protected function typeGeometry(Fluent $column)
@@ -901,7 +881,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a spatial Geography type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      * @return string
      */
     protected function typeGeography(Fluent $column)
@@ -912,7 +892,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a generated, computed column type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      * @return void
      */
     protected function typeComputed(Fluent $column)
@@ -923,7 +903,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for a vector type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      * @return string
      */
     protected function typeVector(Fluent $column)
@@ -936,7 +916,7 @@ class Grammar extends BaseGrammar
     /**
      * Create the column definition for an Array type.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function typeArray(Fluent $column): string
     {
@@ -975,7 +955,7 @@ class Grammar extends BaseGrammar
     /**
      * Add the column decorators to the definition.
      *
-     * @param  Fluent<string, string>  $column
+     * @param  Fluent<string, mixed>  $column
      */
     protected function addDecorators(Blueprint $blueprint, Fluent $column, string $type): string
     {

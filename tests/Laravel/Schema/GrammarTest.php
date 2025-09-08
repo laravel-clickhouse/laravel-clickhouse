@@ -1382,20 +1382,6 @@ class GrammarTest extends TestCase
         );
     }
 
-    public function testDropAllTables()
-    {
-        $statement = $this->getGrammar()->compileDropAllTables(['alpha', 'beta', 'gamma']);
-
-        $this->assertSame('DROP TABLE alpha, beta, gamma', $statement);
-    }
-
-    public function testDropAllViews()
-    {
-        $statement = $this->getGrammar()->compileDropAllViews(['alpha', 'beta', 'gamma']);
-
-        $this->assertSame('DROP VIEW alpha, beta, gamma', $statement);
-    }
-
     public function testGrammarsAreMacroable()
     {
         // compileReplace macro.

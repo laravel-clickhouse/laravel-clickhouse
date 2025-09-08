@@ -49,7 +49,7 @@ class Blueprint extends BaseBlueprint
     /**
      * Set the PARTITION BY clause for the table.
      *
-     * @return Fluent<string, string>
+     * @return Fluent<string, mixed>
      */
     public function partitionBy(string $expression): Fluent
     {
@@ -60,7 +60,7 @@ class Blueprint extends BaseBlueprint
      * Set the ORDER BY clause for the table.
      *
      * @param  array<string>|string  ...$columns
-     * @return Fluent<string, string>
+     * @return Fluent<string, mixed>
      */
     public function orderBy(array|string ...$columns): Fluent
     {
@@ -72,7 +72,7 @@ class Blueprint extends BaseBlueprint
     /**
      * Create a new Array column on the table.
      *
-     * @return Fluent<string, string>
+     * @return Fluent<string, mixed>
      */
     public function array(string $column, string $type): Fluent
     {
