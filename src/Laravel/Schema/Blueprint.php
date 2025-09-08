@@ -12,6 +12,12 @@ use Illuminate\Support\Fluent;
  * @method ColumnDefinition text(string $column)
  * @method ColumnDefinition mediumText(string $column)
  * @method ColumnDefinition longText(string $column)
+ * @method IndexDefinition primary(string|string[] $columns, string|null $name = null, string|null $algorithm = null)
+ * @method IndexDefinition unique(string|string[] $columns, string|null $name = null, string|null $algorithm = null)
+ * @method IndexDefinition index(string|string[] $columns, string|null $name = null, string|null $algorithm = null)
+ * @method IndexDefinition fullText(string|string[] $columns, string|null $name = null, string|null $algorithm = null)
+ * @method IndexDefinition spatialIndex(string|string[] $columns, string|null $name = null)
+ * @method IndexDefinition rawIndex(string $expression, string $name)
  */
 class Blueprint extends BaseBlueprint
 {
@@ -46,76 +52,5 @@ class Blueprint extends BaseBlueprint
     public function array(string $column, string $type): Fluent
     {
         return $this->addColumn('array', $column, ['innerType' => $type]);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param  string|string[]  $columns
-     * @return IndexDefinition
-     */
-    public function primary($columns, $name = null, $algorithm = null)
-    {
-        // @phpstan-ignore-next-line
-        return parent::primary($columns, $name, $algorithm);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param  string|string[]  $columns
-     * @return IndexDefinition
-     */
-    public function unique($columns, $name = null, $algorithm = null)
-    {
-        // @phpstan-ignore-next-line
-        return parent::unique($columns, $name, $algorithm);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param  string|string[]  $columns
-     * @return IndexDefinition
-     */
-    public function index($columns, $name = null, $algorithm = null)
-    {
-        // @phpstan-ignore-next-line
-        return parent::index($columns, $name, $algorithm);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param  string|string[]  $columns
-     * @return IndexDefinition
-     */
-    public function fullText($columns, $name = null, $algorithm = null)
-    {
-        // @phpstan-ignore-next-line
-        return parent::fullText($columns, $name, $algorithm);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param  string|string[]  $columns
-     * @return IndexDefinition
-     */
-    public function spatialIndex($columns, $name = null)
-    {
-        // @phpstan-ignore-next-line
-        return parent::spatialIndex($columns, $name);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @return IndexDefinition
-     */
-    public function rawIndex($expression, $name)
-    {
-        // @phpstan-ignore-next-line
-        return parent::rawIndex($expression, $name);
     }
 }
