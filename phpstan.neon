@@ -36,5 +36,6 @@ parameters:
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$srid\.#'
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$innerType\.#'
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$expression\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, string>)?::\$lowCardinality\.#'
     - '#Call to an undefined method Illuminate\\Support\\Fluent<string, string>::default\(\)\.#'
     - '#Access to an undefined property Illuminate\\Database\\Schema\\ColumnDefinition::\$name\.#'

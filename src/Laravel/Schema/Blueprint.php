@@ -5,6 +5,14 @@ namespace ClickHouse\Laravel\Schema;
 use Illuminate\Database\Schema\Blueprint as BaseBlueprint;
 use Illuminate\Support\Fluent;
 
+/**
+ * @method ColumnDefinition char(string $column, int|null $length = null)
+ * @method ColumnDefinition string(string $column, int|null $length = null)
+ * @method ColumnDefinition tinyText(string $column)
+ * @method ColumnDefinition text(string $column)
+ * @method ColumnDefinition mediumText(string $column)
+ * @method ColumnDefinition longText(string $column)
+ */
 class Blueprint extends BaseBlueprint
 {
     /**
@@ -28,16 +36,6 @@ class Blueprint extends BaseBlueprint
         $columns = is_array($columns[0]) ? $columns[0] : $columns;
 
         return $this->addCommand('orderBy', compact('columns'));
-    }
-
-    /**
-     * Create a new LowCardinality column on the table.
-     *
-     * @return Fluent<string, string>
-     */
-    public function lowCardinality(string $column, string $type): Fluent
-    {
-        return $this->addColumn('lowCardinality', $column, ['innerType' => $type]);
     }
 
     /**

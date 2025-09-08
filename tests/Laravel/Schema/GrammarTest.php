@@ -1457,7 +1457,7 @@ class GrammarTest extends TestCase
     public function testAddingLowCardinality()
     {
         $blueprint = new Blueprint('users');
-        $blueprint->lowCardinality('foo', 'String');
+        $blueprint->text('foo')->lowCardinality();
         $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar());
 
         $this->assertCount(1, $statements);

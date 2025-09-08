@@ -24,7 +24,7 @@ class Grammar extends BaseGrammar
      *
      * @var string[]
      */
-    protected $decorators = ['Unsigned', 'Nullable'];
+    protected $decorators = ['Unsigned', 'Nullable', 'LowCardinality'];
 
     /**
      * {@inheritDoc}
@@ -523,6 +523,20 @@ class Grammar extends BaseGrammar
     }
 
     /**
+     * Get the SQL for a low cardinality column decorator.
+     *
+     * @param  Fluent<string, string>  $column
+     */
+    protected function decorateLowCardinality(Blueprint $blueprint, Fluent $column, string $type): string
+    {
+        if ($column->lowCardinality) {
+            return "LowCardinality($type)";
+        }
+
+        return $type;
+    }
+
+    /**
      * Create the column definition for a char type.
      *
      * @param  Fluent<string, string>  $column
@@ -903,16 +917,6 @@ class Grammar extends BaseGrammar
         return isset($column->dimensions) && $column->dimensions !== ''
             ? "vector({$column->dimensions})"
             : 'vector';
-    }
-
-    /**
-     * Create the column definition for a LowCardinality type.
-     *
-     * @param  Fluent<string, string>  $column
-     */
-    protected function typeLowCardinality(Fluent $column): string
-    {
-        return "LowCardinality({$column->innerType})";
     }
 
     /**
