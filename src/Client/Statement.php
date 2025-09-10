@@ -58,8 +58,7 @@ class Statement
 
         for ($i = 0; $i < strlen($this->query); $i++) {
             $char = $this->query[$i];
-            // @phpstan-ignore-next-line
-            $nextChar = $sql[$i + 1] ?? null;
+            $nextChar = $this->query[$i + 1] ?? null;
 
             // Single quotes can be escaped as '' according to the SQL standard while
             // MySQL uses \'. Postgres has operators like ?| that must get encoded
