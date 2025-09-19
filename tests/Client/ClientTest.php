@@ -70,7 +70,10 @@ class ClientTest extends TestCase
             ->shouldReceive('executeParallelly')
             ->with([$sql1, $sql2])
             ->once()
-            ->andReturn([$result1, $result2]);
+            ->andReturn([
+                new Response($sql1, true, null, $result1),
+                new Response($sql2, true, null, $result2),
+            ]);
 
         $client = $this->getClient($transport);
         $client->parallel([$statement1, $statement2]);
@@ -102,7 +105,7 @@ class ClientTest extends TestCase
             ->with([$sql1, $sql2])
             ->once()
             ->andThrow(new ParallelQueryException(
-                [0 => $result1],
+                [0 => new Response($sql1, true, null, $result1)],
                 [1 => $exception2 = new Exception('error')]
             ));
 
@@ -111,7 +114,7 @@ class ClientTest extends TestCase
         try {
             $client->parallel([$statement1, $statement2]);
         } catch (ParallelQueryException $e) {
-            $this->assertEquals($statement1, $e->getResults()[0]);
+            $this->assertEquals($result1, $e->getResponses()[0]->getRecords());
             $this->assertEquals($exception2, $e->getErrors()[1]);
         }
     }

@@ -115,7 +115,7 @@ class Connection extends BaseConnection
                 );
             })->all();
 
-            throw new ParallelQueryException($e->getResults(), $errors);
+            throw new ParallelQueryException($e->getResponses(), $errors);
         }
 
         return collect($statements)->map(function ($statement, $key) use ($queries) {
@@ -235,7 +235,7 @@ class Connection extends BaseConnection
             database: $database,
             username: $config['username'] ?? 'default',
             password: $config['password'] ?? 'default',
-            transport: $config['transport'] ?? 'curl',
+            transport: $config['transport'] ?? 'guzzle',
         );
     }
 }

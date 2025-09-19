@@ -11,9 +11,9 @@ interface Transport
 
     /**
      * @param  array<int|string, string>  $sql
-     * @return array<int|string, array<string, mixed>[]>
+     * @return array<int|string, Response>
      *
-     * @throws ParallelQueryException<array<string, mixed>[]>
+     * @throws ParallelQueryException
      */
     public function executeParallelly(array $sql): array;
 }

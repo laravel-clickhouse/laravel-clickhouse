@@ -142,7 +142,7 @@ class ConnectionTest extends TestCase
                 'b' => ['sql' => $sqlB, 'bindings' => [$bindingB]],
             ]);
         } catch (ParallelQueryException $e) {
-            $this->assertEquals(['a' => $expectedA], $e->getResults());
+            $this->assertEquals(['a' => $expectedA], $e->getResponses());
             $this->assertInstanceOf(QueryException::class, $e->getErrors()['b']);
         }
     }

@@ -19,6 +19,7 @@ class Curl implements Transport
         protected string $database,
         protected string $username,
         protected string $password,
+        protected bool $https = false,
         ?Client $client = null,
     ) {
         $this->client = $client ?? $this->getDefaultClient();
@@ -50,21 +51,26 @@ class Curl implements Transport
 
         $this->client->executeAsync();
 
-        $results = collect($statements)->reduce(function ($results, $statement, $key) {
+        $results = collect($statements)->reduce(function ($results, $statement, $key) use ($sqls) {
             try {
-                $results['results'][$key] = $statement->rows();
+                $results['responses'][$key] = new Response(
+                    $sqls[$key],
+                    true,
+                    null,
+                    $statement->rows()
+                );
             } catch (Exception $e) {
                 $results['errors'][$key] = $e;
             }
 
             return $results;
-        }, ['results' => [], 'errors' => []]);
+        }, ['responses' => [], 'errors' => []]);
 
         if (count($results['errors'])) {
-            throw new ParallelQueryException($results['results'], $results['errors']);
+            throw new ParallelQueryException($results['responses'], $results['errors']);
         }
 
-        return $results['results'];
+        return $results['responses'];
     }
 
     protected function getDefaultClient(): Client

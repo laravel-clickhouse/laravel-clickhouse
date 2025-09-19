@@ -50,21 +50,18 @@ class Client
         }, $statements);
 
         try {
-            $results = $this->getTransport()->executeParallelly($sqls);
+            $responses = $this->getTransport()->executeParallelly($sqls);
         } catch (ParallelQueryException $e) {
-            /** @var ParallelQueryException<array<string, mixed>[]> $e */
-            $results = $e->getResults();
+            $responses = $e->getResponses();
             $errors = $e->getErrors();
         }
 
-        foreach ($results as $key => $result) {
-            $statements[$key]->setResponse(
-                new Response($sqls[$key], true, null, $result)
-            );
+        foreach ($responses as $key => $response) {
+            $statements[$key]->setResponse($response);
         }
 
         if (isset($errors)) {
-            throw new ParallelQueryException($statements, $errors);
+            throw new ParallelQueryException($responses, $errors);
         }
     }
 
