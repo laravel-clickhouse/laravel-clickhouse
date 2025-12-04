@@ -2,6 +2,7 @@
 
 namespace ClickHouse\Tests;
 
+use Carbon\Carbon;
 use Closure;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Mockery as m;
@@ -12,6 +13,15 @@ use PHPUnit\Framework\TestCase as BaseTestCase;
 abstract class TestCase extends BaseTestCase
 {
     use MockeryPHPUnitIntegration;
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+
+        Carbon::setTestNow(null);
+
+        m::close();
+    }
 
     /**
      * @template TMock of object
