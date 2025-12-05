@@ -831,7 +831,7 @@ class Grammar extends BaseGrammar
      */
     protected function typeUuid(Fluent $column): string
     {
-        return 'FixedString(36)';
+        return 'UUID';
     }
 
     /**

@@ -37,7 +37,7 @@ class GrammarTest extends TestCase
         $statements = $blueprint->toSql($conn, $this->getGrammar());
 
         $this->assertCount(1, $statements);
-        $this->assertSame('CREATE TABLE users (id FixedString(36), PRIMARY KEY (id)) ENGINE = Memory', $statements[0]);
+        $this->assertSame('CREATE TABLE users (id UUID, PRIMARY KEY (id)) ENGINE = Memory', $statements[0]);
     }
 
     public function testAutoIncrement()
@@ -1042,7 +1042,7 @@ class GrammarTest extends TestCase
         $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar());
 
         $this->assertCount(1, $statements);
-        $this->assertSame('ALTER TABLE users ADD COLUMN foo FixedString(36)', $statements[0]);
+        $this->assertSame('ALTER TABLE users ADD COLUMN foo UUID', $statements[0]);
     }
 
     public function testAddingUuidDefaultsColumnName()
@@ -1052,7 +1052,7 @@ class GrammarTest extends TestCase
         $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar());
 
         $this->assertCount(1, $statements);
-        $this->assertSame('ALTER TABLE users ADD COLUMN uuid FixedString(36)', $statements[0]);
+        $this->assertSame('ALTER TABLE users ADD COLUMN uuid UUID', $statements[0]);
     }
 
     public function testAddingForeignUuid()
@@ -1064,7 +1064,7 @@ class GrammarTest extends TestCase
 
         $this->assertInstanceOf(ForeignIdColumnDefinition::class, $foreignUuid);
         $this->assertCount(1, $statements);
-        $this->assertSame('ALTER TABLE users ADD COLUMN foo FixedString(36)', $statements[0]);
+        $this->assertSame('ALTER TABLE users ADD COLUMN foo UUID', $statements[0]);
     }
 
     public function testAddingForeignUuidWithConstraint()
