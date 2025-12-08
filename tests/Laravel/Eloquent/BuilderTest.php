@@ -60,6 +60,52 @@ class BuilderTest extends TestCase
         $this->assertEquals(1, $result);
     }
 
+    public function testForceDelete()
+    {
+        $query = new BaseBuilder(m::mock(ConnectionInterface::class), new Grammar, m::mock(Processor::class));
+        $builder = new Builder($query);
+        $model = new EloquentBuilderTestStub;
+        $this->mockConnectionForModel($model, '');
+        $builder->setModel($model);
+        $builder->getConnection()->shouldReceive('getConfig')->once()
+            ->with('use_lightweight_delete')->andReturn(false);
+        $builder->getConnection()->shouldReceive('delete')->once()
+            ->with('alter table `table` delete', [])->andReturn(1);
+
+        $result = $builder->forceDelete();
+        $this->assertEquals(1, $result);
+    }
+
+    public function testForceDeleteWithLightweight()
+    {
+        $query = new BaseBuilder(m::mock(ConnectionInterface::class), new Grammar, m::mock(Processor::class));
+        $builder = new Builder($query);
+        $model = new EloquentBuilderTestStub;
+        $this->mockConnectionForModel($model, '');
+        $builder->setModel($model);
+        $builder->getConnection()->shouldReceive('delete')->once()
+            ->with('delete from `table`', [])->andReturn(1);
+
+        $result = $builder->forceDelete(lightweight: true);
+        $this->assertEquals(1, $result);
+    }
+
+    public function testForceDeleteWithPartition()
+    {
+        $query = new BaseBuilder(m::mock(ConnectionInterface::class), new Grammar, m::mock(Processor::class));
+        $builder = new Builder($query);
+        $model = new EloquentBuilderTestStub;
+        $this->mockConnectionForModel($model, '');
+        $builder->setModel($model);
+        $builder->getConnection()->shouldReceive('getConfig')->once()
+            ->with('use_lightweight_delete')->andReturn(false);
+        $builder->getConnection()->shouldReceive('delete')->once()
+            ->with('alter table `table` delete in partition ?', ['partition'])->andReturn(1);
+
+        $result = $builder->forceDelete(partition: 'partition');
+        $this->assertEquals(1, $result);
+    }
+
     private function mockConnectionForModel($model)
     {
         $grammarClass = 'Illuminate\Database\Query\Grammars\Grammar';
