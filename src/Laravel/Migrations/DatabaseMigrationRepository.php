@@ -23,6 +23,7 @@ class DatabaseMigrationRepository extends BaseDatabaseMigrationRepository
         $schema->create($this->table, function ($table) {
             $table->text('migration');
             $table->integer('batch');
+            $table->orderBy('batch');
         });
     }
 }
