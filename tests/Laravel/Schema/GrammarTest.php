@@ -67,14 +67,14 @@ class GrammarTest extends TestCase
         $blueprint->create();
         $blueprint->unsignedInteger('id');
         $blueprint->string('email');
-        $blueprint->engine('MergeTree');
+        $blueprint->engine('MergeTree()');
 
         $conn = $this->getConnection();
 
         $statements = $blueprint->toSql($conn, $this->getGrammar());
 
         $this->assertCount(1, $statements);
-        $this->assertSame('CREATE TABLE users (id UInt32, email FixedString(255)) ENGINE = MergeTree', $statements[0]);
+        $this->assertSame('CREATE TABLE users (id UInt32, email FixedString(255)) ENGINE = MergeTree()', $statements[0]);
 
         $blueprint = new Blueprint('users');
         $blueprint->create();
@@ -82,12 +82,12 @@ class GrammarTest extends TestCase
         $blueprint->string('email');
 
         $conn = $this->getConnection();
-        $conn->shouldReceive('getConfig')->once()->with('engine')->andReturn('MergeTree');
+        $conn->shouldReceive('getConfig')->once()->with('engine')->andReturn('MergeTree()');
 
         $statements = $blueprint->toSql($conn, $this->getGrammar());
 
         $this->assertCount(1, $statements);
-        $this->assertSame('CREATE TABLE users (id UInt32, email FixedString(255)) ENGINE = MergeTree', $statements[0]);
+        $this->assertSame('CREATE TABLE users (id UInt32, email FixedString(255)) ENGINE = MergeTree()', $statements[0]);
     }
 
     public function testBasicCreateTableWithPrefix()
@@ -1414,7 +1414,7 @@ class GrammarTest extends TestCase
         $blueprint = new Blueprint('users');
         $blueprint->create();
         $blueprint->unsignedInteger('id');
-        $blueprint->engine('MergeTree');
+        $blueprint->engine('MergeTree()');
         $blueprint->partitionBy('toYYYYMM(created_at)');
 
         $conn = $this->getConnection();
@@ -1422,7 +1422,7 @@ class GrammarTest extends TestCase
         $statements = $blueprint->toSql($conn, $this->getGrammar());
 
         $this->assertCount(1, $statements);
-        $this->assertSame('CREATE TABLE users (id UInt32) ENGINE = MergeTree PARTITION BY toYYYYMM(created_at)', $statements[0]);
+        $this->assertSame('CREATE TABLE users (id UInt32) ENGINE = MergeTree() PARTITION BY toYYYYMM(created_at)', $statements[0]);
     }
 
     public function testOrderByCreateTable()
@@ -1430,7 +1430,7 @@ class GrammarTest extends TestCase
         $blueprint = new Blueprint('users');
         $blueprint->create();
         $blueprint->unsignedInteger('id');
-        $blueprint->engine('MergeTree');
+        $blueprint->engine('MergeTree()');
         $blueprint->orderBy(['id', 'email']);
 
         $conn = $this->getConnection();
@@ -1438,12 +1438,12 @@ class GrammarTest extends TestCase
         $statements = $blueprint->toSql($conn, $this->getGrammar());
 
         $this->assertCount(1, $statements);
-        $this->assertSame('CREATE TABLE users (id UInt32) ENGINE = MergeTree ORDER BY (id, email)', $statements[0]);
+        $this->assertSame('CREATE TABLE users (id UInt32) ENGINE = MergeTree() ORDER BY (id, email)', $statements[0]);
 
         $blueprint = new Blueprint('users');
         $blueprint->create();
         $blueprint->unsignedInteger('id');
-        $blueprint->engine('MergeTree');
+        $blueprint->engine('MergeTree()');
         $blueprint->orderBy('id', 'email');
 
         $conn = $this->getConnection();
@@ -1451,7 +1451,7 @@ class GrammarTest extends TestCase
         $statements = $blueprint->toSql($conn, $this->getGrammar());
 
         $this->assertCount(1, $statements);
-        $this->assertSame('CREATE TABLE users (id UInt32) ENGINE = MergeTree ORDER BY (id, email)', $statements[0]);
+        $this->assertSame('CREATE TABLE users (id UInt32) ENGINE = MergeTree() ORDER BY (id, email)', $statements[0]);
     }
 
     public function testAddingLowCardinality()
