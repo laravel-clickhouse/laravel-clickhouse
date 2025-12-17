@@ -25,7 +25,7 @@ class GrammarTest extends TestCase
         $statements = $blueprint->toSql($conn, $this->getGrammar());
 
         $this->assertCount(1, $statements);
-        $this->assertSame('CREATE TABLE users (id UInt32, email FixedString(255), PRIMARY KEY (id)) ENGINE = Memory', $statements[0]);
+        $this->assertSame('CREATE TABLE users (id UInt32, email FixedString(255), PRIMARY KEY (id)) ENGINE = MergeTree()', $statements[0]);
 
         $blueprint = new Blueprint('users');
         $blueprint->create();
@@ -37,7 +37,7 @@ class GrammarTest extends TestCase
         $statements = $blueprint->toSql($conn, $this->getGrammar());
 
         $this->assertCount(1, $statements);
-        $this->assertSame('CREATE TABLE users (id UUID, PRIMARY KEY (id)) ENGINE = Memory', $statements[0]);
+        $this->assertSame('CREATE TABLE users (id UUID, PRIMARY KEY (id)) ENGINE = MergeTree()', $statements[0]);
     }
 
     public function testAutoIncrement()
@@ -105,7 +105,7 @@ class GrammarTest extends TestCase
         $statements = $blueprint->toSql($conn, $grammar);
 
         $this->assertCount(1, $statements);
-        $this->assertSame('CREATE TABLE prefix_users (id UInt32, email FixedString(255)) ENGINE = Memory', $statements[0]);
+        $this->assertSame('CREATE TABLE prefix_users (id UInt32, email FixedString(255)) ENGINE = MergeTree()', $statements[0]);
     }
 
     public function testCreateTemporaryTable()
@@ -122,7 +122,7 @@ class GrammarTest extends TestCase
         $statements = $blueprint->toSql($conn, $this->getGrammar());
 
         $this->assertCount(1, $statements);
-        $this->assertSame('CREATE TEMPORARY TABLE users (id UInt32, email FixedString(255)) ENGINE = Memory', $statements[0]);
+        $this->assertSame('CREATE TEMPORARY TABLE users (id UInt32, email FixedString(255)) ENGINE = MergeTree()', $statements[0]);
     }
 
     public function testDropTable()
@@ -1279,7 +1279,7 @@ class GrammarTest extends TestCase
         $statements = $blueprint->toSql($conn, $this->getGrammar());
 
         $this->assertCount(1, $statements);
-        $this->assertSame('CREATE TABLE users (my_column FixedString(255), my_other_column FixedString(255) ALIAS my_column) ENGINE = Memory', $statements[0]);
+        $this->assertSame('CREATE TABLE users (my_column FixedString(255), my_other_column FixedString(255) ALIAS my_column) ENGINE = MergeTree()', $statements[0]);
 
         // $blueprint = new Blueprint('users');
         // $blueprint->create();
@@ -1336,7 +1336,7 @@ class GrammarTest extends TestCase
         $statements = $blueprint->toSql($conn, $this->getGrammar());
 
         $this->assertCount(1, $statements);
-        $this->assertSame('CREATE TABLE users (my_column FixedString(255), my_other_column FixedString(255) MATERIALIZED my_column) ENGINE = Memory', $statements[0]);
+        $this->assertSame('CREATE TABLE users (my_column FixedString(255), my_other_column FixedString(255) MATERIALIZED my_column) ENGINE = MergeTree()', $statements[0]);
 
         // $blueprint = new Blueprint('users');
         // $blueprint->create();

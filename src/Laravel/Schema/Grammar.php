@@ -306,7 +306,7 @@ class Grammar extends BaseGrammar
             // @phpstan-ignore-next-line
             $sql = "{$sql} ENGINE = {$engine}";
         } else {
-            $sql = "{$sql} ENGINE = Memory";
+            $sql = "{$sql} ENGINE = MergeTree()";
         }
 
         if ($partitionBy = $this->getCommandByName($blueprint, 'partitionBy')) {
