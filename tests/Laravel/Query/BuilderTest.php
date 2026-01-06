@@ -1152,6 +1152,22 @@ class BuilderTest extends TestCase
         $builder->from('table')->where('column', 'value')->delete(partition: 'partition');
     }
 
+    public function testDeleteWithPartitionMultipleTimes()
+    {
+        $builder = $this->getBuilder();
+        $builder->getConnection()->shouldReceive('getConfig')->with('use_lightweight_delete')->twice()->andReturn(null);
+        $builder->getConnection()->shouldReceive('delete')->with(
+            'alter table `table` delete in partition ? where `column_a` = ?',
+            ['partition_a', 'value_a']
+        )->once()->andReturn(1);
+        $builder->getConnection()->shouldReceive('delete')->with(
+            'alter table `table` delete in partition ? where `column_a` = ? and `column_b` = ?',
+            ['partition_b', 'value_a', 'value_b']
+        )->once()->andReturn(1);
+        $builder->from('table')->where('column_a', 'value_a')->delete(partition: 'partition_a');
+        $builder->from('table')->where('column_b', 'value_b')->delete(partition: 'partition_b');
+    }
+
     public function testLightweightDeleteWithPartition()
     {
         $expectedSql = 'delete from `table` in partition ? where `column` = ?';

@@ -333,11 +333,15 @@ class Builder extends BaseBuilder
 
         $this->applyBeforeQueryCallbacks();
 
-        return $this->connection->delete(
+        $result = $this->connection->delete(
             $this->grammar->compileDelete($this, $lightweight, $partition), $this->cleanBindings(
                 $this->grammar->prepareBindingsForDelete($this->bindings)
             )
         );
+
+        $this->setBindings([], 'partition');
+
+        return $result;
     }
 
     /**
