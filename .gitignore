@@ -7,3 +7,6 @@
 composer.lock
 .DS_Store
 phpunit.xml
+/docs/node_modules
+/docs/.vitepress/dist
+/docs/.vitepress/cache
