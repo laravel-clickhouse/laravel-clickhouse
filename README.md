@@ -136,7 +136,7 @@ $results = Parallel::get([
 composer test
 ```
 
-Tests require a ClickHouse server running on `127.0.0.1:18123`. See [phpunit.xml](phpunit.xml) for configuration.
+Tests require a ClickHouse server running on `127.0.0.1:8123`. See [phpunit.xml.dist](phpunit.xml.dist) for configuration.
 
 ```bash
 composer phpstan   # Static analysis
