@@ -42,7 +42,7 @@ Add a ClickHouse connection to your `config/database.php`:
 ],
 ```
 
-For full configuration options, see [Installation & Configuration](docs/installation.md).
+For full configuration options, see [Installation & Configuration](docs/docs/installation.md).
 
 ## Quick Start
 
@@ -123,12 +123,12 @@ $results = Parallel::get([
 
 | Topic | Description |
 |-------|-------------|
-| [Installation & Configuration](docs/guide/installation.md) | Requirements, setup, configuration options |
-| [Query Builder](docs/guide/query-builder.md) | ClickHouse-specific query features |
-| [Eloquent Model](docs/guide/eloquent.md) | Model definition, CRUD operations |
-| [Schema Builder & Migrations](docs/guide/schema.md) | Table creation, column types, indexes |
-| [Parallel Queries](docs/guide/parallel-queries.md) | Concurrent query execution |
-| [Advanced Topics](docs/guide/advanced.md) | Transports, raw queries, limitations |
+| [Installation & Configuration](docs/docs/installation.md) | Requirements, setup, configuration options |
+| [Query Builder](docs/docs/query-builder.md) | ClickHouse-specific query features |
+| [Eloquent Model](docs/docs/eloquent.md) | Model definition, CRUD operations |
+| [Schema Builder & Migrations](docs/docs/schema.md) | Table creation, column types, indexes |
+| [Parallel Queries](docs/docs/parallel-queries.md) | Concurrent query execution |
+| [Advanced Topics](docs/docs/advanced.md) | Transports, raw queries, limitations |
 
 ## Testing
 

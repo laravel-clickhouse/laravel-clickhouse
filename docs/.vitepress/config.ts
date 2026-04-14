@@ -11,7 +11,7 @@ export default defineConfig({
 
   themeConfig: {
     nav: [
-      { text: 'Guide', link: '/guide/installation' },
+      { text: 'Docs', link: '/docs/installation' },
       {
         text: 'Resources',
         items: [
@@ -25,22 +25,22 @@ export default defineConfig({
       {
         text: 'Getting Started',
         items: [
-          { text: 'Installation', link: '/guide/installation' },
+          { text: 'Installation', link: '/docs/installation' },
         ],
       },
       {
         text: 'Usage',
         items: [
-          { text: 'Query Builder', link: '/guide/query-builder' },
-          { text: 'Eloquent', link: '/guide/eloquent' },
-          { text: 'Schema', link: '/guide/schema' },
-          { text: 'Parallel Queries', link: '/guide/parallel-queries' },
+          { text: 'Query Builder', link: '/docs/query-builder' },
+          { text: 'Eloquent', link: '/docs/eloquent' },
+          { text: 'Schema', link: '/docs/schema' },
+          { text: 'Parallel Queries', link: '/docs/parallel-queries' },
         ],
       },
       {
         text: 'Reference',
         items: [
-          { text: 'Advanced', link: '/guide/advanced' },
+          { text: 'Advanced', link: '/docs/advanced' },
         ],
       },
     ],
