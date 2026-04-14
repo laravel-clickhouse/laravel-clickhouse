@@ -8,7 +8,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /guide/installation
+      link: /docs/installation
     - theme: alt
       text: View on GitHub
       link: https://github.com/laravel-clickhouse/laravel-clickhouse
