@@ -134,6 +134,137 @@ Event::where('user_id', 1)->forceDelete(lightweight: true, partition: '202301');
 
 **Standard delete** uses `ALTER TABLE ... DELETE`, which is a heavy mutation operation. **Lightweight delete** uses `DELETE FROM`, which marks rows as deleted without immediately removing them. Use lightweight deletes for better performance in most cases.
 
+## Relations
+
+Standard Eloquent relations work with ClickHouse models. Because ClickHouse does not support foreign key constraints or `UPDATE`/`DELETE` with joins, all relations are resolved through separate queries — which is exactly how Eloquent loads them by default.
+
+### Cross-Connection Relations
+
+The most common pattern is pairing a ClickHouse analytics model with a standard relational model (MySQL, PostgreSQL, etc.). Laravel's Eloquent handles cross-connection relations transparently.
+
+**User model (MySQL) with a `hasMany` to ClickHouse events:**
+
+```php
+use App\Models\Event;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+// app/Models/User.php  (MySQL connection)
+class User extends Model
+{
+    public function events(): HasMany
+    {
+        return $this->hasMany(Event::class, 'user_id');
+    }
+}
+```
+
+```php
+use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+// app/Models/Event.php  (ClickHouse connection)
+class Event extends Model
+{
+    protected $connection = 'clickhouse';
+    protected $table = 'events';
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+}
+```
+
+```php
+// Retrieve all events for a user
+$events = User::find(42)->events;
+
+// Retrieve the user who triggered an event
+$user = Event::find('evt_001')->user;
+```
+
+### Same-Connection Relations
+
+Relations between two ClickHouse models work the same way:
+
+```php
+use App\Models\PageView;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+// app/Models/Page.php
+class Page extends Model
+{
+    protected $connection = 'clickhouse';
+    protected $table = 'pages';
+
+    public function views(): HasMany
+    {
+        return $this->hasMany(PageView::class, 'page_id');
+    }
+}
+```
+
+```php
+use App\Models\Page;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+// app/Models/PageView.php
+class PageView extends Model
+{
+    protected $connection = 'clickhouse';
+    protected $table = 'page_views';
+
+    public function page(): BelongsTo
+    {
+        return $this->belongsTo(Page::class, 'page_id');
+    }
+}
+```
+
+```php
+$totalViews = Page::find('home')->views()->count();
+```
+
+### Eager Loading
+
+Eager loading with `with()` works as expected and avoids N+1 queries. Each relation is resolved with a separate query:
+
+```php
+// Load users with their ClickHouse events
+$users = User::with('events')->get();
+
+foreach ($users as $user) {
+    echo $user->events->count();
+}
+
+// Nested eager loading
+$users = User::with('events.page')->get();
+```
+
+### Relation Constraints
+
+You can apply query constraints on any relation the same way you would with standard Eloquent:
+
+```php
+$clickEvents = User::find(42)
+    ->events()
+    ->where('type', 'click')
+    ->where('created_at', '>=', now()->subDays(7))
+    ->orderBy('created_at', 'desc')
+    ->get();
+```
+
+### Limitations
+
+The following relation types are not supported due to ClickHouse's architecture:
+
+- **`belongsToMany`** — requires a pivot table with joins, which ClickHouse does not support.
+- **`hasManyThrough` / `hasOneThrough`** — these compile to a join query that ClickHouse cannot execute.
+- **Attaching / detaching pivot records** — `attach()`, `detach()`, and `sync()` are unavailable.
+
 ## Limitations
 
 The following Eloquent features are not supported due to ClickHouse's architecture:
