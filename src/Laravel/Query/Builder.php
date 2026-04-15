@@ -82,7 +82,7 @@ class Builder extends BaseBuilder
     /**
      * The cluster name for ON CLUSTER queries.
      */
-    public $cluster = null;
+    public ?string $cluster = null;
 
     /**
      * The sample factor for SAMPLE queries.
