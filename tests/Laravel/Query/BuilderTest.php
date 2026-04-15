@@ -1329,6 +1329,38 @@ class BuilderTest extends TestCase
             ->update(['column' => 'new_value']);
     }
 
+    public function testSample()
+    {
+        $this->assertEquals(
+            'select * from `table` sample 0.1',
+            $this->getBuilder()->from('table')->sample(0.1)->toRawSql()
+        );
+    }
+
+    public function testSampleWithOffset()
+    {
+        $this->assertEquals(
+            'select * from `table` sample 0.1 offset 0.5',
+            $this->getBuilder()->from('table')->sample(0.1, 0.5)->toRawSql()
+        );
+    }
+
+    public function testSampleAbsoluteRows()
+    {
+        $this->assertEquals(
+            'select * from `table` sample 1000',
+            $this->getBuilder()->from('table')->sample(1000)->toRawSql()
+        );
+    }
+
+    public function testSampleWithWhere()
+    {
+        $this->assertEquals(
+            "select * from `table` sample 0.5 where `status` = 'active'",
+            $this->getBuilder()->from('table')->sample(0.5)->where('status', 'active')->toRawSql()
+        );
+    }
+
     private function getBuilder(
         ?string $select = null,
         ?string $insert = null,

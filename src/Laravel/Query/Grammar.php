@@ -22,6 +22,7 @@ class Grammar extends BaseGrammar
         'aggregate',
         'columns',
         'from',
+        'sample',
         'indexHint',
         'joins',
         'arrayJoins',
@@ -356,6 +357,22 @@ class Grammar extends BaseGrammar
         return 'settings '.$settings->map(function ($value, $key) {
             return "{$this->wrap($key)} = {$this->parameter($value)}";
         })->implode(', ');
+    }
+
+    /**
+     * Compile the SAMPLE clause for the query.
+     *
+     * @param  array{'factor': float|int, 'offset': float|int|null}  $sample
+     */
+    protected function compileSample(BaseBuilder $query, array $sample): string
+    {
+        $sql = 'sample '.$sample['factor'];
+
+        if (! is_null($sample['offset'])) {
+            $sql .= ' offset '.$sample['offset'];
+        }
+
+        return $sql;
     }
 
     /**

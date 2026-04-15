@@ -152,6 +152,34 @@ DB::connection('clickhouse')->table('events')->exists();
 // select exists(select * from `events`) as `exists`
 ```
 
+## SAMPLE Clause
+
+The `SAMPLE` clause enables approximate query processing by reading only a fraction of the data. It is placed immediately after the `FROM` clause.
+
+```php
+// Sample 10% of rows
+$query->from('events')->sample(0.1)->get();
+// select * from `events` sample 0.1
+
+// Sample an absolute number of rows
+$query->from('events')->sample(1_000_000)->get();
+// select * from `events` sample 1000000
+
+// Sample with an offset (shifts the sampling window)
+$query->from('events')->sample(0.1, 0.5)->get();
+// select * from `events` sample 0.1 offset 0.5
+
+// Combined with WHERE and LIMIT
+$query->from('events')
+    ->sample(0.1)
+    ->where('type', 'click')
+    ->limit(1000)
+    ->get();
+// select * from `events` sample 0.1 where `type` = 'click' limit 1000
+```
+
+> **Note:** The table must use a sampled MergeTree engine (e.g. `MergeTree() SAMPLE BY`) for `SAMPLE` to work.
+
 ## FINAL Clause
 
 The `FINAL` modifier forces ClickHouse to merge data parts before returning results. This is particularly useful with `ReplacingMergeTree`, `CollapsingMergeTree`, and other merge tree engines that perform background merges.

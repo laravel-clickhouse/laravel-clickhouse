@@ -85,6 +85,13 @@ class Builder extends BaseBuilder
     public $cluster = null;
 
     /**
+     * The sample factor for SAMPLE queries.
+     *
+     * @var array{'factor': float|int, 'offset': float|int|null}|null
+     */
+    public $sample = null;
+
+    /**
      * {@inheritDoc}
      */
     public function from($table, $as = null, bool $final = false): static
@@ -491,6 +498,19 @@ class Builder extends BaseBuilder
     public function cluster(string $cluster): static
     {
         $this->cluster = $cluster;
+
+        return $this;
+    }
+
+    /**
+     * Add a SAMPLE clause to the query.
+     *
+     * @param  float|int  $factor  Sampling fraction (e.g. 0.1) or absolute row count (e.g. 1000)
+     * @param  float|int|null  $offset  Sampling offset fraction
+     */
+    public function sample(float|int $factor, float|int|null $offset = null): static
+    {
+        $this->sample = compact('factor', 'offset');
 
         return $this;
     }
