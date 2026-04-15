@@ -1301,6 +1301,34 @@ class BuilderTest extends TestCase
         $this->assertEquals(['pre_val', 'where_val'], $builder->getBindings());
     }
 
+    public function testClusterDelete()
+    {
+        $expectedSql = "alter table `table` on cluster `my_cluster` delete where `column` = ?";
+        $bindings = ['value'];
+        $builder = $this->getBuilder(delete: $expectedSql, bindings: $bindings);
+        $builder->getConnection()->shouldReceive('getConfig')->with('use_lightweight_delete')->once()->andReturn(null);
+        $builder->from('table')->cluster('my_cluster')->where('column', 'value')->delete();
+    }
+
+    public function testClusterLightweightDelete()
+    {
+        $expectedSql = "delete from `table` on cluster `my_cluster` where `column` = ?";
+        $bindings = ['value'];
+        $builder = $this->getBuilder(delete: $expectedSql, bindings: $bindings);
+        $builder->from('table')->cluster('my_cluster')->where('column', 'value')->delete(lightweight: true);
+    }
+
+    public function testClusterUpdate()
+    {
+        $expectedSql = "alter table `table` on cluster `my_cluster` update `column` = ? where `id` = ?";
+        $bindings = ['new_value', 1];
+        $this->getBuilder(update: $expectedSql, bindings: $bindings)
+            ->from('table')
+            ->cluster('my_cluster')
+            ->where('id', 1)
+            ->update(['column' => 'new_value']);
+    }
+
     private function getBuilder(
         ?string $select = null,
         ?string $insert = null,

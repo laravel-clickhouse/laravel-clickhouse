@@ -167,7 +167,9 @@ class Grammar extends BaseGrammar
     /** {@inheritDoc} */
     protected function compileUpdateWithoutJoins(BaseBuilder $query, $table, $columns, $where): string
     {
-        return "alter table {$table} update {$columns} {$where}";
+        $cluster = ($query instanceof Builder && $query->cluster) ? " on cluster {$this->wrapValue($query->cluster)}" : '';
+
+        return "alter table {$table}{$cluster} update {$columns} {$where}";
     }
 
     /** {@inheritDoc} */
@@ -182,13 +184,14 @@ class Grammar extends BaseGrammar
         /** @var Connection $connection */
         $connection = $query->connection;
 
+        $cluster = ($query instanceof Builder && $query->cluster) ? " on cluster {$this->wrapValue($query->cluster)}" : '';
         $partitionClause = $partition ? " in partition {$this->parameter($partition)}" : '';
 
         if ((! is_null($lightweight) && $lightweight) || $connection->getConfig('use_lightweight_delete')) {
-            return "delete from {$table}{$partitionClause} {$where}";
+            return "delete from {$table}{$cluster}{$partitionClause} {$where}";
         }
 
-        return "alter table {$table} delete{$partitionClause} {$where}";
+        return "alter table {$table}{$cluster} delete{$partitionClause} {$where}";
     }
 
     /** {@inheritDoc} */

@@ -617,14 +617,14 @@ DB::connection('clickhouse')->table('events')->insert([
     'id' => 1,
     'name' => 'page_view',
 ]);
-// insert into `events` (`id`, `name`) values (?, ?)
+// insert into `events` (`id`, `name`) values (1, 'page_view')
 
 // Batch insert
 DB::connection('clickhouse')->table('events')->insert([
     ['id' => 1, 'name' => 'page_view'],
     ['id' => 2, 'name' => 'click'],
 ]);
-// insert into `events` (`id`, `name`) values (?, ?), (?, ?)
+// insert into `events` (`id`, `name`) values (1, 'page_view'), (2, 'click')
 ```
 
 ### Update
@@ -635,7 +635,7 @@ Updates use ClickHouse's `ALTER TABLE ... UPDATE` syntax:
 DB::connection('clickhouse')->table('events')
     ->where('id', 1)
     ->update(['name' => 'updated_event']);
-// alter table `events` update `name` = ? where `id` = ?
+// alter table `events` update `name` = 'updated_event' where `id` = 1
 ```
 
 > **Note:** Update with joins is not supported and will throw a `LogicException`. Use `joinGet` or `dictGet` functions instead.
@@ -648,7 +648,7 @@ DB::connection('clickhouse')->table('events')
 DB::connection('clickhouse')->table('events')
     ->where('status', 'expired')
     ->delete();
-// alter table `events` delete where `status` = ?
+// alter table `events` delete where `status` = 'expired'
 ```
 
 **Lightweight delete** uses the `DELETE FROM` syntax, which is faster but has different semantics:
@@ -657,7 +657,7 @@ DB::connection('clickhouse')->table('events')
 DB::connection('clickhouse')->table('events')
     ->where('status', 'expired')
     ->delete(lightweight: true);
-// delete from `events` where `status` = ?
+// delete from `events` where `status` = 'expired'
 ```
 
 You can enable lightweight deletes globally via the connection configuration:
@@ -676,7 +676,7 @@ You can enable lightweight deletes globally via the connection configuration:
 DB::connection('clickhouse')->table('events')
     ->where('status', 'expired')
     ->delete(partition: '202401');
-// alter table `events` delete in partition ? where `status` = ?
+// alter table `events` delete in partition '202401' where `status` = 'expired'
 ```
 
 **Lightweight delete with partition:**
@@ -685,10 +685,44 @@ DB::connection('clickhouse')->table('events')
 DB::connection('clickhouse')->table('events')
     ->where('status', 'expired')
     ->delete(lightweight: true, partition: '202401');
-// delete from `events` in partition ? where `status` = ?
+// delete from `events` in partition '202401' where `status` = 'expired'
 ```
 
 > **Note:** Delete with joins is not supported and will throw a `LogicException`.
+
+### ON CLUSTER
+
+`cluster()` injects an `ON CLUSTER` clause into `ALTER TABLE ... UPDATE` and `ALTER TABLE ... DELETE` (including lightweight deletes). Use it when running mutations against a Distributed or ReplicatedMergeTree table in a multi-node cluster.
+
+```php
+// Update on cluster
+DB::connection('clickhouse')->table('events')
+    ->cluster('my_cluster')
+    ->where('status', 'expired')
+    ->update(['status' => 'archived']);
+// alter table `events` on cluster `my_cluster` update `status` = 'archived' where `status` = 'expired'
+
+// Standard delete on cluster
+DB::connection('clickhouse')->table('events')
+    ->cluster('my_cluster')
+    ->where('status', 'expired')
+    ->delete();
+// alter table `events` on cluster `my_cluster` delete where `status` = 'expired'
+
+// Lightweight delete on cluster
+DB::connection('clickhouse')->table('events')
+    ->cluster('my_cluster')
+    ->where('status', 'expired')
+    ->delete(lightweight: true);
+// delete from `events` on cluster `my_cluster` where `status` = 'expired'
+
+// Delete with partition on cluster
+DB::connection('clickhouse')->table('events')
+    ->cluster('my_cluster')
+    ->where('status', 'expired')
+    ->delete(partition: '202401');
+// alter table `events` on cluster `my_cluster` delete in partition '202401' where `status` = 'expired'
+```
 
 ### Truncate
 

@@ -80,6 +80,11 @@ class Builder extends BaseBuilder
     public $preWheres = [];
 
     /**
+     * The cluster name for ON CLUSTER queries.
+     */
+    public $cluster = null;
+
+    /**
      * {@inheritDoc}
      */
     public function from($table, $as = null, bool $final = false): static
@@ -478,6 +483,16 @@ class Builder extends BaseBuilder
     public function preWhereNotNull(string|array $columns, string $boolean = 'and'): static
     {
         return $this->preWhereNull($columns, $boolean, true);
+    }
+
+    /**
+     * Set the ON CLUSTER clause for ALTER TABLE / DELETE / UPDATE queries.
+     */
+    public function cluster(string $cluster): static
+    {
+        $this->cluster = $cluster;
+
+        return $this;
     }
 
     /**
