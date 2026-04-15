@@ -387,6 +387,34 @@ class Grammar extends BaseGrammar
     }
 
     /**
+     * Compile a GLOBAL IN clause.
+     *
+     * @param  array{'column': ExpressionContract|string, 'values': array<mixed>}  $where
+     */
+    protected function whereGlobalIn(BaseBuilder $query, $where): string
+    {
+        if (! empty($where['values'])) {
+            return $this->wrap($where['column']).' global in ('.$this->parameterize($where['values']).')';
+        }
+
+        return '0 = 1';
+    }
+
+    /**
+     * Compile a GLOBAL NOT IN clause.
+     *
+     * @param  array{'column': ExpressionContract|string, 'values': array<mixed>}  $where
+     */
+    protected function whereGlobalNotIn(BaseBuilder $query, $where): string
+    {
+        if (! empty($where['values'])) {
+            return $this->wrap($where['column']).' global not in ('.$this->parameterize($where['values']).')';
+        }
+
+        return '1 = 1';
+    }
+
+    /**
      * Compile the PREWHERE clauses for the query.
      *
      * @param  array<int, array<string, mixed>>  $preWheres

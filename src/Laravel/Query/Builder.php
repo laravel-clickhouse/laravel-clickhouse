@@ -535,6 +535,62 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * Add a GLOBAL IN clause to the query.
+     *
+     * @param  Closure|self|EloquentBuilder<Model>|array<mixed>  $values
+     */
+    public function whereGlobalIn(string $column, mixed $values, string $boolean = 'and', bool $not = false): static
+    {
+        $type = $not ? 'GlobalNotIn' : 'GlobalIn';
+
+        if ($this->isQueryable($values)) {
+            /** @var Closure|self|EloquentBuilder<Model> $values */
+            [$query, $bindings] = $this->createSub($values);
+            $values = [new Expression($query)];
+            $this->addBinding($bindings, 'where');
+        }
+
+        $this->wheres[] = compact('type', 'column', 'values', 'boolean');
+
+        if (! $values instanceof ExpressionContract) {
+            /** @var array<mixed> $values */
+            $this->addBinding($this->cleanBindings($values), 'where');
+        }
+
+        return $this;
+    }
+
+    /**
+     * Add a GLOBAL NOT IN clause to the query.
+     *
+     * @param  Closure|self|EloquentBuilder<Model>|array<mixed>  $values
+     */
+    public function whereGlobalNotIn(string $column, mixed $values, string $boolean = 'and'): static
+    {
+        return $this->whereGlobalIn($column, $values, $boolean, true);
+    }
+
+    /**
+     * Add an OR GLOBAL IN clause to the query.
+     *
+     * @param  Closure|self|EloquentBuilder<Model>|array<mixed>  $values
+     */
+    public function orWhereGlobalIn(string $column, mixed $values): static
+    {
+        return $this->whereGlobalIn($column, $values, 'or');
+    }
+
+    /**
+     * Add an OR GLOBAL NOT IN clause to the query.
+     *
+     * @param  Closure|self|EloquentBuilder<Model>|array<mixed>  $values
+     */
+    public function orWhereGlobalNotIn(string $column, mixed $values): static
+    {
+        return $this->whereGlobalIn($column, $values, 'or', true);
+    }
+
+    /**
      * Add a "where empty" clause to the query.
      *
      * @param  string|string[]|ExpressionContract  $columns

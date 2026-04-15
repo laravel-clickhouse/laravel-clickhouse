@@ -592,6 +592,52 @@ $query->groupBy('status')
 // group by `status` having not empty(`name`) or not empty(`email`)
 ```
 
+### GLOBAL IN / GLOBAL NOT IN
+
+In distributed ClickHouse queries, `IN` with a subquery is evaluated independently on each shard. `GLOBAL IN` evaluates the subquery once on the initiator node and broadcasts the result, avoiding repeated execution. Use it when the inner subquery is not sharded or when you need consistent results across shards.
+
+```php
+// GLOBAL IN with array
+$query->from('events')
+    ->whereGlobalIn('user_id', [1, 2, 3])
+    ->get();
+// select * from `events` where `user_id` global in (1, 2, 3)
+
+// GLOBAL NOT IN with array
+$query->from('events')
+    ->whereGlobalNotIn('user_id', [1, 2, 3])
+    ->get();
+// select * from `events` where `user_id` global not in (1, 2, 3)
+
+// OR GLOBAL IN / OR GLOBAL NOT IN
+$query->from('events')
+    ->whereGlobalIn('type', ['click'])
+    ->orWhereGlobalIn('type', ['view'])
+    ->get();
+// select * from `events` where `type` global in ('click') or `type` global in ('view')
+
+$query->from('events')
+    ->whereGlobalNotIn('type', ['spam'])
+    ->orWhereGlobalNotIn('type', ['bot'])
+    ->get();
+// select * from `events` where `type` global not in ('spam') or `type` global not in ('bot')
+
+// GLOBAL IN with subquery
+$subquery = DB::connection('clickhouse')->table('active_users')->select('id');
+$query->from('events')
+    ->whereGlobalIn('user_id', $subquery)
+    ->get();
+// select * from `events` where `user_id` global in (select `id` from `active_users`)
+
+// GLOBAL IN with closure
+$query->from('events')
+    ->whereGlobalIn('user_id', function ($q) {
+        $q->from('active_users')->select('id');
+    })
+    ->get();
+// select * from `events` where `user_id` global in (select `id` from `active_users`)
+```
+
 ### ClickHouse Date Function Mapping
 
 Laravel's date-based where methods are mapped to ClickHouse functions:

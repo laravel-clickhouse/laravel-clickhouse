@@ -1385,6 +1385,63 @@ class BuilderTest extends TestCase
         );
     }
 
+    public function testWhereGlobalIn()
+    {
+        $this->assertEquals(
+            'select * from `table` where `id` global in (1, 2, 3)',
+            $this->getBuilder()->from('table')->whereGlobalIn('id', [1, 2, 3])->toRawSql()
+        );
+    }
+
+    public function testWhereGlobalNotIn()
+    {
+        $this->assertEquals(
+            'select * from `table` where `id` global not in (1, 2, 3)',
+            $this->getBuilder()->from('table')->whereGlobalNotIn('id', [1, 2, 3])->toRawSql()
+        );
+    }
+
+    public function testOrWhereGlobalIn()
+    {
+        $this->assertEquals(
+            "select * from `table` where `a` = 'x' or `id` global in (1, 2)",
+            $this->getBuilder()->from('table')->where('a', 'x')->orWhereGlobalIn('id', [1, 2])->toRawSql()
+        );
+    }
+
+    public function testOrWhereGlobalNotIn()
+    {
+        $this->assertEquals(
+            "select * from `table` where `a` = 'x' or `id` global not in (1, 2)",
+            $this->getBuilder()->from('table')->where('a', 'x')->orWhereGlobalNotIn('id', [1, 2])->toRawSql()
+        );
+    }
+
+    public function testWhereGlobalInWithSubquery()
+    {
+        $sub = $this->getBuilder()->from('other')->select('id');
+        $this->assertEquals(
+            'select * from `table` where `id` global in (select `id` from `other`)',
+            $this->getBuilder()->from('table')->whereGlobalIn('id', $sub)->toRawSql()
+        );
+    }
+
+    public function testWhereGlobalNotInEmptyValues()
+    {
+        $this->assertEquals(
+            'select * from `table` where 1 = 1',
+            $this->getBuilder()->from('table')->whereGlobalNotIn('id', [])->toRawSql()
+        );
+    }
+
+    public function testWhereGlobalInEmptyValues()
+    {
+        $this->assertEquals(
+            'select * from `table` where 0 = 1',
+            $this->getBuilder()->from('table')->whereGlobalIn('id', [])->toRawSql()
+        );
+    }
+
     private function getBuilder(
         ?string $select = null,
         ?string $insert = null,
