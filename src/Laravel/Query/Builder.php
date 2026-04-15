@@ -32,6 +32,7 @@ class Builder extends BaseBuilder
         'join' => [],
         'arrayJoin' => [],
         'partition' => [],
+        'preWhere' => [],
         'where' => [],
         'groupBy' => [],
         'having' => [],
@@ -70,6 +71,13 @@ class Builder extends BaseBuilder
      * @var array<string, int|float|bool|string>
      */
     public $settings = [];
+
+    /**
+     * The pre-where clauses for the query (PREWHERE).
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    public $preWheres = [];
 
     /**
      * {@inheritDoc}
@@ -374,6 +382,102 @@ class Builder extends BaseBuilder
     public function ignoreIndex($index): static
     {
         throw new LogicException('ClickHouse does not support specify indexes.');
+    }
+
+    /**
+     * Temporarily swap wheres/bindings to the preWhere arrays and run the callback.
+     */
+    private function redirectToPreWheres(callable $callback): static
+    {
+        [$this->wheres, $this->preWheres] = [$this->preWheres, $this->wheres];
+        [$this->bindings['where'], $this->bindings['preWhere']] = [$this->bindings['preWhere'], $this->bindings['where']];
+
+        $callback();
+
+        [$this->wheres, $this->preWheres] = [$this->preWheres, $this->wheres];
+        [$this->bindings['where'], $this->bindings['preWhere']] = [$this->bindings['preWhere'], $this->bindings['where']];
+
+        return $this;
+    }
+
+    /**
+     * Add a PREWHERE clause to the query.
+     *
+     * @param  Closure|string|array<mixed>|ExpressionContract  $column
+     */
+    public function preWhere(mixed $column, mixed $operator = null, mixed $value = null, string $boolean = 'and'): static
+    {
+        return $this->redirectToPreWheres(fn () => $this->where($column, $operator, $value, $boolean));
+    }
+
+    /**
+     * Add an OR PREWHERE clause to the query.
+     *
+     * @param  Closure|string|array<mixed>|ExpressionContract  $column
+     */
+    public function orPreWhere(mixed $column, mixed $operator = null, mixed $value = null): static
+    {
+        return $this->preWhere($column, $operator, $value, 'or');
+    }
+
+    /**
+     * Add a raw PREWHERE clause to the query.
+     *
+     * @param  array<mixed>  $bindings
+     */
+    public function preWhereRaw(string $sql, array $bindings = [], string $boolean = 'and'): static
+    {
+        return $this->redirectToPreWheres(fn () => $this->whereRaw($sql, $bindings, $boolean));
+    }
+
+    /**
+     * Add a raw OR PREWHERE clause to the query.
+     *
+     * @param  array<mixed>  $bindings
+     */
+    public function orPreWhereRaw(string $sql, array $bindings = []): static
+    {
+        return $this->preWhereRaw($sql, $bindings, 'or');
+    }
+
+    /**
+     * Add a PREWHERE IN clause to the query.
+     *
+     * @param  Closure|self|EloquentBuilder<Model>|array<mixed>  $values
+     */
+    public function preWhereIn(string $column, mixed $values, string $boolean = 'and', bool $not = false): static
+    {
+        return $this->redirectToPreWheres(fn () => $this->whereIn($column, $values, $boolean, $not));
+    }
+
+    /**
+     * Add a PREWHERE NOT IN clause to the query.
+     *
+     * @param  Closure|self|EloquentBuilder<Model>|array<mixed>  $values
+     */
+    public function preWhereNotIn(string $column, mixed $values, string $boolean = 'and'): static
+    {
+        return $this->preWhereIn($column, $values, $boolean, true);
+    }
+
+    /**
+     * Add a PREWHERE NULL clause to the query.
+     *
+     * @param  string|string[]  $columns
+     */
+    public function preWhereNull(string|array $columns, string $boolean = 'and', bool $not = false): static
+    {
+        return $this->redirectToPreWheres(fn () => $this->whereNull($columns, $boolean, $not));
+    }
+
+    /**
+     * Add a PREWHERE NOT NULL clause to the query.
+     *
+     * @param  string|string[]  $columns
+     */
+    public function preWhereNotNull(string|array $columns, string $boolean = 'and'): static
+    {
+        return $this->preWhereNull($columns, $boolean, true);
     }
 
     /**
