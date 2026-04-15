@@ -1247,7 +1247,7 @@ class BuilderTest extends TestCase
     public function testPreWhereRaw()
     {
         $this->assertEquals(
-            "select * from `table` prewhere column > 100",
+            'select * from `table` prewhere column > 100',
             $this->getBuilder()->from('table')->preWhereRaw('column > 100')->toRawSql()
         );
     }
@@ -1263,7 +1263,7 @@ class BuilderTest extends TestCase
     public function testPreWhereIn()
     {
         $this->assertEquals(
-            "select * from `table` prewhere `column` in (1, 2, 3)",
+            'select * from `table` prewhere `column` in (1, 2, 3)',
             $this->getBuilder()->from('table')->preWhereIn('column', [1, 2, 3])->toRawSql()
         );
     }
@@ -1271,7 +1271,7 @@ class BuilderTest extends TestCase
     public function testPreWhereNotIn()
     {
         $this->assertEquals(
-            "select * from `table` prewhere `column` not in (1, 2, 3)",
+            'select * from `table` prewhere `column` not in (1, 2, 3)',
             $this->getBuilder()->from('table')->preWhereNotIn('column', [1, 2, 3])->toRawSql()
         );
     }
@@ -1303,7 +1303,7 @@ class BuilderTest extends TestCase
 
     public function testClusterDelete()
     {
-        $expectedSql = "alter table `table` on cluster `my_cluster` delete where `column` = ?";
+        $expectedSql = 'alter table `table` on cluster `my_cluster` delete where `column` = ?';
         $bindings = ['value'];
         $builder = $this->getBuilder(delete: $expectedSql, bindings: $bindings);
         $builder->getConnection()->shouldReceive('getConfig')->with('use_lightweight_delete')->once()->andReturn(null);
@@ -1312,7 +1312,7 @@ class BuilderTest extends TestCase
 
     public function testClusterLightweightDelete()
     {
-        $expectedSql = "delete from `table` on cluster `my_cluster` where `column` = ?";
+        $expectedSql = 'delete from `table` on cluster `my_cluster` where `column` = ?';
         $bindings = ['value'];
         $builder = $this->getBuilder(delete: $expectedSql, bindings: $bindings);
         $builder->from('table')->cluster('my_cluster')->where('column', 'value')->delete(lightweight: true);
@@ -1320,7 +1320,7 @@ class BuilderTest extends TestCase
 
     public function testClusterUpdate()
     {
-        $expectedSql = "alter table `table` on cluster `my_cluster` update `column` = ? where `id` = ?";
+        $expectedSql = 'alter table `table` on cluster `my_cluster` update `column` = ? where `id` = ?';
         $bindings = ['new_value', 1];
         $this->getBuilder(update: $expectedSql, bindings: $bindings)
             ->from('table')
