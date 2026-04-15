@@ -92,6 +92,13 @@ class Builder extends BaseBuilder
     public $sample = null;
 
     /**
+     * The limit-by clause for LIMIT n BY queries.
+     *
+     * @var array{'limit': int, 'columns': string[]}|null
+     */
+    public $limitBy = null;
+
+    /**
      * {@inheritDoc}
      */
     public function from($table, $as = null, bool $final = false): static
@@ -511,6 +518,18 @@ class Builder extends BaseBuilder
     public function sample(float|int $factor, float|int|null $offset = null): static
     {
         $this->sample = compact('factor', 'offset');
+
+        return $this;
+    }
+
+    /**
+     * Add a LIMIT n BY clause to the query.
+     *
+     * @param  string|string[]  $columns
+     */
+    public function limitBy(int $limit, string|array $columns): static
+    {
+        $this->limitBy = ['limit' => $limit, 'columns' => Arr::wrap($columns)];
 
         return $this;
     }

@@ -130,6 +130,28 @@ $query->limit(10)->offset(20)->get();
 // select * from `table` limit 10 offset 20
 ```
 
+### LIMIT BY
+
+`LIMIT n BY` returns at most `n` rows for each distinct value of the specified columns. It is placed before the `LIMIT` clause.
+
+```php
+// Limit 3 rows per user
+$query->from('events')->limitBy(3, 'user_id')->get();
+// select * from `events` limit 3 by `user_id`
+
+// Limit 1 row per user per day
+$query->from('events')->limitBy(1, ['user_id', 'date'])->get();
+// select * from `events` limit 1 by `user_id`, `date`
+
+// Combined with LIMIT
+$query->from('events')
+    ->orderBy('created_at', 'desc')
+    ->limitBy(3, 'user_id')
+    ->limit(100)
+    ->get();
+// select * from `events` order by `created_at` desc limit 3 by `user_id` limit 100
+```
+
 ### Aggregates
 
 ```php

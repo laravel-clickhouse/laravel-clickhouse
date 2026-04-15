@@ -1361,6 +1361,30 @@ class BuilderTest extends TestCase
         );
     }
 
+    public function testLimitBy()
+    {
+        $this->assertEquals(
+            'select * from `table` limit 3 by `user_id`',
+            $this->getBuilder()->from('table')->limitBy(3, 'user_id')->toRawSql()
+        );
+    }
+
+    public function testLimitByMultipleColumns()
+    {
+        $this->assertEquals(
+            'select * from `table` limit 5 by `user_id`, `event_type`',
+            $this->getBuilder()->from('table')->limitBy(5, ['user_id', 'event_type'])->toRawSql()
+        );
+    }
+
+    public function testLimitByWithLimit()
+    {
+        $this->assertEquals(
+            'select * from `table` order by `ts` desc limit 3 by `user_id` limit 10',
+            $this->getBuilder()->from('table')->orderByDesc('ts')->limitBy(3, 'user_id')->limit(10)->toRawSql()
+        );
+    }
+
     private function getBuilder(
         ?string $select = null,
         ?string $insert = null,

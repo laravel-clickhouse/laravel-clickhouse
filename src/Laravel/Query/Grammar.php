@@ -31,6 +31,7 @@ class Grammar extends BaseGrammar
         'groups',
         'havings',
         'orders',
+        'limitBy',
         'limit',
         'offset',
         'lock',
@@ -357,6 +358,16 @@ class Grammar extends BaseGrammar
         return 'settings '.$settings->map(function ($value, $key) {
             return "{$this->wrap($key)} = {$this->parameter($value)}";
         })->implode(', ');
+    }
+
+    /**
+     * Compile the LIMIT n BY clause for the query.
+     *
+     * @param  array{'limit': int, 'columns': string[]}  $limitBy
+     */
+    protected function compileLimitBy(BaseBuilder $query, array $limitBy): string
+    {
+        return 'limit '.$limitBy['limit'].' by '.$this->columnize($limitBy['columns']);
     }
 
     /**
