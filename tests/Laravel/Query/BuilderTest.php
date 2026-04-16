@@ -1202,14 +1202,14 @@ class BuilderTest extends TestCase
     public function testUseIndex()
     {
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('ClickHouse does not support specify indexes, please use preWhere instead.');
+        $this->expectExceptionMessage('ClickHouse does not support specify indexes.');
         $this->getBuilder()->from('table')->useIndex('index');
     }
 
     public function testForceIndex()
     {
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('ClickHouse does not support specify indexes, please use preWhere instead.');
+        $this->expectExceptionMessage('ClickHouse does not support specify indexes.');
         $this->getBuilder()->from('table')->forceIndex('index');
     }
 
@@ -1218,6 +1218,147 @@ class BuilderTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('ClickHouse does not support specify indexes.');
         $this->getBuilder()->from('table')->ignoreIndex('index');
+    }
+
+    public function testClusterDelete()
+    {
+        $expectedSql = 'alter table `table` on cluster `my_cluster` delete where `column` = ?';
+        $bindings = ['value'];
+        $builder = $this->getBuilder(delete: $expectedSql, bindings: $bindings);
+        $builder->getConnection()->shouldReceive('getConfig')->with('use_lightweight_delete')->once()->andReturn(null);
+        $builder->from('table')->cluster('my_cluster')->where('column', 'value')->delete();
+    }
+
+    public function testClusterLightweightDelete()
+    {
+        $expectedSql = 'delete from `table` on cluster `my_cluster` where `column` = ?';
+        $bindings = ['value'];
+        $builder = $this->getBuilder(delete: $expectedSql, bindings: $bindings);
+        $builder->from('table')->cluster('my_cluster')->where('column', 'value')->delete(lightweight: true);
+    }
+
+    public function testClusterUpdate()
+    {
+        $expectedSql = 'alter table `table` on cluster `my_cluster` update `column` = ? where `id` = ?';
+        $bindings = ['new_value', 1];
+        $this->getBuilder(update: $expectedSql, bindings: $bindings)
+            ->from('table')
+            ->cluster('my_cluster')
+            ->where('id', 1)
+            ->update(['column' => 'new_value']);
+    }
+
+    public function testSample()
+    {
+        $this->assertEquals(
+            'select * from `table` sample 0.1',
+            $this->getBuilder()->from('table')->sample(0.1)->toRawSql()
+        );
+    }
+
+    public function testSampleWithOffset()
+    {
+        $this->assertEquals(
+            'select * from `table` sample 0.1 offset 0.5',
+            $this->getBuilder()->from('table')->sample(0.1, 0.5)->toRawSql()
+        );
+    }
+
+    public function testSampleAbsoluteRows()
+    {
+        $this->assertEquals(
+            'select * from `table` sample 1000',
+            $this->getBuilder()->from('table')->sample(1000)->toRawSql()
+        );
+    }
+
+    public function testSampleWithWhere()
+    {
+        $this->assertEquals(
+            "select * from `table` sample 0.5 where `status` = 'active'",
+            $this->getBuilder()->from('table')->sample(0.5)->where('status', 'active')->toRawSql()
+        );
+    }
+
+    public function testLimitBy()
+    {
+        $this->assertEquals(
+            'select * from `table` limit 3 by `user_id`',
+            $this->getBuilder()->from('table')->limitBy(3, 'user_id')->toRawSql()
+        );
+    }
+
+    public function testLimitByMultipleColumns()
+    {
+        $this->assertEquals(
+            'select * from `table` limit 5 by `user_id`, `event_type`',
+            $this->getBuilder()->from('table')->limitBy(5, ['user_id', 'event_type'])->toRawSql()
+        );
+    }
+
+    public function testLimitByWithLimit()
+    {
+        $this->assertEquals(
+            'select * from `table` order by `ts` desc limit 3 by `user_id` limit 10',
+            $this->getBuilder()->from('table')->orderByDesc('ts')->limitBy(3, 'user_id')->limit(10)->toRawSql()
+        );
+    }
+
+    public function testWhereGlobalIn()
+    {
+        $this->assertEquals(
+            'select * from `table` where `id` global in (1, 2, 3)',
+            $this->getBuilder()->from('table')->whereGlobalIn('id', [1, 2, 3])->toRawSql()
+        );
+    }
+
+    public function testWhereGlobalNotIn()
+    {
+        $this->assertEquals(
+            'select * from `table` where `id` global not in (1, 2, 3)',
+            $this->getBuilder()->from('table')->whereGlobalNotIn('id', [1, 2, 3])->toRawSql()
+        );
+    }
+
+    public function testOrWhereGlobalIn()
+    {
+        $this->assertEquals(
+            "select * from `table` where `a` = 'x' or `id` global in (1, 2)",
+            $this->getBuilder()->from('table')->where('a', 'x')->orWhereGlobalIn('id', [1, 2])->toRawSql()
+        );
+    }
+
+    public function testOrWhereGlobalNotIn()
+    {
+        $this->assertEquals(
+            "select * from `table` where `a` = 'x' or `id` global not in (1, 2)",
+            $this->getBuilder()->from('table')->where('a', 'x')->orWhereGlobalNotIn('id', [1, 2])->toRawSql()
+        );
+    }
+
+    public function testWhereGlobalInWithSubquery()
+    {
+        $sub = $this->getBuilder()->from('other')->select('id');
+        $this->assertEquals(
+            'select * from `table` where `id` global in (select `id` from `other`)',
+            $this->getBuilder()->from('table')->whereGlobalIn('id', $sub)->toRawSql()
+        );
+    }
+
+    public function testWhereGlobalNotInEmptyValues()
+    {
+        $this->assertEquals(
+            'select * from `table` where 1 = 1',
+            $this->getBuilder()->from('table')->whereGlobalNotIn('id', [])->toRawSql()
+        );
+    }
+
+    public function testWhereGlobalInEmptyValues()
+    {
+        $this->assertEquals(
+            'select * from `table` where 0 = 1',
+            $this->getBuilder()->from('table')->whereGlobalIn('id', [])->toRawSql()
+        );
     }
 
     private function getBuilder(

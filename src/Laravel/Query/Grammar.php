@@ -22,6 +22,7 @@ class Grammar extends BaseGrammar
         'aggregate',
         'columns',
         'from',
+        'sample',
         'indexHint',
         'joins',
         'arrayJoins',
@@ -29,6 +30,7 @@ class Grammar extends BaseGrammar
         'groups',
         'havings',
         'orders',
+        'limitBy',
         'limit',
         'offset',
         'lock',
@@ -166,7 +168,9 @@ class Grammar extends BaseGrammar
     /** {@inheritDoc} */
     protected function compileUpdateWithoutJoins(BaseBuilder $query, $table, $columns, $where): string
     {
-        return "alter table {$table} update {$columns} {$where}";
+        $cluster = ($query instanceof Builder && $query->cluster) ? " on cluster {$this->wrapValue($query->cluster)}" : '';
+
+        return "alter table {$table}{$cluster} update {$columns} {$where}";
     }
 
     /** {@inheritDoc} */
@@ -181,13 +185,14 @@ class Grammar extends BaseGrammar
         /** @var Connection $connection */
         $connection = $query->connection;
 
+        $cluster = ($query instanceof Builder && $query->cluster) ? " on cluster {$this->wrapValue($query->cluster)}" : '';
         $partitionClause = $partition ? " in partition {$this->parameter($partition)}" : '';
 
         if ((! is_null($lightweight) && $lightweight) || $connection->getConfig('use_lightweight_delete')) {
-            return "delete from {$table}{$partitionClause} {$where}";
+            return "delete from {$table}{$cluster}{$partitionClause} {$where}";
         }
 
-        return "alter table {$table} delete{$partitionClause} {$where}";
+        return "alter table {$table}{$cluster} delete{$partitionClause} {$where}";
     }
 
     /** {@inheritDoc} */
@@ -352,5 +357,59 @@ class Grammar extends BaseGrammar
         return 'settings '.$settings->map(function ($value, $key) {
             return "{$this->wrap($key)} = {$this->parameter($value)}";
         })->implode(', ');
+    }
+
+    /**
+     * Compile the LIMIT n BY clause for the query.
+     *
+     * @param  array{'limit': int, 'columns': string[]}  $limitBy
+     */
+    protected function compileLimitBy(BaseBuilder $query, array $limitBy): string
+    {
+        return 'limit '.$limitBy['limit'].' by '.$this->columnize($limitBy['columns']);
+    }
+
+    /**
+     * Compile the SAMPLE clause for the query.
+     *
+     * @param  array{'factor': float|int, 'offset': float|int|null}  $sample
+     */
+    protected function compileSample(BaseBuilder $query, array $sample): string
+    {
+        $sql = 'sample '.$sample['factor'];
+
+        if (! is_null($sample['offset'])) {
+            $sql .= ' offset '.$sample['offset'];
+        }
+
+        return $sql;
+    }
+
+    /**
+     * Compile a GLOBAL IN clause.
+     *
+     * @param  array{'column': ExpressionContract|string, 'values': array<mixed>}  $where
+     */
+    protected function whereGlobalIn(BaseBuilder $query, $where): string
+    {
+        if (! empty($where['values'])) {
+            return $this->wrap($where['column']).' global in ('.$this->parameterize($where['values']).')';
+        }
+
+        return '0 = 1';
+    }
+
+    /**
+     * Compile a GLOBAL NOT IN clause.
+     *
+     * @param  array{'column': ExpressionContract|string, 'values': array<mixed>}  $where
+     */
+    protected function whereGlobalNotIn(BaseBuilder $query, $where): string
+    {
+        if (! empty($where['values'])) {
+            return $this->wrap($where['column']).' global not in ('.$this->parameterize($where['values']).')';
+        }
+
+        return '1 = 1';
     }
 }
