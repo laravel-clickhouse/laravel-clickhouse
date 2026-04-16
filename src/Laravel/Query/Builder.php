@@ -491,7 +491,7 @@ class Builder extends BaseBuilder
             foreach ($column as $key => $value) {
                 if (is_numeric($key) && is_array($value)) {
                     $arguments = array_values($value);
-                    $query->where($arguments[0], $arguments[1] ?? null, $args[2] ?? null, $boolean);
+                    $query->where($arguments[0], $arguments[1] ?? null, $arguments[2] ?? null, $boolean);
                 } else {
                     $query->where($key, '=', $value, $boolean);
                 }
