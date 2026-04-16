@@ -130,6 +130,28 @@ $query->limit(10)->offset(20)->get();
 // select * from `table` limit 10 offset 20
 ```
 
+### LIMIT BY
+
+`LIMIT n BY` returns at most `n` rows for each distinct value of the specified columns. It is placed before the `LIMIT` clause.
+
+```php
+// Limit 3 rows per user
+$query->from('events')->limitBy(3, 'user_id')->get();
+// select * from `events` limit 3 by `user_id`
+
+// Limit 1 row per user per day
+$query->from('events')->limitBy(1, ['user_id', 'date'])->get();
+// select * from `events` limit 1 by `user_id`, `date`
+
+// Combined with LIMIT
+$query->from('events')
+    ->orderBy('created_at', 'desc')
+    ->limitBy(3, 'user_id')
+    ->limit(100)
+    ->get();
+// select * from `events` order by `created_at` desc limit 3 by `user_id` limit 100
+```
+
 ### Aggregates
 
 ```php
@@ -151,6 +173,34 @@ DB::connection('clickhouse')->table('events')->avg('score');
 DB::connection('clickhouse')->table('events')->exists();
 // select exists(select * from `events`) as `exists`
 ```
+
+## SAMPLE Clause
+
+The `SAMPLE` clause enables approximate query processing by reading only a fraction of the data. It is placed immediately after the `FROM` clause.
+
+```php
+// Sample 10% of rows
+$query->from('events')->sample(0.1)->get();
+// select * from `events` sample 0.1
+
+// Sample an absolute number of rows
+$query->from('events')->sample(1_000_000)->get();
+// select * from `events` sample 1000000
+
+// Sample with an offset (shifts the sampling window)
+$query->from('events')->sample(0.1, 0.5)->get();
+// select * from `events` sample 0.1 offset 0.5
+
+// Combined with WHERE and LIMIT
+$query->from('events')
+    ->sample(0.1)
+    ->where('type', 'click')
+    ->limit(1000)
+    ->get();
+// select * from `events` sample 0.1 where `type` = 'click' limit 1000
+```
+
+> **Note:** The table must use a sampled MergeTree engine (e.g. `MergeTree() SAMPLE BY`) for `SAMPLE` to work.
 
 ## FINAL Clause
 
@@ -463,6 +513,52 @@ $query->groupBy('status')
 // group by `status` having not empty(`name`) or not empty(`email`)
 ```
 
+### GLOBAL IN / GLOBAL NOT IN
+
+In distributed ClickHouse queries, `IN` with a subquery is evaluated independently on each shard. `GLOBAL IN` evaluates the subquery once on the initiator node and broadcasts the result, avoiding repeated execution. Use it when the inner subquery is not sharded or when you need consistent results across shards.
+
+```php
+// GLOBAL IN with array
+$query->from('events')
+    ->whereGlobalIn('user_id', [1, 2, 3])
+    ->get();
+// select * from `events` where `user_id` global in (1, 2, 3)
+
+// GLOBAL NOT IN with array
+$query->from('events')
+    ->whereGlobalNotIn('user_id', [1, 2, 3])
+    ->get();
+// select * from `events` where `user_id` global not in (1, 2, 3)
+
+// OR GLOBAL IN / OR GLOBAL NOT IN
+$query->from('events')
+    ->whereGlobalIn('type', ['click'])
+    ->orWhereGlobalIn('type', ['view'])
+    ->get();
+// select * from `events` where `type` global in ('click') or `type` global in ('view')
+
+$query->from('events')
+    ->whereGlobalNotIn('type', ['spam'])
+    ->orWhereGlobalNotIn('type', ['bot'])
+    ->get();
+// select * from `events` where `type` global not in ('spam') or `type` global not in ('bot')
+
+// GLOBAL IN with subquery
+$subquery = DB::connection('clickhouse')->table('active_users')->select('id');
+$query->from('events')
+    ->whereGlobalIn('user_id', $subquery)
+    ->get();
+// select * from `events` where `user_id` global in (select `id` from `active_users`)
+
+// GLOBAL IN with closure
+$query->from('events')
+    ->whereGlobalIn('user_id', function ($q) {
+        $q->from('active_users')->select('id');
+    })
+    ->get();
+// select * from `events` where `user_id` global in (select `id` from `active_users`)
+```
+
 ### ClickHouse Date Function Mapping
 
 Laravel's date-based where methods are mapped to ClickHouse functions:
@@ -538,14 +634,14 @@ DB::connection('clickhouse')->table('events')->insert([
     'id' => 1,
     'name' => 'page_view',
 ]);
-// insert into `events` (`id`, `name`) values (?, ?)
+// insert into `events` (`id`, `name`) values (1, 'page_view')
 
 // Batch insert
 DB::connection('clickhouse')->table('events')->insert([
     ['id' => 1, 'name' => 'page_view'],
     ['id' => 2, 'name' => 'click'],
 ]);
-// insert into `events` (`id`, `name`) values (?, ?), (?, ?)
+// insert into `events` (`id`, `name`) values (1, 'page_view'), (2, 'click')
 ```
 
 ### Update
@@ -556,7 +652,7 @@ Updates use ClickHouse's `ALTER TABLE ... UPDATE` syntax:
 DB::connection('clickhouse')->table('events')
     ->where('id', 1)
     ->update(['name' => 'updated_event']);
-// alter table `events` update `name` = ? where `id` = ?
+// alter table `events` update `name` = 'updated_event' where `id` = 1
 ```
 
 > **Note:** Update with joins is not supported and will throw a `LogicException`. Use `joinGet` or `dictGet` functions instead.
@@ -569,7 +665,7 @@ DB::connection('clickhouse')->table('events')
 DB::connection('clickhouse')->table('events')
     ->where('status', 'expired')
     ->delete();
-// alter table `events` delete where `status` = ?
+// alter table `events` delete where `status` = 'expired'
 ```
 
 **Lightweight delete** uses the `DELETE FROM` syntax, which is faster but has different semantics:
@@ -578,7 +674,7 @@ DB::connection('clickhouse')->table('events')
 DB::connection('clickhouse')->table('events')
     ->where('status', 'expired')
     ->delete(lightweight: true);
-// delete from `events` where `status` = ?
+// delete from `events` where `status` = 'expired'
 ```
 
 You can enable lightweight deletes globally via the connection configuration:
@@ -597,7 +693,7 @@ You can enable lightweight deletes globally via the connection configuration:
 DB::connection('clickhouse')->table('events')
     ->where('status', 'expired')
     ->delete(partition: '202401');
-// alter table `events` delete in partition ? where `status` = ?
+// alter table `events` delete in partition '202401' where `status` = 'expired'
 ```
 
 **Lightweight delete with partition:**
@@ -606,10 +702,44 @@ DB::connection('clickhouse')->table('events')
 DB::connection('clickhouse')->table('events')
     ->where('status', 'expired')
     ->delete(lightweight: true, partition: '202401');
-// delete from `events` in partition ? where `status` = ?
+// delete from `events` in partition '202401' where `status` = 'expired'
 ```
 
 > **Note:** Delete with joins is not supported and will throw a `LogicException`.
+
+### ON CLUSTER
+
+`cluster()` injects an `ON CLUSTER` clause into `ALTER TABLE ... UPDATE` and `ALTER TABLE ... DELETE` (including lightweight deletes). Use it when running mutations against a Distributed or ReplicatedMergeTree table in a multi-node cluster.
+
+```php
+// Update on cluster
+DB::connection('clickhouse')->table('events')
+    ->cluster('my_cluster')
+    ->where('status', 'expired')
+    ->update(['status' => 'archived']);
+// alter table `events` on cluster `my_cluster` update `status` = 'archived' where `status` = 'expired'
+
+// Standard delete on cluster
+DB::connection('clickhouse')->table('events')
+    ->cluster('my_cluster')
+    ->where('status', 'expired')
+    ->delete();
+// alter table `events` on cluster `my_cluster` delete where `status` = 'expired'
+
+// Lightweight delete on cluster
+DB::connection('clickhouse')->table('events')
+    ->cluster('my_cluster')
+    ->where('status', 'expired')
+    ->delete(lightweight: true);
+// delete from `events` on cluster `my_cluster` where `status` = 'expired'
+
+// Delete with partition on cluster
+DB::connection('clickhouse')->table('events')
+    ->cluster('my_cluster')
+    ->where('status', 'expired')
+    ->delete(partition: '202401');
+// alter table `events` on cluster `my_cluster` delete in partition '202401' where `status` = 'expired'
+```
 
 ### Truncate
 

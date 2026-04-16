@@ -72,6 +72,25 @@ class Builder extends BaseBuilder
     public $settings = [];
 
     /**
+     * The cluster name for ON CLUSTER queries.
+     */
+    public ?string $cluster = null;
+
+    /**
+     * The sample factor for SAMPLE queries.
+     *
+     * @var array{'factor': float|int, 'offset': float|int|null}|null
+     */
+    public $sample = null;
+
+    /**
+     * The limit-by clause for LIMIT n BY queries.
+     *
+     * @var array{'limit': int, 'columns': string[]}|null
+     */
+    public $limitBy = null;
+
+    /**
      * {@inheritDoc}
      */
     public function from($table, $as = null, bool $final = false): static
@@ -357,7 +376,7 @@ class Builder extends BaseBuilder
      */
     public function useIndex($index): static
     {
-        throw new LogicException('ClickHouse does not support specify indexes, please use preWhere instead.');
+        throw new LogicException('ClickHouse does not support specify indexes.');
     }
 
     /**
@@ -365,7 +384,7 @@ class Builder extends BaseBuilder
      */
     public function forceIndex($index): static
     {
-        throw new LogicException('ClickHouse does not support specify indexes, please use preWhere instead.');
+        throw new LogicException('ClickHouse does not support specify indexes.');
     }
 
     /**
@@ -374,6 +393,97 @@ class Builder extends BaseBuilder
     public function ignoreIndex($index): static
     {
         throw new LogicException('ClickHouse does not support specify indexes.');
+    }
+
+    /**
+     * Set the ON CLUSTER clause for ALTER TABLE / DELETE / UPDATE queries.
+     */
+    public function cluster(string $cluster): static
+    {
+        $this->cluster = $cluster;
+
+        return $this;
+    }
+
+    /**
+     * Add a SAMPLE clause to the query.
+     *
+     * @param  float|int  $factor  Sampling fraction (e.g. 0.1) or absolute row count (e.g. 1000)
+     * @param  float|int|null  $offset  Sampling offset fraction
+     */
+    public function sample(float|int $factor, float|int|null $offset = null): static
+    {
+        $this->sample = compact('factor', 'offset');
+
+        return $this;
+    }
+
+    /**
+     * Add a LIMIT n BY clause to the query.
+     *
+     * @param  string|string[]  $columns
+     */
+    public function limitBy(int $limit, string|array $columns): static
+    {
+        $this->limitBy = ['limit' => $limit, 'columns' => Arr::wrap($columns)];
+
+        return $this;
+    }
+
+    /**
+     * Add a GLOBAL IN clause to the query.
+     *
+     * @param  Closure|self|EloquentBuilder<Model>|array<mixed>  $values
+     */
+    public function whereGlobalIn(string $column, mixed $values, string $boolean = 'and', bool $not = false): static
+    {
+        $type = $not ? 'GlobalNotIn' : 'GlobalIn';
+
+        if ($this->isQueryable($values)) {
+            /** @var Closure|self|EloquentBuilder<Model> $values */
+            [$query, $bindings] = $this->createSub($values);
+            $values = [new Expression($query)];
+            $this->addBinding($bindings, 'where');
+        }
+
+        $this->wheres[] = compact('type', 'column', 'values', 'boolean');
+
+        if (! $values instanceof ExpressionContract) {
+            /** @var array<mixed> $values */
+            $this->addBinding($this->cleanBindings($values), 'where');
+        }
+
+        return $this;
+    }
+
+    /**
+     * Add a GLOBAL NOT IN clause to the query.
+     *
+     * @param  Closure|self|EloquentBuilder<Model>|array<mixed>  $values
+     */
+    public function whereGlobalNotIn(string $column, mixed $values, string $boolean = 'and'): static
+    {
+        return $this->whereGlobalIn($column, $values, $boolean, true);
+    }
+
+    /**
+     * Add an OR GLOBAL IN clause to the query.
+     *
+     * @param  Closure|self|EloquentBuilder<Model>|array<mixed>  $values
+     */
+    public function orWhereGlobalIn(string $column, mixed $values): static
+    {
+        return $this->whereGlobalIn($column, $values, 'or');
+    }
+
+    /**
+     * Add an OR GLOBAL NOT IN clause to the query.
+     *
+     * @param  Closure|self|EloquentBuilder<Model>|array<mixed>  $values
+     */
+    public function orWhereGlobalNotIn(string $column, mixed $values): static
+    {
+        return $this->whereGlobalIn($column, $values, 'or', true);
     }
 
     /**
