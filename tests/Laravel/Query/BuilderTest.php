@@ -1202,14 +1202,14 @@ class BuilderTest extends TestCase
     public function testUseIndex()
     {
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('ClickHouse does not support specify indexes, please use preWhere instead.');
+        $this->expectExceptionMessage('ClickHouse does not support specify indexes.');
         $this->getBuilder()->from('table')->useIndex('index');
     }
 
     public function testForceIndex()
     {
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('ClickHouse does not support specify indexes, please use preWhere instead.');
+        $this->expectExceptionMessage('ClickHouse does not support specify indexes.');
         $this->getBuilder()->from('table')->forceIndex('index');
     }
 
@@ -1218,87 +1218,6 @@ class BuilderTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('ClickHouse does not support specify indexes.');
         $this->getBuilder()->from('table')->ignoreIndex('index');
-    }
-
-    public function testPreWhere()
-    {
-        $this->assertEquals(
-            "select * from `table` prewhere `column` = 'value'",
-            $this->getBuilder()->from('table')->preWhere('column', 'value')->toRawSql()
-        );
-    }
-
-    public function testPreWhereWithWhereAlso()
-    {
-        $this->assertEquals(
-            "select * from `table` prewhere `a` = 'x' where `b` = 'y'",
-            $this->getBuilder()->from('table')->preWhere('a', 'x')->where('b', 'y')->toRawSql()
-        );
-    }
-
-    public function testOrPreWhere()
-    {
-        $this->assertEquals(
-            "select * from `table` prewhere `a` = 'x' or `b` = 'y'",
-            $this->getBuilder()->from('table')->preWhere('a', 'x')->orPreWhere('b', 'y')->toRawSql()
-        );
-    }
-
-    public function testPreWhereRaw()
-    {
-        $this->assertEquals(
-            'select * from `table` prewhere column > 100',
-            $this->getBuilder()->from('table')->preWhereRaw('column > 100')->toRawSql()
-        );
-    }
-
-    public function testOrPreWhereRaw()
-    {
-        $this->assertEquals(
-            "select * from `table` prewhere `a` = 'x' or column > 100",
-            $this->getBuilder()->from('table')->preWhere('a', 'x')->orPreWhereRaw('column > 100')->toRawSql()
-        );
-    }
-
-    public function testPreWhereIn()
-    {
-        $this->assertEquals(
-            'select * from `table` prewhere `column` in (1, 2, 3)',
-            $this->getBuilder()->from('table')->preWhereIn('column', [1, 2, 3])->toRawSql()
-        );
-    }
-
-    public function testPreWhereNotIn()
-    {
-        $this->assertEquals(
-            'select * from `table` prewhere `column` not in (1, 2, 3)',
-            $this->getBuilder()->from('table')->preWhereNotIn('column', [1, 2, 3])->toRawSql()
-        );
-    }
-
-    public function testPreWhereNull()
-    {
-        $this->assertEquals(
-            'select * from `table` prewhere `column` is null',
-            $this->getBuilder()->from('table')->preWhereNull('column')->toRawSql()
-        );
-    }
-
-    public function testPreWhereNotNull()
-    {
-        $this->assertEquals(
-            'select * from `table` prewhere `column` is not null',
-            $this->getBuilder()->from('table')->preWhereNotNull('column')->toRawSql()
-        );
-    }
-
-    public function testPreWhereBindingsOrderBeforeWhere()
-    {
-        $builder = $this->getBuilder()->from('table')
-            ->preWhere('a', 'pre_val')
-            ->where('b', 'where_val');
-
-        $this->assertEquals(['pre_val', 'where_val'], $builder->getBindings());
     }
 
     public function testClusterDelete()

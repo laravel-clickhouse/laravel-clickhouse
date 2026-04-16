@@ -5,13 +5,10 @@ namespace ClickHouse\Laravel\Query;
 use ClickHouse\Laravel\Eloquent\Builder as EloquentBuilder;
 use ClickHouse\Laravel\Eloquent\Model;
 use Closure;
-use Illuminate\Contracts\Database\Query\ConditionExpression;
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
-use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Arr;
-use InvalidArgumentException;
 use LogicException;
 
 class Builder extends BaseBuilder
@@ -35,7 +32,6 @@ class Builder extends BaseBuilder
         'join' => [],
         'arrayJoin' => [],
         'partition' => [],
-        'preWhere' => [],
         'where' => [],
         'groupBy' => [],
         'having' => [],
@@ -74,13 +70,6 @@ class Builder extends BaseBuilder
      * @var array<string, int|float|bool|string>
      */
     public $settings = [];
-
-    /**
-     * The pre-where clauses for the query (PREWHERE).
-     *
-     * @var array<int, array<string, mixed>>
-     */
-    public $preWheres = [];
 
     /**
      * The cluster name for ON CLUSTER queries.
@@ -387,7 +376,7 @@ class Builder extends BaseBuilder
      */
     public function useIndex($index): static
     {
-        throw new LogicException('ClickHouse does not support specify indexes, please use preWhere instead.');
+        throw new LogicException('ClickHouse does not support specify indexes.');
     }
 
     /**
@@ -395,7 +384,7 @@ class Builder extends BaseBuilder
      */
     public function forceIndex($index): static
     {
-        throw new LogicException('ClickHouse does not support specify indexes, please use preWhere instead.');
+        throw new LogicException('ClickHouse does not support specify indexes.');
     }
 
     /**
@@ -404,237 +393,6 @@ class Builder extends BaseBuilder
     public function ignoreIndex($index): static
     {
         throw new LogicException('ClickHouse does not support specify indexes.');
-    }
-
-    /**
-     * Add a PREWHERE clause to the query.
-     *
-     * @param  Closure|string|array<mixed>|ExpressionContract  $column
-     */
-    public function preWhere(mixed $column, mixed $operator = null, mixed $value = null, string $boolean = 'and'): static
-    {
-        if ($column instanceof ConditionExpression) {
-            $type = 'Expression';
-            $this->preWheres[] = compact('type', 'column', 'boolean');
-
-            return $this;
-        }
-
-        if (is_array($column)) {
-            return $this->addArrayOfPreWheres($column, $boolean);
-        }
-
-        // @phpstan-ignore-next-line
-        [$value, $operator] = $this->prepareValueAndOperator($value, $operator, func_num_args() === 2);
-
-        if ($column instanceof Closure && is_null($operator)) {
-            return $this->preWhereNested($column, $boolean);
-        }
-
-        if ($this->isQueryable($column) && ! is_null($operator)) {
-            /** @var Closure|BaseBuilder|EloquentBuilder<Model> $column */
-            [$sub, $bindings] = $this->createSub($column);
-
-            return $this->addBinding($bindings, 'preWhere')
-                ->preWhere(new Expression('('.$sub.')'), $operator, $value, $boolean);
-        }
-
-        if ($this->invalidOperator($operator)) {
-            [$value, $operator] = [$operator, '='];
-        }
-
-        if ($this->isQueryable($value)) {
-            return $this->preWhereSub($column, $operator, $value, $boolean);
-        }
-
-        if (is_null($value)) {
-            /** @var string $column */
-            return $this->preWhereNull($column, $boolean, $operator !== '=');
-        }
-
-        $type = 'Basic';
-
-        $columnString = ($column instanceof ExpressionContract)
-            ? $this->grammar->getValue($column)
-            : $column;
-
-        /** @var string $columnString */
-        if (str_contains($columnString, '->') && is_bool($value)) {
-            $value = new Expression($value ? 'true' : 'false');
-
-            if (is_string($column)) {
-                $type = 'JsonBoolean';
-            }
-        }
-
-        if ($this->isBitwiseOperator($operator)) {
-            $type = 'Bitwise';
-        }
-
-        $this->preWheres[] = compact('type', 'column', 'operator', 'value', 'boolean');
-
-        if (! $value instanceof ExpressionContract) {
-            $this->addBinding($this->flattenValue($value), 'preWhere');
-        }
-
-        return $this;
-    }
-
-    /**
-     * Add an array of PREWHERE clauses to the query.
-     *
-     * @param  array<mixed>  $column
-     */
-    protected function addArrayOfPreWheres(array $column, string $boolean): static
-    {
-        return $this->preWhereNested(function (self $query) use ($column, $boolean) {
-            foreach ($column as $key => $value) {
-                if (is_numeric($key) && is_array($value)) {
-                    $arguments = array_values($value);
-                    $query->where($arguments[0], $arguments[1] ?? null, $arguments[2] ?? null, $boolean);
-                } else {
-                    $query->where($key, '=', $value, $boolean);
-                }
-            }
-        }, $boolean);
-    }
-
-    /**
-     * Add a nested PREWHERE clause to the query.
-     */
-    protected function preWhereNested(Closure $callback, string $boolean = 'and'): static
-    {
-        $callback($query = $this->forNestedWhere());
-
-        if (count($query->wheres)) {
-            $type = 'Nested';
-            $this->preWheres[] = compact('type', 'query', 'boolean');
-            $this->addBinding($query->getRawBindings()['where'], 'preWhere');
-        }
-
-        return $this;
-    }
-
-    /**
-     * Add a full sub-select PREWHERE clause to the query.
-     *
-     * @param  \Closure|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder<*>  $callback
-     */
-    protected function preWhereSub(mixed $column, string $operator, mixed $callback, string $boolean): static
-    {
-        $type = 'Sub';
-
-        if ($callback instanceof Closure) {
-            $callback($query = $this->forSubQuery());
-        } else {
-            $query = $callback instanceof EloquentBuilder ? $callback->toBase() : $callback;
-        }
-
-        $this->preWheres[] = compact('type', 'column', 'operator', 'query', 'boolean');
-        $this->addBinding($query->getBindings(), 'preWhere');
-
-        return $this;
-    }
-
-    /**
-     * Add an OR PREWHERE clause to the query.
-     *
-     * @param  Closure|string|array<mixed>|ExpressionContract  $column
-     */
-    public function orPreWhere(mixed $column, mixed $operator = null, mixed $value = null): static
-    {
-        return $this->preWhere($column, $operator, $value, 'or');
-    }
-
-    /**
-     * Add a raw PREWHERE clause to the query.
-     *
-     * @param  array<mixed>  $bindings
-     */
-    public function preWhereRaw(string $sql, array $bindings = [], string $boolean = 'and'): static
-    {
-        $this->preWheres[] = ['type' => 'raw', 'sql' => $sql, 'boolean' => $boolean];
-        $this->addBinding((array) $bindings, 'preWhere');
-
-        return $this;
-    }
-
-    /**
-     * Add a raw OR PREWHERE clause to the query.
-     *
-     * @param  array<mixed>  $bindings
-     */
-    public function orPreWhereRaw(string $sql, array $bindings = []): static
-    {
-        return $this->preWhereRaw($sql, $bindings, 'or');
-    }
-
-    /**
-     * Add a PREWHERE IN clause to the query.
-     *
-     * @param  Closure|BaseBuilder|Arrayable<int|string, mixed>|array<mixed>  $values
-     */
-    public function preWhereIn(string $column, mixed $values, string $boolean = 'and', bool $not = false): static
-    {
-        $type = $not ? 'NotIn' : 'In';
-
-        if ($this->isQueryable($values)) {
-            /** @var Closure|BaseBuilder|EloquentBuilder<Model> $values */
-            [$query, $bindings] = $this->createSub($values);
-            $values = [new Expression($query)];
-            $this->addBinding($bindings, 'preWhere');
-        }
-
-        if ($values instanceof Arrayable) {
-            $values = $values->toArray();
-        }
-
-        $this->preWheres[] = compact('type', 'column', 'values', 'boolean');
-
-        /** @var array<int|string, mixed> $values */
-        if (count($values) !== count(Arr::flatten($values, 1))) {
-            throw new InvalidArgumentException('Nested arrays may not be passed to preWhereIn method.');
-        }
-
-        $this->addBinding($this->cleanBindings($values), 'preWhere');
-
-        return $this;
-    }
-
-    /**
-     * Add a PREWHERE NOT IN clause to the query.
-     *
-     * @param  Closure|BaseBuilder|Arrayable<int|string, mixed>|array<mixed>  $values
-     */
-    public function preWhereNotIn(string $column, mixed $values, string $boolean = 'and'): static
-    {
-        return $this->preWhereIn($column, $values, $boolean, true);
-    }
-
-    /**
-     * Add a PREWHERE NULL clause to the query.
-     *
-     * @param  string|string[]  $columns
-     */
-    public function preWhereNull(string|array $columns, string $boolean = 'and', bool $not = false): static
-    {
-        $type = $not ? 'NotNull' : 'Null';
-
-        foreach (Arr::wrap($columns) as $column) {
-            $this->preWheres[] = compact('type', 'column', 'boolean');
-        }
-
-        return $this;
-    }
-
-    /**
-     * Add a PREWHERE NOT NULL clause to the query.
-     *
-     * @param  string|string[]  $columns
-     */
-    public function preWhereNotNull(string|array $columns, string $boolean = 'and'): static
-    {
-        return $this->preWhereNull($columns, $boolean, true);
     }
 
     /**
