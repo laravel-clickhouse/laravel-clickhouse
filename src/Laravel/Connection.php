@@ -10,10 +10,12 @@ use ClickHouse\Laravel\Query\Grammar as QueryGrammar;
 use ClickHouse\Laravel\Schema\Builder as SchemaBuilder;
 use ClickHouse\Laravel\Schema\Grammar as SchemaGrammar;
 use ClickHouse\Support\Escaper;
+use Closure;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
 use RuntimeException;
+use Throwable;
 
 class Connection extends BaseConnection
 {
@@ -174,6 +176,70 @@ class Connection extends BaseConnection
 
     /** {@inheritDoc} */
     public function disconnect() {}
+
+    /**
+     * {@inheritDoc}
+     *
+     * ClickHouse's HTTP client has no PDO, so transactions are a no-op that
+     * still tracks nesting level and fires connection events. Laravel testing
+     * traits that depend on transactions (RefreshDatabase, etc.) therefore
+     * won't crash, but data is NOT rolled back. Use DatabaseTruncation or
+     * DatabaseMigrations for real isolation.
+     *
+     * @param  Closure(static): mixed  $callback
+     *
+     * @throws Throwable
+     */
+    public function transaction(Closure $callback, $attempts = 1)
+    {
+        for ($currentAttempt = 1; $currentAttempt <= $attempts; $currentAttempt++) {
+            $this->beginTransaction();
+
+            try {
+                $callbackResult = $callback($this);
+            } catch (Throwable $e) {
+                $this->rollBack();
+
+                throw $e;
+            }
+
+            $this->commit();
+
+            return $callbackResult;
+        }
+
+        // @phpstan-ignore-next-line
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    public function commit()
+    {
+        if ($this->transactionLevel() == 1) {
+            $this->fireConnectionEvent('committing');
+        }
+
+        [$levelBeingCommitted, $this->transactions] = [
+            $this->transactions,
+            max(0, $this->transactions - 1),
+        ];
+
+        $this->transactionsManager?->commit(
+            $this->getName() ?: '', $levelBeingCommitted, $this->transactions
+        );
+
+        $this->fireConnectionEvent('committed');
+    }
+
+    /** {@inheritDoc} */
+    protected function createTransaction() {}
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param  int  $toLevel
+     */
+    protected function performRollBack($toLevel) {}
 
     /** {@inheritDoc} */
     public function getSchemaBuilder()

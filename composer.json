@@ -25,7 +25,8 @@
         "phpstan/phpstan": "^1.12",
         "laravel/pint": "^1.17",
         "illuminate/database": "^11.21",
-        "laravel/serializable-closure": "^1.3"
+        "laravel/serializable-closure": "^1.3",
+        "orchestra/testbench": "^9.0"
     },
     "autoload": {
         "psr-4": {
@@ -46,6 +47,8 @@
     },
     "scripts": {
       "test": "phpunit --colors",
+      "test:unit": "phpunit --colors --testsuite=Unit",
+      "test:testbench": "phpunit --colors --testsuite=Testbench",
       "phpstan": "phpstan analyse --memory-limit=-1",
       "cs": "pint src tests --test",
       "cs:fix": "pint src tests"
