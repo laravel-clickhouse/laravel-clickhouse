@@ -3,20 +3,30 @@
 namespace ClickHouse\Tests\Testbench;
 
 use ClickHouse\Laravel\ClickHouseServiceProvider;
+use Illuminate\Database\SQLiteConnection;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
+use PDO;
 
 abstract class TestCase extends OrchestraTestCase
 {
     /**
-     * Per-class SQLite file path. File-based (not ":memory:") because Laravel's
-     * DatabaseTruncation / DatabaseMigrations disconnect and reconnect between
-     * tests, and ":memory:" loses its schema on every reconnect (a documented
-     * Laravel limitation). A temp file gives a cheap ephemeral DB that is
-     * removed in tearDownAfterClass.
+     * Shared-cache in-memory SQLite URI for this test class. A bare ":memory:"
+     * cannot be used because DatabaseTruncation / DatabaseMigrations disconnect
+     * between tests and a private in-memory DB dies on disconnect. The
+     * "file:xxx?mode=memory&cache=shared" URI lets multiple PDO instances
+     * share the same in-memory DB inside one process, and the keepalive PDO
+     * below holds it alive across reconnects.
      */
-    protected static ?string $sqliteDatabasePath = null;
+    protected static ?string $sqliteUri = null;
+
+    /**
+     * Long-lived PDO that keeps the shared in-memory database alive for the
+     * lifetime of the test class. Cleared in tearDownAfterClass so the DB is
+     * released between classes.
+     */
+    protected static ?PDO $sqliteKeepalive = null;
 
     public static function setUpBeforeClass(): void
     {
@@ -29,8 +39,8 @@ abstract class TestCase extends OrchestraTestCase
         RefreshDatabaseState::$lazilyRefreshed = false;
         RefreshDatabaseState::$inMemoryConnections = [];
 
-        static::$sqliteDatabasePath = tempnam(sys_get_temp_dir(), 'lch_tb_').'.sqlite';
-        touch(static::$sqliteDatabasePath);
+        static::$sqliteUri = 'file:lch_tb_'.bin2hex(random_bytes(6)).'?mode=memory&cache=shared';
+        static::$sqliteKeepalive = new PDO('sqlite:'.static::$sqliteUri);
 
         // migrate:fresh only drops tables on the default connection. In the
         // combined scenario ClickHouse-side tables would be left over and
@@ -40,11 +50,10 @@ abstract class TestCase extends OrchestraTestCase
 
     public static function tearDownAfterClass(): void
     {
-        if (static::$sqliteDatabasePath !== null && file_exists(static::$sqliteDatabasePath)) {
-            @unlink(static::$sqliteDatabasePath);
-        }
-
-        static::$sqliteDatabasePath = null;
+        // Releasing the last PDO referencing the shared in-memory cache lets
+        // SQLite free the database. Subsequent classes get a fresh one.
+        static::$sqliteKeepalive = null;
+        static::$sqliteUri = null;
 
         parent::tearDownAfterClass();
     }
@@ -63,6 +72,29 @@ abstract class TestCase extends OrchestraTestCase
      */
     protected function defineEnvironment($app): void
     {
+        // Register a custom sqlite driver that accepts URI-mode database
+        // strings. Laravel's stock SQLiteConnector calls realpath() on any
+        // non-":memory:" database value, which would reject our shared-cache
+        // URI. Each Laravel-side reconnect opens a fresh PDO against the same
+        // URI, transparently sharing schema with the keepalive PDO.
+        $app->resolving('db', function ($db) {
+            $db->extend('sqlite_memory_shared', function (array $config, string $name) {
+                $pdoFactory = function () use ($config): PDO {
+                    $pdo = new PDO('sqlite:'.$config['database']);
+                    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+                    return $pdo;
+                };
+
+                return new SQLiteConnection(
+                    $pdoFactory,
+                    $config['database'],
+                    $config['prefix'] ?? '',
+                    array_merge($config, ['name' => $name]),
+                );
+            });
+        });
+
         $app['config']->set('database.default', $this->defaultConnection());
 
         $app['config']->set('database.connections.clickhouse', [
@@ -75,8 +107,8 @@ abstract class TestCase extends OrchestraTestCase
         ]);
 
         $app['config']->set('database.connections.sqlite', [
-            'driver' => 'sqlite',
-            'database' => static::$sqliteDatabasePath,
+            'driver' => 'sqlite_memory_shared',
+            'database' => static::$sqliteUri,
             'prefix' => '',
             'foreign_key_constraints' => false,
         ]);
