@@ -121,7 +121,7 @@ class UsersTest extends TestCase
 ```
 
 ::: tip In-memory SQLite
-`:memory:` SQLite is supported with `RefreshDatabase` only. With `DatabaseTruncation` and `DatabaseMigrations`, Laravel reconnects between tests and the in-memory database is wiped, so use a file-based SQLite path (for example a temp file) instead.
+`:memory:` works out of the box with `RefreshDatabase` (Laravel preserves the PDO between tests) and with `DatabaseMigrations` (each test re-runs `migrate:fresh` against the new connection). It does **not** work with `DatabaseTruncation`: that trait migrates once and assumes the schema persists, but each reconnect to `:memory:` gives a fresh database. For `DatabaseTruncation` use a file-based SQLite path, or a shared-cache URI like `file:tests?mode=memory&cache=shared` plus a keepalive PDO held for the lifetime of the test class.
 :::
 
 ## Caveats
