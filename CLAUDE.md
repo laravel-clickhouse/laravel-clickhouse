@@ -104,6 +104,11 @@ All classes use `ClickHouse\` as root namespace:
 - `ClickHouse\Support\` - Utility classes
 - `ClickHouse\Exceptions\` - Custom exceptions
 
+## Code Comments Language
+
+- All code (`src/`, `tests/`) — comments and docblocks MUST be in English.
+- Public docs (`docs/`, `README.md`) — follow the existing language of the file.
+
 ## Release Checklist
 
 Before tagging a new release, run through every item below. Do not skip any step.

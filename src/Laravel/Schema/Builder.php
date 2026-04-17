@@ -39,6 +39,25 @@ class Builder extends BaseBuilder
 
     /**
      * {@inheritDoc}
+     *
+     * ClickHouse has no foreign key mechanism. Both this and disableForeignKeyConstraints()
+     * are no-ops so that DatabaseTruncation and other traits which wrap work in
+     * withoutForeignKeyConstraints() do not invoke the unimplemented
+     * compileEnable/DisableForeignKeyConstraints grammar methods.
+     */
+    public function enableForeignKeyConstraints()
+    {
+        return true;
+    }
+
+    /** {@inheritDoc} */
+    public function disableForeignKeyConstraints()
+    {
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
      */
     public function dropAllTables()
     {

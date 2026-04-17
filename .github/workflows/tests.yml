@@ -58,4 +58,5 @@ jobs:
         run: |
           vendor/bin/pint src tests --test
           vendor/bin/phpstan analyse
-          vendor/bin/phpunit --coverage-text
+          vendor/bin/phpunit --testsuite=Unit --coverage-text
+          vendor/bin/phpunit --testsuite=Testbench --coverage-text
