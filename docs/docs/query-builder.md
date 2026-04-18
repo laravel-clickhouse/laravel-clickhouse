@@ -597,11 +597,11 @@ All `where*` variants are supported — closures, subqueries, `IN`, `NULL`, and 
 ### Basic PREWHERE
 
 ```php
-$query->from('events')->preWhere('type', 'click')->get();
+$query->from('events')->prewhere('type', 'click')->get();
 // select * from `events` prewhere `type` = 'click'
 
 $query->from('events')
-    ->preWhere('type', 'click')
+    ->prewhere('type', 'click')
     ->where('user_id', 42)
     ->get();
 // select * from `events` prewhere `type` = 'click' where `user_id` = 42
@@ -611,8 +611,8 @@ $query->from('events')
 
 ```php
 $query->from('events')
-    ->preWhere('type', 'click')
-    ->orPreWhere('type', 'view')
+    ->prewhere('type', 'click')
+    ->orPrewhere('type', 'view')
     ->get();
 // select * from `events` prewhere `type` = 'click' or `type` = 'view'
 ```
@@ -620,12 +620,12 @@ $query->from('events')
 ### Raw PREWHERE
 
 ```php
-$query->from('events')->preWhereRaw('type = ?', ['click'])->get();
+$query->from('events')->prewhereRaw('type = ?', ['click'])->get();
 // select * from `events` prewhere type = 'click'
 
 $query->from('events')
-    ->preWhereRaw('type = ?', ['click'])
-    ->orPreWhereRaw('type = ?', ['view'])
+    ->prewhereRaw('type = ?', ['click'])
+    ->orPrewhereRaw('type = ?', ['view'])
     ->get();
 // select * from `events` prewhere type = 'click' or type = 'view'
 ```
@@ -633,25 +633,25 @@ $query->from('events')
 ### PREWHERE IN / NOT IN
 
 ```php
-$query->from('events')->preWhereIn('type', ['click', 'view'])->get();
+$query->from('events')->prewhereIn('type', ['click', 'view'])->get();
 // select * from `events` prewhere `type` in ('click', 'view')
 
-$query->from('events')->preWhereNotIn('type', ['spam', 'bot'])->get();
+$query->from('events')->prewhereNotIn('type', ['spam', 'bot'])->get();
 // select * from `events` prewhere `type` not in ('spam', 'bot')
 
 // Subquery
 $subquery = DB::connection('clickhouse')->table('active_types')->select('type');
-$query->from('events')->preWhereIn('type', $subquery)->get();
+$query->from('events')->prewhereIn('type', $subquery)->get();
 // select * from `events` prewhere `type` in (select `type` from `active_types`)
 ```
 
 ### PREWHERE NULL / NOT NULL
 
 ```php
-$query->from('events')->preWhereNull('deleted_at')->get();
+$query->from('events')->prewhereNull('deleted_at')->get();
 // select * from `events` prewhere `deleted_at` is null
 
-$query->from('events')->preWhereNotNull('published_at')->get();
+$query->from('events')->prewhereNotNull('published_at')->get();
 // select * from `events` prewhere `published_at` is not null
 ```
 
@@ -659,7 +659,7 @@ $query->from('events')->preWhereNotNull('published_at')->get();
 
 ```php
 $query->from('events')
-    ->preWhere(function ($q) {
+    ->prewhere(function ($q) {
         $q->where('type', 'click')->orWhere('type', 'view');
     })
     ->where('user_id', 42)

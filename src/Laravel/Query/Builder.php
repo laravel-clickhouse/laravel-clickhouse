@@ -32,7 +32,7 @@ class Builder extends BaseBuilder
         'join' => [],
         'arrayJoin' => [],
         'partition' => [],
-        'preWhere' => [],
+        'prewhere' => [],
         'where' => [],
         'groupBy' => [],
         'having' => [],
@@ -77,7 +77,7 @@ class Builder extends BaseBuilder
      *
      * @var array<int, array<string, mixed>>
      */
-    public $preWheres = [];
+    public $prewheres = [];
 
     /**
      * The cluster name for ON CLUSTER queries.
@@ -406,17 +406,17 @@ class Builder extends BaseBuilder
     /**
      * Temporarily swap wheres/bindings to the preWhere arrays and run the callback.
      */
-    private function redirectToPreWheres(callable $callback): static
+    private function redirectToPrewheres(callable $callback): static
     {
         try {
-            [$this->wheres, $this->preWheres] = [$this->preWheres, $this->wheres];
-            [$this->bindings['where'], $this->bindings['preWhere']] = [$this->bindings['preWhere'], $this->bindings['where']];
+            [$this->wheres, $this->prewheres] = [$this->prewheres, $this->wheres];
+            [$this->bindings['where'], $this->bindings['prewhere']] = [$this->bindings['prewhere'], $this->bindings['where']];
 
             $callback();
         } finally {
             // Swap back after the callback so the builder is in a consistent state for the next call.
-            [$this->wheres, $this->preWheres] = [$this->preWheres, $this->wheres];
-            [$this->bindings['where'], $this->bindings['preWhere']] = [$this->bindings['preWhere'], $this->bindings['where']];
+            [$this->wheres, $this->prewheres] = [$this->prewheres, $this->wheres];
+            [$this->bindings['where'], $this->bindings['prewhere']] = [$this->bindings['prewhere'], $this->bindings['where']];
         }
 
         return $this;
@@ -427,9 +427,9 @@ class Builder extends BaseBuilder
      *
      * @param  Closure|string|array<mixed>|ExpressionContract  $column
      */
-    public function preWhere(mixed $column, mixed $operator = null, mixed $value = null, string $boolean = 'and'): static
+    public function prewhere(mixed $column, mixed $operator = null, mixed $value = null, string $boolean = 'and'): static
     {
-        return $this->redirectToPreWheres(fn () => $this->where($column, $operator, $value, $boolean));
+        return $this->redirectToPrewheres(fn () => $this->where($column, $operator, $value, $boolean));
     }
 
     /**
@@ -437,9 +437,9 @@ class Builder extends BaseBuilder
      *
      * @param  Closure|string|array<mixed>|ExpressionContract  $column
      */
-    public function orPreWhere(mixed $column, mixed $operator = null, mixed $value = null): static
+    public function orPrewhere(mixed $column, mixed $operator = null, mixed $value = null): static
     {
-        return $this->preWhere($column, $operator, $value, 'or');
+        return $this->prewhere($column, $operator, $value, 'or');
     }
 
     /**
@@ -447,9 +447,9 @@ class Builder extends BaseBuilder
      *
      * @param  array<mixed>  $bindings
      */
-    public function preWhereRaw(string $sql, array $bindings = [], string $boolean = 'and'): static
+    public function prewhereRaw(string $sql, array $bindings = [], string $boolean = 'and'): static
     {
-        return $this->redirectToPreWheres(fn () => $this->whereRaw($sql, $bindings, $boolean));
+        return $this->redirectToPrewheres(fn () => $this->whereRaw($sql, $bindings, $boolean));
     }
 
     /**
@@ -457,9 +457,9 @@ class Builder extends BaseBuilder
      *
      * @param  array<mixed>  $bindings
      */
-    public function orPreWhereRaw(string $sql, array $bindings = []): static
+    public function orPrewhereRaw(string $sql, array $bindings = []): static
     {
-        return $this->preWhereRaw($sql, $bindings, 'or');
+        return $this->prewhereRaw($sql, $bindings, 'or');
     }
 
     /**
@@ -467,9 +467,9 @@ class Builder extends BaseBuilder
      *
      * @param  Closure|self|EloquentBuilder<Model>|array<mixed>  $values
      */
-    public function preWhereIn(string $column, mixed $values, string $boolean = 'and', bool $not = false): static
+    public function prewhereIn(string $column, mixed $values, string $boolean = 'and', bool $not = false): static
     {
-        return $this->redirectToPreWheres(fn () => $this->whereIn($column, $values, $boolean, $not));
+        return $this->redirectToPrewheres(fn () => $this->whereIn($column, $values, $boolean, $not));
     }
 
     /**
@@ -477,9 +477,9 @@ class Builder extends BaseBuilder
      *
      * @param  Closure|self|EloquentBuilder<Model>|array<mixed>  $values
      */
-    public function preWhereNotIn(string $column, mixed $values, string $boolean = 'and'): static
+    public function prewhereNotIn(string $column, mixed $values, string $boolean = 'and'): static
     {
-        return $this->preWhereIn($column, $values, $boolean, true);
+        return $this->prewhereIn($column, $values, $boolean, true);
     }
 
     /**
@@ -487,9 +487,9 @@ class Builder extends BaseBuilder
      *
      * @param  string|string[]  $columns
      */
-    public function preWhereNull(string|array $columns, string $boolean = 'and', bool $not = false): static
+    public function prewhereNull(string|array $columns, string $boolean = 'and', bool $not = false): static
     {
-        return $this->redirectToPreWheres(fn () => $this->whereNull($columns, $boolean, $not));
+        return $this->redirectToPrewheres(fn () => $this->whereNull($columns, $boolean, $not));
     }
 
     /**
@@ -497,9 +497,9 @@ class Builder extends BaseBuilder
      *
      * @param  string|string[]  $columns
      */
-    public function preWhereNotNull(string|array $columns, string $boolean = 'and'): static
+    public function prewhereNotNull(string|array $columns, string $boolean = 'and'): static
     {
-        return $this->preWhereNull($columns, $boolean, true);
+        return $this->prewhereNull($columns, $boolean, true);
     }
 
     /**

@@ -1220,82 +1220,82 @@ class BuilderTest extends TestCase
         $this->getBuilder()->from('table')->ignoreIndex('index');
     }
 
-    public function testPreWhere()
+    public function testPrewhere()
     {
         $this->assertEquals(
             "select * from `table` prewhere `column` = 'value'",
-            $this->getBuilder()->from('table')->preWhere('column', 'value')->toRawSql()
+            $this->getBuilder()->from('table')->prewhere('column', 'value')->toRawSql()
         );
     }
 
-    public function testPreWhereWithWhereAlso()
+    public function testPrewhereWithWhereAlso()
     {
         $this->assertEquals(
             "select * from `table` prewhere `a` = 'x' where `b` = 'y'",
-            $this->getBuilder()->from('table')->preWhere('a', 'x')->where('b', 'y')->toRawSql()
+            $this->getBuilder()->from('table')->prewhere('a', 'x')->where('b', 'y')->toRawSql()
         );
     }
 
-    public function testOrPreWhere()
+    public function testOrPrewhere()
     {
         $this->assertEquals(
             "select * from `table` prewhere `a` = 'x' or `b` = 'y'",
-            $this->getBuilder()->from('table')->preWhere('a', 'x')->orPreWhere('b', 'y')->toRawSql()
+            $this->getBuilder()->from('table')->prewhere('a', 'x')->orPrewhere('b', 'y')->toRawSql()
         );
     }
 
-    public function testPreWhereRaw()
+    public function testPrewhereRaw()
     {
         $this->assertEquals(
             'select * from `table` prewhere column > 100',
-            $this->getBuilder()->from('table')->preWhereRaw('column > 100')->toRawSql()
+            $this->getBuilder()->from('table')->prewhereRaw('column > 100')->toRawSql()
         );
     }
 
-    public function testOrPreWhereRaw()
+    public function testOrPrewhereRaw()
     {
         $this->assertEquals(
             "select * from `table` prewhere `a` = 'x' or column > 100",
-            $this->getBuilder()->from('table')->preWhere('a', 'x')->orPreWhereRaw('column > 100')->toRawSql()
+            $this->getBuilder()->from('table')->prewhere('a', 'x')->orPrewhereRaw('column > 100')->toRawSql()
         );
     }
 
-    public function testPreWhereIn()
+    public function testPrewhereIn()
     {
         $this->assertEquals(
             'select * from `table` prewhere `column` in (1, 2, 3)',
-            $this->getBuilder()->from('table')->preWhereIn('column', [1, 2, 3])->toRawSql()
+            $this->getBuilder()->from('table')->prewhereIn('column', [1, 2, 3])->toRawSql()
         );
     }
 
-    public function testPreWhereNotIn()
+    public function testPrewhereNotIn()
     {
         $this->assertEquals(
             'select * from `table` prewhere `column` not in (1, 2, 3)',
-            $this->getBuilder()->from('table')->preWhereNotIn('column', [1, 2, 3])->toRawSql()
+            $this->getBuilder()->from('table')->prewhereNotIn('column', [1, 2, 3])->toRawSql()
         );
     }
 
-    public function testPreWhereNull()
+    public function testPrewhereNull()
     {
         $this->assertEquals(
             'select * from `table` prewhere `column` is null',
-            $this->getBuilder()->from('table')->preWhereNull('column')->toRawSql()
+            $this->getBuilder()->from('table')->prewhereNull('column')->toRawSql()
         );
     }
 
-    public function testPreWhereNotNull()
+    public function testPrewhereNotNull()
     {
         $this->assertEquals(
             'select * from `table` prewhere `column` is not null',
-            $this->getBuilder()->from('table')->preWhereNotNull('column')->toRawSql()
+            $this->getBuilder()->from('table')->prewhereNotNull('column')->toRawSql()
         );
     }
 
-    public function testPreWhereBindingsOrderBeforeWhere()
+    public function testPrewhereBindingsOrderBeforeWhere()
     {
         $builder = $this->getBuilder()->from('table')
-            ->preWhere('a', 'pre_val')
+            ->prewhere('a', 'pre_val')
             ->where('b', 'where_val');
 
         $this->assertEquals(['pre_val', 'where_val'], $builder->getBindings());

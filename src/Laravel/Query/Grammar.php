@@ -26,7 +26,7 @@ class Grammar extends BaseGrammar
         'indexHint',
         'joins',
         'arrayJoins',
-        'preWheres',
+        'prewheres',
         'wheres',
         'groups',
         'havings',
@@ -419,13 +419,13 @@ class Grammar extends BaseGrammar
      *
      * @param  array<int, array<string, mixed>>  $preWheres
      */
-    protected function compilePreWheres(BaseBuilder $query, array $preWheres): string
+    protected function compilePrewheres(BaseBuilder $query, array $prewheres): string
     {
-        if (empty($preWheres)) {
+        if (empty($prewheres)) {
             return '';
         }
 
-        $sql = collect($preWheres)->map(function (array $where) use ($query) {
+        $sql = collect($prewheres)->map(function (array $where) use ($query) {
             /** @var string $boolean */
             $boolean = $where['boolean'];
             /** @var string $type */
