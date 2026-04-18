@@ -18,17 +18,17 @@ Tests typically need a way to reset database state between runs. Laravel ships t
 | `DatabaseTruncation` | Migrates once, then `TRUNCATE`s tables between tests |
 | `DatabaseMigrations` | Runs `migrate:fresh` before each test, `migrate:rollback` after |
 
-This package overrides `Connection::beginTransaction` / `commit` / `rollBack` / `transaction` so they no longer crash on the missing PDO, but ClickHouse has no real transactions — the override is a no-op that only tracks nesting level and fires events.
+ClickHouse has no real transactions, so this package's `Connection` throws `LogicException` from `beginTransaction()`, `commit()`, `rollBack()`, and `transaction()`. `RefreshDatabase` therefore cannot wrap a ClickHouse connection — exclude it from `$connectionsToTransact` and use `DatabaseTruncation` or `DatabaseMigrations` for isolation on the ClickHouse side.
 
 ## Trait Compatibility
 
 | Trait | ClickHouse connection | SQLite/MySQL/PostgreSQL connection |
 |-------|-----------------------|------------------------------------|
-| `RefreshDatabase` | ⚠ Works without crashing, but **does not isolate** — data persists between tests | Works as in vanilla Laravel |
-| `DatabaseTruncation` | Works (uses native `TRUNCATE TABLE`; not supported on `Distributed` / `View` engines) | Works as in vanilla Laravel |
-| `DatabaseMigrations` | Works (uses the package's custom migration repository) | Works as in vanilla Laravel |
+| `RefreshDatabase` | ✗ `beginTransaction()` throws `LogicException`. Do not list ClickHouse in `$connectionsToTransact` | Works as in vanilla Laravel |
+| `DatabaseTruncation` | ✓ Uses native `TRUNCATE TABLE` (not supported on `Distributed` / `View` engines) | Works as in vanilla Laravel |
+| `DatabaseMigrations` | ✓ Uses the package's custom migration repository | Works as in vanilla Laravel |
 
-For real per-test isolation on a ClickHouse connection, use **`DatabaseTruncation`** (fast) or **`DatabaseMigrations`** (slower but more thorough).
+For per-test isolation on a ClickHouse connection, use **`DatabaseTruncation`** (fast) or **`DatabaseMigrations`** (slower but more thorough). `RefreshDatabase` is still useful for non-ClickHouse connections in the same test class.
 
 ## Recommended Setup
 
@@ -98,12 +98,13 @@ class AnalyticsTest extends TestCase
 }
 ```
 
-`RefreshDatabase` is also valid here, but be aware of the asymmetric behaviour:
+`RefreshDatabase` is also valid here, but **only** with SQLite in `$connectionsToTransact`:
 
-- The SQLite connection is rolled back per test as expected.
-- The ClickHouse connection's "transactions" are no-ops, so any ClickHouse data you write **stays around** until the next time something cleans it.
+```php
+protected $connectionsToTransact = ['sqlite'];
+```
 
-If you want symmetric isolation, prefer `DatabaseTruncation` or `DatabaseMigrations`.
+If you list `clickhouse`, `beginTransaction()` will throw `LogicException`. SQLite still rolls back per test; ClickHouse data must be cleaned via `DatabaseTruncation` or `DatabaseMigrations` if isolation matters.
 
 ## Pure SQLite (No ClickHouse)
 
@@ -128,7 +129,7 @@ class UsersTest extends TestCase
 
 ### RefreshDatabase on a ClickHouse connection
 
-Because ClickHouse transactions are no-ops, `RefreshDatabase` provides **no isolation** for ClickHouse data — it only prevents the trait from crashing. Use `DatabaseTruncation` or `DatabaseMigrations` for real isolation.
+ClickHouse has no transactions, so `Connection::beginTransaction()` (and `commit`, `rollBack`, `transaction`) throw `LogicException`. To use `RefreshDatabase` in a test class that also touches ClickHouse, exclude the ClickHouse connection from `$connectionsToTransact` and use `DatabaseTruncation` or `DatabaseMigrations` for ClickHouse-side isolation.
 
 ### TRUNCATE engine compatibility
 
@@ -138,6 +139,3 @@ ClickHouse supports `TRUNCATE TABLE` for `Memory`, `MergeTree` family, and most 
 
 The service provider rebinds `migration.repository` as an app-wide singleton to a ClickHouse-aware implementation as soon as `MigrateInstallCommand` is resolved. The repository writes each migration against the connection that the migration itself declares (via `protected $connection = '...'`), so SQLite migrations still land on SQLite. In practice this means the rebinding is transparent, but it does silently replace Laravel's default repository — keep this in mind if you bind your own.
 
-### `afterCommit` callbacks
-
-`DB::afterCommit(...)` callbacks registered on a ClickHouse connection fire as soon as the outermost (fake) transaction commits. This matches what Laravel testing traits expect, but be aware that "after commit" is effectively immediate on ClickHouse.

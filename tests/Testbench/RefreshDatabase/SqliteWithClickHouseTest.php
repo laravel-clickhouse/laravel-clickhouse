@@ -8,14 +8,12 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Combined scenario: SQLite as the default connection, ClickHouse as a
- * secondary one.
+ * secondary one. RefreshDatabase wraps only SQLite (see
+ * SqliteWithClickHouseTestCase::$connectionsToTransact); ClickHouse is left
+ * out because its Connection throws LogicException on beginTransaction.
  *
- * - SQLite transactions behave natively and roll back per test
- * - ClickHouse transactions are no-ops, so data accumulates across tests on
- *   the ClickHouse side (documented caveat)
- *
- * For real isolation on the ClickHouse side, use DatabaseTruncation or
- * DatabaseMigrations instead.
+ * SQLite still rolls back per test. ClickHouse data must be cleaned via
+ * DatabaseTruncation or DatabaseMigrations if isolation matters.
  */
 class SqliteWithClickHouseTest extends SqliteWithClickHouseTestCase
 {
@@ -33,7 +31,7 @@ class SqliteWithClickHouseTest extends SqliteWithClickHouseTestCase
         $this->assertSame(0, DB::connection('sqlite')->table('sq_users')->count());
     }
 
-    public function testClickhouseInsertUnderRefreshDatabaseDoesNotCrash(): void
+    public function testClickhouseQueriesStillWorkAlongsideRefreshDatabase(): void
     {
         DB::connection('clickhouse')->table('ch_events')->insert(['id' => 1, 'name' => 'ch-a']);
 
