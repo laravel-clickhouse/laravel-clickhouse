@@ -14,8 +14,8 @@ use Closure;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
+use LogicException;
 use RuntimeException;
-use Throwable;
 
 class Connection extends BaseConnection
 {
@@ -180,66 +180,49 @@ class Connection extends BaseConnection
     /**
      * {@inheritDoc}
      *
-     * ClickHouse's HTTP client has no PDO, so transactions are a no-op that
-     * still tracks nesting level and fires connection events. Laravel testing
-     * traits that depend on transactions (RefreshDatabase, etc.) therefore
-     * won't crash, but data is NOT rolled back. Use DatabaseTruncation or
-     * DatabaseMigrations for real isolation.
-     *
      * @param  Closure(static): mixed  $callback
      *
-     * @throws Throwable
+     * @throws LogicException
      */
-    public function transaction(Closure $callback, $attempts = 1)
+    public function transaction(Closure $callback, $attempts = 1): never
     {
-        for ($currentAttempt = 1; $currentAttempt <= $attempts; $currentAttempt++) {
-            $this->beginTransaction();
-
-            try {
-                $callbackResult = $callback($this);
-            } catch (Throwable $e) {
-                $this->rollBack();
-
-                throw $e;
-            }
-
-            $this->commit();
-
-            return $callbackResult;
-        }
-
-        // @phpstan-ignore-next-line
-        return null;
+        $this->throwUnsupportedTransaction();
     }
-
-    /** {@inheritDoc} */
-    public function commit()
-    {
-        if ($this->transactionLevel() == 1) {
-            $this->fireConnectionEvent('committing');
-        }
-
-        [$levelBeingCommitted, $this->transactions] = [
-            $this->transactions,
-            max(0, $this->transactions - 1),
-        ];
-
-        $this->transactionsManager?->commit(
-            $this->getName() ?: '', $levelBeingCommitted, $this->transactions
-        );
-
-        $this->fireConnectionEvent('committed');
-    }
-
-    /** {@inheritDoc} */
-    protected function createTransaction() {}
 
     /**
      * {@inheritDoc}
      *
-     * @param  int  $toLevel
+     * @throws LogicException
      */
-    protected function performRollBack($toLevel) {}
+    public function beginTransaction(): never
+    {
+        $this->throwUnsupportedTransaction();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws LogicException
+     */
+    public function commit(): never
+    {
+        $this->throwUnsupportedTransaction();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws LogicException
+     */
+    public function rollBack($toLevel = null): never
+    {
+        $this->throwUnsupportedTransaction();
+    }
+
+    private function throwUnsupportedTransaction(): never
+    {
+        throw new LogicException('Transactions are not supported when using ClickHouse.');
+    }
 
     /** {@inheritDoc} */
     public function getSchemaBuilder()

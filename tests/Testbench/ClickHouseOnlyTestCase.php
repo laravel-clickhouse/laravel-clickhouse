@@ -6,8 +6,13 @@ use function Orchestra\Testbench\load_migration_paths;
 
 abstract class ClickHouseOnlyTestCase extends TestCase
 {
-    /** @var array<int, string> */
-    protected $connectionsToTransact = ['clickhouse'];
+    /**
+     * Empty so RefreshDatabase doesn't try to begin a transaction on the
+     * ClickHouse connection (which throws LogicException).
+     *
+     * @var array<int, string>
+     */
+    protected $connectionsToTransact = [];
 
     /** @var array<int, string> */
     protected $connectionsToTruncate = ['clickhouse'];
