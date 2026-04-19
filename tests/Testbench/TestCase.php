@@ -99,11 +99,7 @@ abstract class TestCase extends OrchestraTestCase
 
         $app['config']->set('database.connections.clickhouse', [
             'driver' => 'clickhouse',
-            'host' => env('CLICKHOUSE_HOST', '127.0.0.1'),
-            'port' => (int) env('CLICKHOUSE_PORT', 8123),
-            'database' => env('CLICKHOUSE_DATABASE', 'default'),
-            'username' => env('CLICKHOUSE_USERNAME', 'default'),
-            'password' => env('CLICKHOUSE_PASSWORD', 'default'),
+            ...static::clickHouseConfig(),
         ]);
 
         $app['config']->set('database.connections.sqlite', [
@@ -120,16 +116,26 @@ abstract class TestCase extends OrchestraTestCase
     }
 
     /**
+     * @return array{host: string, port: int, database: string, username: string, password: string}
+     */
+    private static function clickHouseConfig(): array
+    {
+        return [
+            'host' => env('CLICKHOUSE_HOST', '127.0.0.1'),
+            'port' => (int) env('CLICKHOUSE_PORT', 8123),
+            'database' => env('CLICKHOUSE_DATABASE', 'default'),
+            'username' => env('CLICKHOUSE_USERNAME', 'default'),
+            'password' => env('CLICKHOUSE_PASSWORD', 'default'),
+        ];
+    }
+
+    /**
      * Drop every non-system table in the ClickHouse test database via HTTP.
      * We bypass the Laravel connection because this runs before the app boots.
      */
     protected static function resetClickHouseTestDatabase(): void
     {
-        $host = getenv('CLICKHOUSE_HOST') ?: '127.0.0.1';
-        $port = getenv('CLICKHOUSE_PORT') ?: '8123';
-        $database = getenv('CLICKHOUSE_DATABASE') ?: 'default';
-        $username = getenv('CLICKHOUSE_USERNAME') ?: 'default';
-        $password = getenv('CLICKHOUSE_PASSWORD') ?: 'default';
+        ['host' => $host, 'port' => $port, 'database' => $database, 'username' => $username, 'password' => $password] = static::clickHouseConfig();
 
         $send = function (string $sql) use ($host, $port, $username, $password, $database): void {
             $url = sprintf(
