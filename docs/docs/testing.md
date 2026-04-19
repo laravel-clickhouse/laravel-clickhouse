@@ -34,11 +34,16 @@ For per-test isolation on a ClickHouse connection, use **`DatabaseTruncation`** 
 
 1. Configure your `clickhouse` connection (and any other connections you use) in `config/database.php`.
 2. Extend Laravel's built-in `Tests\TestCase` and add the trait that fits your isolation needs.
-3. List the connections you want the trait to operate on via the `$connectionsToTransact` or `$connectionsToTruncate` property on your test class.
+3. List the connections you want the trait to operate on via the matching property on your test class.
 
 ```php
-protected $connectionsToTransact = ['sqlite', 'clickhouse'];
+// RefreshDatabase: ClickHouse cannot be listed — beginTransaction() throws.
+protected $connectionsToTransact = ['sqlite'];
+
+// DatabaseTruncation / multi-connection DatabaseMigrations: list every
+// connection you want the trait to clean.
 protected $connectionsToTruncate = ['sqlite', 'clickhouse'];
+protected $connectionsToMigrate = ['sqlite', 'clickhouse'];
 ```
 
 ## Single ClickHouse Connection
