@@ -417,7 +417,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile the PREWHERE clauses for the query.
      *
-     * @param  array<int, array<string, mixed>>  $preWheres
+     * @param  array<int, array<string, mixed>>  $prewheres
      */
     protected function compilePrewheres(BaseBuilder $query, array $prewheres): string
     {
