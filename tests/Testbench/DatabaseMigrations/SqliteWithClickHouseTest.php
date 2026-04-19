@@ -2,8 +2,8 @@
 
 namespace ClickHouse\Tests\Testbench\DatabaseMigrations;
 
+use ClickHouse\Laravel\Testing\DatabaseMigrations;
 use ClickHouse\Tests\Testbench\SqliteWithClickHouseTestCase;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 
 /**

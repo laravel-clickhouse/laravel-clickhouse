@@ -17,6 +17,9 @@ abstract class SqliteWithClickHouseTestCase extends TestCase
     /** @var array<int, string> */
     protected $connectionsToTruncate = ['sqlite', 'clickhouse'];
 
+    /** @var array<int, string> */
+    protected $connectionsToMigrate = ['sqlite', 'clickhouse'];
+
     protected function defaultConnection(): string
     {
         return 'sqlite';

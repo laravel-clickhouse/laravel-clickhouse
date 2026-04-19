@@ -26,7 +26,7 @@ ClickHouse has no real transactions, so this package's `Connection` throws `Logi
 |-------|-----------------------|------------------------------------|
 | `RefreshDatabase` | ✗ `beginTransaction()` throws `LogicException`. Do not list ClickHouse in `$connectionsToTransact` | Works as in vanilla Laravel |
 | `DatabaseTruncation` | ✓ Uses native `TRUNCATE TABLE` (not supported on `Distributed` / `View` engines) | Works as in vanilla Laravel |
-| `DatabaseMigrations` | ✓ Uses the package's custom migration repository | Works as in vanilla Laravel |
+| `DatabaseMigrations` | ✓ Uses the package's custom migration repository. For multi-connection migrations use `ClickHouse\Laravel\Testing\DatabaseMigrations` (see below) | Works as in vanilla Laravel |
 
 For per-test isolation on a ClickHouse connection, use **`DatabaseTruncation`** (fast) or **`DatabaseMigrations`** (slower but more thorough). `RefreshDatabase` is still useful for non-ClickHouse connections in the same test class.
 
@@ -105,6 +105,27 @@ protected $connectionsToTransact = ['sqlite'];
 ```
 
 If you list `clickhouse`, `beginTransaction()` will throw `LogicException`. SQLite still rolls back per test; ClickHouse data must be cleaned via `DatabaseTruncation` or `DatabaseMigrations` if isolation matters.
+
+### Multi-connection `DatabaseMigrations`
+
+`migrate:fresh` only drops tables on the connection passed via `--database`, but always re-runs every registered migration (each landing on the connection it declares via `$connection`). When migrations target more than one connection, the secondary connection's tables accumulate across test classes and `CREATE TABLE` eventually conflicts.
+
+The package ships a drop-in replacement that accepts a `$connectionsToMigrate` property (mirroring `$connectionsToTruncate`) and wipes secondary connections via `db:wipe` before the standard `migrate:fresh`:
+
+```php
+use ClickHouse\Laravel\Testing\DatabaseMigrations;
+
+class AnalyticsTest extends TestCase
+{
+    use DatabaseMigrations;
+
+    protected $connectionsToMigrate = ['sqlite', 'clickhouse'];
+
+    // ...
+}
+```
+
+The default connection is skipped automatically (it's already covered by `migrate:fresh`).
 
 ## Pure SQLite (No ClickHouse)
 
