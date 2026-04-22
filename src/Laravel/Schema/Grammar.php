@@ -4,6 +4,7 @@ namespace ClickHouse\Laravel\Schema;
 
 use BackedEnum;
 use ClickHouse\Laravel\Connection;
+use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Grammars\Grammar as BaseGrammar;
@@ -28,24 +29,30 @@ class Grammar extends BaseGrammar
 
     /**
      * {@inheritDoc}
+     *
+     * @param  BaseConnection|null  $connection
      */
-    public function compileCreateDatabase($name, $connection): string
+    public function compileCreateDatabase($name, $connection = null): string
     {
         return sprintf('CREATE DATABASE %s', $this->wrapValue($name));
     }
 
     /**
      * Compile the query to determine the tables.
+     *
+     * @param  string|string[]|null  $schema
      */
-    public function compileTables(): string
+    public function compileTables($schema = null): string
     {
         return "SELECT name AS name, total_bytes AS size, comment AS comment, engine AS engine, '' AS collation FROM system.tables WHERE database = currentDatabase() AND engine NOT LIKE '%View'";
     }
 
     /**
      * Compile the query to determine the views.
+     *
+     * @param  string|string[]|null  $schema
      */
-    public function compileViews(): string
+    public function compileViews($schema = null): string
     {
         return "SELECT name AS name, total_bytes AS size, comment AS comment, engine AS engine, '' AS collation FROM system.tables WHERE database = currentDatabase() AND engine LIKE '%View'";
     }
@@ -55,8 +62,10 @@ class Grammar extends BaseGrammar
      *
      * @param  Fluent<string, mixed>  $command
      */
-    public function compileCreate(Blueprint $blueprint, Fluent $command, Connection $connection): string
+    public function compileCreate(Blueprint $blueprint, Fluent $command, ?BaseConnection $connection = null): string
     {
+        $connection ??= $this->resolveConnection();
+
         $sql = $this->compileCreateTable(
             $blueprint, $command, $connection
         );
@@ -268,7 +277,7 @@ class Grammar extends BaseGrammar
      *
      * @param  Fluent<string, mixed>  $command
      */
-    protected function compileCreateTable(Blueprint $blueprint, Fluent $command, Connection $connection): string
+    protected function compileCreateTable(Blueprint $blueprint, Fluent $command, BaseConnection $connection): string
     {
         $tableStructure = [];
         $tableIndexes = [];
@@ -297,7 +306,7 @@ class Grammar extends BaseGrammar
     /**
      * Append the engine specifications to a command.
      */
-    protected function compileCreateEngine(string $sql, Connection $connection, Blueprint $blueprint): string
+    protected function compileCreateEngine(string $sql, BaseConnection $connection, Blueprint $blueprint): string
     {
         // @phpstan-ignore-next-line
         if (isset($blueprint->engine)) {
@@ -924,8 +933,24 @@ class Grammar extends BaseGrammar
     }
 
     /**
-     * {@inheritDoc}
+     * Resolve the connection from the grammar instance.
+     *
+     * Laravel 11/12 set it via setConnection(); Laravel 13 sets it through
+     * the grammar constructor. In both cases it lives on the base grammar's
+     * protected $connection property.
      */
+    protected function resolveConnection(): BaseConnection
+    {
+        // @phpstan-ignore-next-line
+        $connection = $this->connection ?? null;
+
+        if (! $connection instanceof BaseConnection) {
+            throw new RuntimeException('ClickHouse schema grammar has no connection bound.');
+        }
+
+        return $connection;
+    }
+
     protected function wrapValue($value)
     {
         return $value;
