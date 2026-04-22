@@ -9,6 +9,7 @@ use ClickHouse\Laravel\Query\Grammar;
 use ClickHouse\Tests\TestCase;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\ConnectionResolverInterface;
+use Illuminate\Database\Query\Grammars\Grammar as QueryGrammar;
 use Illuminate\Database\Query\Processors\Processor;
 use Mockery as m;
 
@@ -16,110 +17,118 @@ class BuilderTest extends TestCase
 {
     public function testDelete()
     {
-        $query = new BaseBuilder(m::mock(ConnectionInterface::class), new Grammar, m::mock(Processor::class));
-        $builder = new Builder($query);
-        $model = new EloquentBuilderTestStub;
-        $this->mockConnectionForModel($model, '');
-        $builder->setModel($model);
+        $builder = $this->builderForModel();
+
         $builder->getConnection()->shouldReceive('getConfig')->once()
             ->with('use_lightweight_delete')->andReturn(false);
         $builder->getConnection()->shouldReceive('delete')->once()
             ->with('alter table `table` delete', [])->andReturn(1);
 
-        $result = $builder->delete();
-        $this->assertEquals(1, $result);
+        $this->assertEquals(1, $builder->delete());
     }
 
     public function testDeleteWithLightweight()
     {
-        $query = new BaseBuilder(m::mock(ConnectionInterface::class), new Grammar, m::mock(Processor::class));
-        $builder = new Builder($query);
-        $model = new EloquentBuilderTestStub;
-        $this->mockConnectionForModel($model, '');
-        $builder->setModel($model);
+        $builder = $this->builderForModel();
+
         $builder->getConnection()->shouldReceive('delete')->once()
             ->with('delete from `table`', [])->andReturn(1);
 
-        $result = $builder->delete(lightweight: true);
-        $this->assertEquals(1, $result);
+        $this->assertEquals(1, $builder->delete(lightweight: true));
     }
 
     public function testDeleteWithPartition()
     {
-        $query = new BaseBuilder(m::mock(ConnectionInterface::class), new Grammar, m::mock(Processor::class));
-        $builder = new Builder($query);
-        $model = new EloquentBuilderTestStub;
-        $this->mockConnectionForModel($model, '');
-        $builder->setModel($model);
+        $builder = $this->builderForModel();
+
         $builder->getConnection()->shouldReceive('getConfig')->once()
             ->with('use_lightweight_delete')->andReturn(false);
         $builder->getConnection()->shouldReceive('delete')->once()
             ->with('alter table `table` delete in partition ?', ['partition'])->andReturn(1);
 
-        $result = $builder->delete(partition: 'partition');
-        $this->assertEquals(1, $result);
+        $this->assertEquals(1, $builder->delete(partition: 'partition'));
     }
 
     public function testForceDelete()
     {
-        $query = new BaseBuilder(m::mock(ConnectionInterface::class), new Grammar, m::mock(Processor::class));
-        $builder = new Builder($query);
-        $model = new EloquentBuilderTestStub;
-        $this->mockConnectionForModel($model, '');
-        $builder->setModel($model);
+        $builder = $this->builderForModel();
+
         $builder->getConnection()->shouldReceive('getConfig')->once()
             ->with('use_lightweight_delete')->andReturn(false);
         $builder->getConnection()->shouldReceive('delete')->once()
             ->with('alter table `table` delete', [])->andReturn(1);
 
-        $result = $builder->forceDelete();
-        $this->assertEquals(1, $result);
+        $this->assertEquals(1, $builder->forceDelete());
     }
 
     public function testForceDeleteWithLightweight()
     {
-        $query = new BaseBuilder(m::mock(ConnectionInterface::class), new Grammar, m::mock(Processor::class));
-        $builder = new Builder($query);
-        $model = new EloquentBuilderTestStub;
-        $this->mockConnectionForModel($model, '');
-        $builder->setModel($model);
+        $builder = $this->builderForModel();
+
         $builder->getConnection()->shouldReceive('delete')->once()
             ->with('delete from `table`', [])->andReturn(1);
 
-        $result = $builder->forceDelete(lightweight: true);
-        $this->assertEquals(1, $result);
+        $this->assertEquals(1, $builder->forceDelete(lightweight: true));
     }
 
     public function testForceDeleteWithPartition()
     {
-        $query = new BaseBuilder(m::mock(ConnectionInterface::class), new Grammar, m::mock(Processor::class));
-        $builder = new Builder($query);
-        $model = new EloquentBuilderTestStub;
-        $this->mockConnectionForModel($model, '');
-        $builder->setModel($model);
+        $builder = $this->builderForModel();
+
         $builder->getConnection()->shouldReceive('getConfig')->once()
             ->with('use_lightweight_delete')->andReturn(false);
         $builder->getConnection()->shouldReceive('delete')->once()
             ->with('alter table `table` delete in partition ?', ['partition'])->andReturn(1);
 
-        $result = $builder->forceDelete(partition: 'partition');
-        $this->assertEquals(1, $result);
+        $this->assertEquals(1, $builder->forceDelete(partition: 'partition'));
     }
 
-    private function mockConnectionForModel($model)
+    /**
+     * Wrap an Eloquent Builder around a mocked connection resolver so the
+     * tests can declare the connection expectations they care about and
+     * leave the rest to the defaults.
+     */
+    private function builderForModel(): Builder
     {
-        $grammarClass = 'Illuminate\Database\Query\Grammars\Grammar';
-        $processorClass = 'Illuminate\Database\Query\Processors\Processor';
-        $grammar = new $grammarClass;
-        $processor = new $processorClass;
-        $connection = m::mock(ConnectionInterface::class, ['getQueryGrammar' => $grammar, 'getPostProcessor' => $processor]);
-        $connection->shouldReceive('query')->andReturnUsing(function () use ($connection, $grammar, $processor) {
-            return new BaseBuilder($connection, $grammar, $processor);
-        });
-        $connection->shouldReceive('getDatabaseName')->andReturn('database');
-        $resolver = m::mock(ConnectionResolverInterface::class, ['connection' => $connection]);
-        $class = get_class($model);
-        $class::setConnectionResolver($resolver);
+        $query = new BaseBuilder(
+            $this->queryConnection(),
+            $this->grammar(Grammar::class),
+            m::mock(Processor::class),
+        );
+
+        $model = new EloquentBuilderTestStub;
+        $model::setConnectionResolver($this->modelResolver());
+
+        $builder = new Builder($query);
+        $builder->setModel($model);
+
+        return $builder;
+    }
+
+    private function queryConnection(): ConnectionInterface
+    {
+        $mock = m::mock(ConnectionInterface::class);
+        $mock->shouldReceive('getTablePrefix')->andReturn('');
+
+        return $mock;
+    }
+
+    private function modelResolver(): ConnectionResolverInterface
+    {
+        $grammar = $this->grammar(QueryGrammar::class);
+        $processor = new Processor;
+
+        $connection = m::mock(ConnectionInterface::class, [
+            'getQueryGrammar' => $grammar,
+            'getPostProcessor' => $processor,
+            'getDatabaseName' => 'database',
+            'getTablePrefix' => '',
+        ]);
+
+        $connection->shouldReceive('query')
+            ->andReturnUsing(fn () => new BaseBuilder($connection, $grammar, $processor));
+
+        return m::mock(ConnectionResolverInterface::class, ['connection' => $connection]);
     }
 }
 
