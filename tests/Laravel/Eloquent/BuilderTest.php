@@ -17,7 +17,7 @@ class BuilderTest extends TestCase
 {
     public function testDelete()
     {
-        $builder = $this->builderForModel();
+        $builder = $this->getBuilderForModel();
 
         $builder->getConnection()->shouldReceive('getConfig')->once()
             ->with('use_lightweight_delete')->andReturn(false);
@@ -29,7 +29,7 @@ class BuilderTest extends TestCase
 
     public function testDeleteWithLightweight()
     {
-        $builder = $this->builderForModel();
+        $builder = $this->getBuilderForModel();
 
         $builder->getConnection()->shouldReceive('delete')->once()
             ->with('delete from `table`', [])->andReturn(1);
@@ -39,7 +39,7 @@ class BuilderTest extends TestCase
 
     public function testDeleteWithPartition()
     {
-        $builder = $this->builderForModel();
+        $builder = $this->getBuilderForModel();
 
         $builder->getConnection()->shouldReceive('getConfig')->once()
             ->with('use_lightweight_delete')->andReturn(false);
@@ -51,7 +51,7 @@ class BuilderTest extends TestCase
 
     public function testForceDelete()
     {
-        $builder = $this->builderForModel();
+        $builder = $this->getBuilderForModel();
 
         $builder->getConnection()->shouldReceive('getConfig')->once()
             ->with('use_lightweight_delete')->andReturn(false);
@@ -63,7 +63,7 @@ class BuilderTest extends TestCase
 
     public function testForceDeleteWithLightweight()
     {
-        $builder = $this->builderForModel();
+        $builder = $this->getBuilderForModel();
 
         $builder->getConnection()->shouldReceive('delete')->once()
             ->with('delete from `table`', [])->andReturn(1);
@@ -73,7 +73,7 @@ class BuilderTest extends TestCase
 
     public function testForceDeleteWithPartition()
     {
-        $builder = $this->builderForModel();
+        $builder = $this->getBuilderForModel();
 
         $builder->getConnection()->shouldReceive('getConfig')->once()
             ->with('use_lightweight_delete')->andReturn(false);
@@ -88,16 +88,16 @@ class BuilderTest extends TestCase
      * tests can declare the connection expectations they care about and
      * leave the rest to the defaults.
      */
-    private function builderForModel(): Builder
+    private function getBuilderForModel(): Builder
     {
         $query = new BaseBuilder(
-            $this->queryConnection(),
+            $this->getConnection(),
             $this->getGrammar(Grammar::class),
             m::mock(Processor::class),
         );
 
         $model = new EloquentBuilderTestStub;
-        $model::setConnectionResolver($this->modelResolver());
+        $model::setConnectionResolver($this->getConnectionResolver());
 
         $builder = new Builder($query);
         $builder->setModel($model);
@@ -105,7 +105,7 @@ class BuilderTest extends TestCase
         return $builder;
     }
 
-    private function queryConnection(): ConnectionInterface
+    private function getConnection(): ConnectionInterface
     {
         $mock = m::mock(ConnectionInterface::class);
         $mock->shouldReceive('getTablePrefix')->andReturn('');
@@ -113,7 +113,7 @@ class BuilderTest extends TestCase
         return $mock;
     }
 
-    private function modelResolver(): ConnectionResolverInterface
+    private function getConnectionResolver(): ConnectionResolverInterface
     {
         $grammar = $this->getGrammar(QueryGrammar::class);
         $processor = new Processor;
