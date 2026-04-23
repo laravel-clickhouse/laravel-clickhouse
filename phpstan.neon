@@ -2,6 +2,7 @@ parameters:
   level: 9
   paths:
     - src
+  reportUnmatchedIgnoredErrors: true
   ignoreErrors:
     # Dynamic SQL vs L13's literal-string typing on Expression / fromRaw / Arr::wrap.
     -

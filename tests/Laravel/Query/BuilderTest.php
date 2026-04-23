@@ -1369,14 +1369,14 @@ class BuilderTest extends TestCase
         array $bindings = [],
         mixed $result = null
     ) {
-        $connection = $this->getConnection($select, $insert, $update, $delete, $bindings, $result);
-        $grammar = $this->grammar(Grammar::class, $connection);
+        $connection = $this->mockConnection($select, $insert, $update, $delete, $bindings, $result);
+        $grammar = $this->getGrammar(Grammar::class, $connection);
         $processor = $this->getProcessor();
 
         return new Builder($connection, $grammar, $processor);
     }
 
-    private function getConnection(
+    private function mockConnection(
         ?string $select = null,
         ?string $insert = null,
         ?string $update = null,

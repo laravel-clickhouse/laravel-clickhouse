@@ -11,8 +11,9 @@ class BuilderTest extends TestCase
 {
     public function testCreateBlueprintDispatchesToCustomResolverWhenSet()
     {
-        $builder = new Builder($this->connection());
-        $expected = $this->blueprint('users');
+        $connection = $this->getConnection();
+        $builder = new Builder($connection);
+        $expected = new Blueprint($connection, 'users');
 
         $captured = null;
         $builder->blueprintResolver(function ($table, $callback, $prefix) use (&$captured, $expected) {
@@ -32,7 +33,7 @@ class BuilderTest extends TestCase
 
     public function testCreateBlueprintFallsBackToContainerWhenNoResolverIsSet()
     {
-        $builder = new Builder($this->connection());
+        $builder = new Builder($this->getConnection());
 
         $actual = (new ReflectionMethod($builder, 'createBlueprint'))
             ->invoke($builder, 'users', null);

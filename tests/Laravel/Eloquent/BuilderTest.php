@@ -92,7 +92,7 @@ class BuilderTest extends TestCase
     {
         $query = new BaseBuilder(
             $this->queryConnection(),
-            $this->grammar(Grammar::class),
+            $this->getGrammar(Grammar::class),
             m::mock(Processor::class),
         );
 
@@ -115,7 +115,7 @@ class BuilderTest extends TestCase
 
     private function modelResolver(): ConnectionResolverInterface
     {
-        $grammar = $this->grammar(QueryGrammar::class);
+        $grammar = $this->getGrammar(QueryGrammar::class);
         $processor = new Processor;
 
         $connection = m::mock(ConnectionInterface::class, [
