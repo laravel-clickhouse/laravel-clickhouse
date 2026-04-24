@@ -105,14 +105,6 @@ class BuilderTest extends TestCase
         return $builder;
     }
 
-    private function getConnection(): ConnectionInterface
-    {
-        $mock = m::mock(ConnectionInterface::class);
-        $mock->shouldReceive('getTablePrefix')->andReturn('');
-
-        return $mock;
-    }
-
     private function getConnectionResolver(): ConnectionResolverInterface
     {
         $grammar = $this->getGrammar(QueryGrammar::class);
