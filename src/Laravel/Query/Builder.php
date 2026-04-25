@@ -408,10 +408,10 @@ class Builder extends BaseBuilder
      */
     private function redirectToPrewheres(callable $callback): static
     {
-        try {
-            [$this->wheres, $this->prewheres] = [$this->prewheres, $this->wheres];
-            [$this->bindings['where'], $this->bindings['prewhere']] = [$this->bindings['prewhere'], $this->bindings['where']];
+        [$this->wheres, $this->prewheres] = [$this->prewheres, $this->wheres];
+        [$this->bindings['where'], $this->bindings['prewhere']] = [$this->bindings['prewhere'], $this->bindings['where']];
 
+        try {
             $callback();
         } finally {
             // Swap back after the callback so the builder is in a consistent state for the next call.
