@@ -72,14 +72,16 @@ class Grammar extends BaseGrammar
         }
 
         if ($query instanceof Builder && count($query->arrayJoins)) {
-            $query->columns = collect($query->arrayJoins)
+            $aliases = collect($query->arrayJoins)
                 ->pluck('as')
-                ->filter(function ($as) {
-                    return $as && ! is_numeric($as);
-                })
-                ->reduce(function ($columns, $as) {
-                    return array_merge($columns, [$as]);
-                }, $query->columns);
+                ->filter(fn ($as) => $as && ! is_numeric($as))
+                ->values()
+                ->all();
+
+            /** @var array<ExpressionContract|string> $columns */
+            $columns = array_merge($query->columns ?? [], $aliases);
+
+            $query->columns = $columns;
         }
 
         // To compile the query, we'll spin through each component of the query and

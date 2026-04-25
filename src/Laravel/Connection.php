@@ -60,9 +60,10 @@ class Connection extends BaseConnection
      * {@inheritDoc}
      *
      * @param  mixed[]  $bindings
+     * @param  array<mixed>  $fetchUsing
      * @return array<string, mixed>[]
      */
-    public function select($query, $bindings = [], $useReadPdo = true): array
+    public function select($query, $bindings = [], $useReadPdo = true, array $fetchUsing = []): array
     {
         // @phpstan-ignore-next-line
         return $this->run($query, $bindings, function (string $query, array $bindings) {
@@ -205,15 +206,43 @@ class Connection extends BaseConnection
     /** {@inheritDoc} */
     protected function getDefaultQueryGrammar()
     {
-        return (new QueryGrammar)->setConnection($this);
+        return $this->makeGrammar(QueryGrammar::class);
     }
 
     /** {@inheritDoc} */
     protected function getDefaultSchemaGrammar()
     {
-        ($grammar = new SchemaGrammar)->setConnection($this);
+        $grammar = $this->makeGrammar(SchemaGrammar::class);
 
-        return $this->withTablePrefix($grammar);
+        // withTablePrefix() only exists on Laravel 11; from Laravel 12 the
+        // grammar reads the prefix off its injected connection.
+        if (method_exists($this, 'withTablePrefix')) {
+            return $this->withTablePrefix($grammar);
+        }
+
+        return $grammar;
+    }
+
+    /**
+     * Instantiate a grammar, passing the connection through whichever API
+     * the active Laravel version exposes. On 12+ the grammar accepts the
+     * connection via its constructor; on 11 the argument is silently
+     * ignored by the implicit constructor and setConnection() is used.
+     *
+     * @template TGrammar of object
+     *
+     * @param  class-string<TGrammar>  $class
+     * @return TGrammar
+     */
+    private function makeGrammar(string $class): object
+    {
+        $grammar = new $class($this);
+
+        if (method_exists($grammar, 'setConnection')) {
+            $grammar->setConnection($this);
+        }
+
+        return $grammar;
     }
 
     /**

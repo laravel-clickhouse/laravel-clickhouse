@@ -46,6 +46,8 @@ use Illuminate\Support\Fluent;
  */
 class Blueprint extends BaseBlueprint
 {
+    use BlueprintLaravelCompatibility;
+
     /**
      * Set the PARTITION BY clause for the table.
      *

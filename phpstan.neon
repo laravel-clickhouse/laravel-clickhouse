@@ -3,8 +3,29 @@ parameters:
   paths:
     - src
   reportUnmatchedIgnoredErrors: true
-  excludePaths:
   ignoreErrors:
+    # Dynamic SQL vs L13's literal-string typing on Expression / fromRaw / Arr::wrap.
+    -
+      message: '#Expression constructor expects TValue#'
+      reportUnmatched: false
+    -
+      message: '#fromRaw\(\) expects literal-string#'
+      reportUnmatched: false
+    -
+      message: '#Parameter \#1 \$value of static method Illuminate\\Support\\Arr::wrap\(\) expects#'
+      reportUnmatched: false
+    # ClickHouse binding slots don't match L12+'s literal-string $type enum.
+    -
+      message: '#Parameter \#2 \$type of method Illuminate\\Database\\Query\\Builder::(addBinding|setBindings)\(\) expects#'
+      path: src/Laravel/Query/Builder.php
+      reportUnmatched: false
+    # Dead branch of the conditional trait (see BlueprintLaravelCompatibility.php).
+    -
+      message: '#Parameter \#\d+ \$\w+ of method Illuminate\\Database\\Schema\\Blueprint::__construct\(\) expects#'
+      path: src/Laravel/Schema/BlueprintLaravelCompatibility.php
+      reportUnmatched: false
+    # $resolver is PHPDoc non-nullable but starts unset at runtime.
+    - '#Property Illuminate\\Database\\Schema\\Builder::\$resolver \(Closure\) in isset\(\) is not nullable#'
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$column\.#'
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$to\.#'
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$shouldBeSkipped\.#'

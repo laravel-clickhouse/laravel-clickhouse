@@ -23,7 +23,21 @@ class Builder extends BaseBuilder
     /**
      * {@inheritDoc}
      *
-     * @var array<string, mixed[]>
+     * @var array{
+     *     select: list<mixed>,
+     *     from: list<mixed>,
+     *     join: list<mixed>,
+     *     where: list<mixed>,
+     *     groupBy: list<mixed>,
+     *     having: list<mixed>,
+     *     order: list<mixed>,
+     *     union: list<mixed>,
+     *     unionOrder: list<mixed>,
+     *     withQuery: list<mixed>,
+     *     arrayJoin: list<mixed>,
+     *     partition: list<mixed>,
+     *     settings: list<mixed>,
+     * }
      */
     public $bindings = [
         'withQuery' => [],
@@ -45,11 +59,11 @@ class Builder extends BaseBuilder
     /**
      * The array joins for the query.
      *
-     * @var array{
-     *     'type': string,
-     *     'column': ExpressionContract|string,
-     *     'as': string|null,
-     * }[]
+     * @var list<array{
+     *     type: string,
+     *     column: ExpressionContract|string|self|EloquentBuilder<Model>,
+     *     as: string|null,
+     * }>
      */
     public $arrayJoins = [];
 
@@ -1099,5 +1113,34 @@ class Builder extends BaseBuilder
         }
 
         return parent::addDateBasedWhere($type, $column, $operator, $value, $boolean);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * The base builder declares $type as a literal-string enum of the
+     * core binding slots. ClickHouse adds its own slots (arrayJoin,
+     * partition, settings, withQuery) via the overridden $bindings
+     * property, so the type is widened to plain string here.
+     *
+     * @param  mixed  $value
+     * @param  string  $type
+     * @return $this
+     */
+    public function addBinding($value, $type = 'where')
+    {
+        return parent::addBinding($value, $type);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param  mixed[]  $bindings
+     * @param  string  $type
+     * @return $this
+     */
+    public function setBindings(array $bindings, $type = 'where')
+    {
+        return parent::setBindings($bindings, $type);
     }
 }
