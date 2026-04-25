@@ -58,12 +58,28 @@ class Builder extends BaseBuilder
                     ? $this->connection->getConfig('prefix')
                     : '';
 
-        // @phpstan-ignore-next-line
-        if (isset($this->resolver)) {
-            return call_user_func($this->resolver, $table, $callback, $prefix);
+        if (($resolver = $this->getBlueprintResolver()) !== null) {
+            return $resolver($table, $callback, $prefix);
         }
 
-        // @phpstan-ignore-next-line
-        return Container::getInstance()->make(Blueprint::class, compact('table', 'callback', 'prefix'));
+        return Container::getInstance()->make(Blueprint::class, [
+            'connection' => $this->connection,
+            'table' => $table,
+            'callback' => $callback,
+        ]);
+    }
+
+    /**
+     * Read the base Schema\Builder's blueprint resolver. Laravel 13
+     * PHPDoc-types it as a non-nullable Closure but at runtime it
+     * starts unset — and is always unset on Laravel 11. The mixed-typed
+     * local defeats PHPStan's narrowing of the declared property type.
+     */
+    private function getBlueprintResolver(): ?Closure
+    {
+        /** @var mixed $resolver */
+        $resolver = isset($this->resolver) ? $this->resolver : null;
+
+        return $resolver instanceof Closure ? $resolver : null;
     }
 }

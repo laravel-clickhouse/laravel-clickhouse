@@ -1369,14 +1369,14 @@ class BuilderTest extends TestCase
         array $bindings = [],
         mixed $result = null
     ) {
-        $connection = $this->getConnection($select, $insert, $update, $delete, $bindings, $result);
-        $grammar = (new Grammar)->setConnection($connection);
+        $connection = $this->mockConnection($select, $insert, $update, $delete, $bindings, $result);
+        $grammar = $this->getGrammar(Grammar::class, $connection);
         $processor = $this->getProcessor();
 
         return new Builder($connection, $grammar, $processor);
     }
 
-    private function getConnection(
+    private function mockConnection(
         ?string $select = null,
         ?string $insert = null,
         ?string $update = null,
@@ -1388,11 +1388,15 @@ class BuilderTest extends TestCase
             Connection::class,
             function ($connection) use ($select, $insert, $update, $delete, $bindings, $result) {
                 $connection->shouldReceive('getDatabaseName')->andReturn('database');
+                $connection->shouldReceive('getTablePrefix')->andReturn('');
                 $connection->shouldReceive('prepareBindings')->andReturnUsing(fn ($bindings) => $bindings);
                 $connection->shouldReceive('escape')->andReturnUsing(fn ($value) => is_string($value) ? "'{$value}'" : $value);
 
                 if ($select) {
-                    $connection->shouldReceive('select')->with($select, $bindings, true)->once()->andReturn($result);
+                    $connection->shouldReceive('select')
+                        ->withArgs(fn ($sql, $args, $useRead = true) => $sql === $select && $args === $bindings && $useRead === true)
+                        ->once()
+                        ->andReturn($result);
                 }
 
                 if ($insert) {
