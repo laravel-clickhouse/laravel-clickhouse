@@ -27,6 +27,7 @@ class Builder extends BaseBuilder
      *     select: list<mixed>,
      *     from: list<mixed>,
      *     join: list<mixed>,
+     *     prewhere: list<mixed>,
      *     where: list<mixed>,
      *     groupBy: list<mixed>,
      *     having: list<mixed>,
