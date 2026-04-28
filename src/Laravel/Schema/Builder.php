@@ -14,6 +14,30 @@ use Illuminate\Database\Schema\Builder as BaseBuilder;
 class Builder extends BaseBuilder
 {
     /**
+     * Drop a table from the schema synchronously, waiting for the drop to
+     * propagate across all replicas before returning.
+     */
+    public function dropSync(string $table): void
+    {
+        $this->build(tap($this->createBlueprint($table), function ($blueprint): void {
+            /** @var Blueprint $blueprint */
+            $blueprint->drop()->sync();
+        }));
+    }
+
+    /**
+     * Drop a table from the schema if it exists, synchronously waiting for
+     * the drop to propagate across all replicas before returning.
+     */
+    public function dropIfExistsSync(string $table): void
+    {
+        $this->build(tap($this->createBlueprint($table), function ($blueprint): void {
+            /** @var Blueprint $blueprint */
+            $blueprint->dropIfExists()->sync();
+        }));
+    }
+
+    /**
      * {@inheritDoc}
      */
     public function dropAllTables()
