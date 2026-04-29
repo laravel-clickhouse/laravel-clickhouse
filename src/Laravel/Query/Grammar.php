@@ -26,6 +26,7 @@ class Grammar extends BaseGrammar
         'indexHint',
         'joins',
         'arrayJoins',
+        'prewheres',
         'wheres',
         'groups',
         'havings',
@@ -413,5 +414,28 @@ class Grammar extends BaseGrammar
         }
 
         return '1 = 1';
+    }
+
+    /**
+     * Compile the PREWHERE clauses for the query.
+     *
+     * @param  array<int, array<string, mixed>>  $prewheres
+     */
+    protected function compilePrewheres(BaseBuilder $query, array $prewheres): string
+    {
+        if (empty($prewheres)) {
+            return '';
+        }
+
+        $sql = collect($prewheres)->map(function (array $where) use ($query) {
+            /** @var string $boolean */
+            $boolean = $where['boolean'];
+            /** @var string $type */
+            $type = $where['type'];
+
+            return $boolean.' '.$this->{"where{$type}"}($query, $where);
+        })->all();
+
+        return 'prewhere '.$this->removeLeadingBoolean(implode(' ', $sql));
     }
 }
