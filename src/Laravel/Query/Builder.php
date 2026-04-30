@@ -473,7 +473,7 @@ class Builder extends BaseBuilder
      *
      * @param  array<mixed>  $bindings
      */
-    public function orPrewhereRaw(string $sql, array $bindings = []): static
+    public function orPrewhereRaw(mixed $sql, array $bindings = []): static
     {
         return $this->prewhereRaw($sql, $bindings, 'or');
     }
