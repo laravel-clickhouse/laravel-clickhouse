@@ -41,4 +41,26 @@ class BuilderTest extends TestCase
         $this->assertInstanceOf(Blueprint::class, $actual);
         $this->assertSame('users', $actual->getTable());
     }
+
+    public function testDropSyncCompilesDropTableWithSyncKeyword()
+    {
+        $connection = $this->getConnection();
+        $connection->shouldReceive('statement')
+            ->once()
+            ->with('DROP TABLE users SYNC')
+            ->andReturnTrue();
+
+        (new Builder($connection))->dropSync('users');
+    }
+
+    public function testDropIfExistsSyncCompilesDropTableIfExistsWithSyncKeyword()
+    {
+        $connection = $this->getConnection();
+        $connection->shouldReceive('statement')
+            ->once()
+            ->with('DROP TABLE IF EXISTS users SYNC')
+            ->andReturnTrue();
+
+        (new Builder($connection))->dropIfExistsSync('users');
+    }
 }
