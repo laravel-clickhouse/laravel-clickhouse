@@ -6,54 +6,69 @@ use Illuminate\Foundation\Testing\DatabaseMigrations as BaseDatabaseMigrations;
 
 /**
  * Drop-in replacement for the framework's DatabaseMigrations trait that
- * supports running migrations across multiple connections in a single test
- * class.
+ * keeps multi-connection setups clean across test classes.
  *
- * `migrate:fresh` only drops tables on the connection passed via --database,
- * but always re-runs every registered migration (each landing on the
- * connection it declares via $connection). When migrations target more than
- * one connection, secondary connections accumulate tables across test
- * classes and CREATE TABLE eventually conflicts.
+ * Each migration declares its target connection via `protected $connection`,
+ * and `migrate:fresh` re-runs every registered migration on each invocation
+ * — so a single test class can land tables on several connections at once.
+ * `migrate:fresh --database=X` only drops tables on X (and even then only
+ * when the migrations table already exists on X), so any other connection a
+ * migration touches keeps its tables. Across test classes those leftover
+ * tables stack up and the next `CREATE TABLE` collides.
  *
- * Declare the secondary connections via `$connectionsToMigrate` (mirroring
- * `$connectionsToTruncate` on DatabaseTruncation) and they will be wiped via
- * `db:wipe` before the standard migrate:fresh.
+ * List every connection the class's migrations target via
+ * `$connectionsToMigrate` (mirroring `$connectionsToTruncate` on
+ * DatabaseTruncation). Each one is wiped with `db:wipe` before the standard
+ * `migrate:fresh` runs, so every relevant connection starts empty.
  */
 trait DatabaseMigrations
 {
-    use BaseDatabaseMigrations {
-        refreshTestDatabase as protected baseRefreshTestDatabase;
+    use BaseDatabaseMigrations;
+
+    /**
+     * Perform any work that should take place before the database has started refreshing.
+     *
+     * @return void
+     */
+    protected function beforeRefreshingDatabase()
+    {
+        $this->wipeAdditionalConnections();
     }
 
     /**
-     * @return void
+     * Wipe the additional connections.
      */
-    protected function refreshTestDatabase()
+    protected function wipeAdditionalConnections(): void
     {
-        $this->wipeAdditionalConnections();
-
-        $this->baseRefreshTestDatabase();
-    }
-
-    private function wipeAdditionalConnections(): void
-    {
-        $default = $this->app['config']->get('database.default');
-
-        /** @var array<int, string> $extra */
-        $extra = property_exists($this, 'connectionsToMigrate')
-            ? $this->connectionsToMigrate
-            : [];
-
-        // Always include the default connection. migrate:fresh's internal
-        // db:wipe only triggers when the migrations table exists on that
-        // connection, so a connection populated by another connection's
-        // migrations (e.g. ch_events on ClickHouse when migrations table
-        // lives on SQLite) is missed and CREATE TABLE collides on the next
-        // run. Wiping unconditionally avoids that leftover.
-        $connections = array_values(array_unique([$default, ...$extra]));
+        $connections = $this->connectionsToMigrate();
 
         foreach ($connections as $connection) {
             $this->artisan('db:wipe', ['--database' => $connection]);
         }
+    }
+
+    /**
+     * Get the connections that should be wiped before `migrate:fresh` runs.
+     *
+     * When `$connectionsToMigrate` is not declared, fall back to a single
+     * `null` entry — `db:wipe` resolves a null `--database` back to the
+     * default connection from config. `migrate:fresh --database=<default>`
+     * would normally wipe it itself, but only when the migrations table
+     * already exists on that connection — and across test classes the
+     * connection that is the default *now* may have been a secondary in an
+     * earlier class, leaving tables behind without ever holding the
+     * migrations table. Wiping the default unconditionally covers that
+     * cross-class leftover.
+     *
+     * @return array<int, string|null>
+     */
+    protected function connectionsToMigrate(): array
+    {
+        /** @var array<int, string|null> $connectionsToMigrate */
+        $connectionsToMigrate = property_exists($this, 'connectionsToMigrate')
+            ? $this->connectionsToMigrate
+            : [null];
+
+        return $connectionsToMigrate;
     }
 }
