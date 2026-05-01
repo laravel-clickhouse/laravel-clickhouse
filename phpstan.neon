@@ -2,7 +2,7 @@ parameters:
   level: 9
   paths:
     - src
-  reportUnmatchedIgnoredErrors: false
+  reportUnmatchedIgnoredErrors: true
   ignoreErrors:
     # Dynamic SQL vs L13's literal-string typing on Expression / fromRaw / Arr::wrap.
     -
@@ -17,6 +17,11 @@ parameters:
     # ClickHouse binding slots don't match L12+'s literal-string $type enum.
     -
       message: '#Parameter \#2 \$type of method Illuminate\\Database\\Query\\Builder::(addBinding|setBindings)\(\) expects#'
+      path: src/Laravel/Query/Builder.php
+      reportUnmatched: false
+    # Dynamic SQL vs L13's literal-string typing on whereRaw.
+    -
+      message: '#Parameter \#1 \$sql of method Illuminate\\Database\\Query\\Builder::whereRaw\(\) expects string, mixed given\.#'
       path: src/Laravel/Query/Builder.php
       reportUnmatched: false
     # Dead branch of the conditional trait (see BlueprintLaravelCompatibility.php).
