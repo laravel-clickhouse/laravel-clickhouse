@@ -1,13 +1,13 @@
 <?php
 
-namespace ClickHouse\Tests\Client;
+namespace ClickHouse\Tests\Unit\Client;
 
 use ClickHouse\Client\Client;
 use ClickHouse\Client\Contracts\Transport;
 use ClickHouse\Client\Response;
 use ClickHouse\Client\Statement;
 use ClickHouse\Support\Escaper;
-use ClickHouse\Tests\TestCase;
+use ClickHouse\Tests\Unit\TestCase;
 
 class StatementTest extends TestCase
 {

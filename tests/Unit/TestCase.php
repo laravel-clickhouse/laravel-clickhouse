@@ -1,6 +1,6 @@
 <?php
 
-namespace ClickHouse\Tests;
+namespace ClickHouse\Tests\Unit;
 
 use Carbon\Carbon;
 use ClickHouse\Laravel\Schema\Grammar as ClickHouseSchemaGrammar;

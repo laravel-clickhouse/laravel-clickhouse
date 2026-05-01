@@ -1,14 +1,15 @@
 <?php
 
-namespace ClickHouse\Tests\Laravel;
+namespace ClickHouse\Tests\Unit\Laravel;
 
 use ClickHouse\Client\Client;
 use ClickHouse\Client\Statement;
 use ClickHouse\Exceptions\ParallelQueryException;
 use ClickHouse\Laravel\Connection;
-use ClickHouse\Tests\TestCase;
+use ClickHouse\Tests\Unit\TestCase;
 use Exception;
 use Illuminate\Database\QueryException;
+use LogicException;
 use PDO;
 
 class ConnectionTest extends TestCase
@@ -145,5 +146,34 @@ class ConnectionTest extends TestCase
             $this->assertEquals(['a' => $expectedA], $e->getResponses());
             $this->assertInstanceOf(QueryException::class, $e->getErrors()['b']);
         }
+    }
+
+    public function testBeginTransactionThrowsLogicException()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Transactions are not supported when using ClickHouse.');
+
+        (new Connection(client: $this->mock(Client::class)))->beginTransaction();
+    }
+
+    public function testCommitThrowsLogicException()
+    {
+        $this->expectException(LogicException::class);
+
+        (new Connection(client: $this->mock(Client::class)))->commit();
+    }
+
+    public function testRollBackThrowsLogicException()
+    {
+        $this->expectException(LogicException::class);
+
+        (new Connection(client: $this->mock(Client::class)))->rollBack();
+    }
+
+    public function testTransactionClosureThrowsLogicException()
+    {
+        $this->expectException(LogicException::class);
+
+        (new Connection(client: $this->mock(Client::class)))->transaction(fn () => null);
     }
 }

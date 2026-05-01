@@ -1,10 +1,10 @@
 <?php
 
-namespace ClickHouse\Tests\Laravel\Query;
+namespace ClickHouse\Tests\Unit\Laravel\Query;
 
 use ClickHouse\Laravel\Query\Builder;
 use ClickHouse\Laravel\Query\Grammar;
-use ClickHouse\Tests\TestCase;
+use ClickHouse\Tests\Unit\TestCase;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Processors\Processor;
 use LogicException;
