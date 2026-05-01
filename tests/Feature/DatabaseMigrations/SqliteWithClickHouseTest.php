@@ -1,18 +1,20 @@
 <?php
 
-namespace ClickHouse\Tests\Testbench\DatabaseTruncation;
+namespace ClickHouse\Tests\Feature\DatabaseMigrations;
 
-use ClickHouse\Laravel\Testing\DatabaseTruncation;
-use ClickHouse\Tests\Testbench\SqliteWithClickHouseTestCase;
+use ClickHouse\Laravel\Testing\DatabaseMigrations;
+use ClickHouse\Tests\Feature\SqliteWithClickHouseTestCase;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Combined-scenario DatabaseTruncation: tables on both connections are wiped
- * between tests.
+ * Combined-scenario DatabaseMigrations: a single migration.repository handles
+ * migrations from both drivers. Each migration writes its schema against the
+ * connection it declares, so SQLite migrations land on SQLite and ClickHouse
+ * migrations land on ClickHouse, with no cross-talk.
  */
 class SqliteWithClickHouseTest extends SqliteWithClickHouseTestCase
 {
-    use DatabaseTruncation;
+    use DatabaseMigrations;
 
     public function testRound1InsertsIntoBothConnections(): void
     {
@@ -23,7 +25,7 @@ class SqliteWithClickHouseTest extends SqliteWithClickHouseTestCase
         $this->assertSame(1, DB::connection('clickhouse')->table('ch_events')->count());
     }
 
-    public function testRound2BothTablesTruncated(): void
+    public function testRound2BothTablesAreFresh(): void
     {
         $this->assertSame(0, DB::connection('sqlite')->table('sq_users')->count());
         $this->assertSame(0, DB::connection('clickhouse')->table('ch_events')->count());

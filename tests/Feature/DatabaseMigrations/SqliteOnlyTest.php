@@ -1,8 +1,8 @@
 <?php
 
-namespace ClickHouse\Tests\Testbench\DatabaseMigrations;
+namespace ClickHouse\Tests\Feature\DatabaseMigrations;
 
-use ClickHouse\Tests\Testbench\SqliteOnlyTestCase;
+use ClickHouse\Tests\Feature\SqliteOnlyTestCase;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 

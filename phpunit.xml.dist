@@ -12,12 +12,10 @@
 >
   <testsuites>
     <testsuite name="Unit">
-      <directory>tests/Client</directory>
-      <directory>tests/Laravel</directory>
-      <directory>tests/Support</directory>
+      <directory>tests/Unit</directory>
     </testsuite>
-    <testsuite name="Testbench">
-      <directory>tests/Testbench</directory>
+    <testsuite name="Feature">
+      <directory>tests/Feature</directory>
     </testsuite>
   </testsuites>
   <php>

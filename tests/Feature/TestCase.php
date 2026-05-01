@@ -1,6 +1,6 @@
 <?php
 
-namespace ClickHouse\Tests\Testbench;
+namespace ClickHouse\Tests\Feature;
 
 use ClickHouse\Laravel\ClickHouseServiceProvider;
 use Illuminate\Database\SQLiteConnection;

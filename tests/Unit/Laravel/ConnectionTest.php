@@ -1,12 +1,12 @@
 <?php
 
-namespace ClickHouse\Tests\Laravel;
+namespace ClickHouse\Tests\Unit\Laravel;
 
 use ClickHouse\Client\Client;
 use ClickHouse\Client\Statement;
 use ClickHouse\Exceptions\ParallelQueryException;
 use ClickHouse\Laravel\Connection;
-use ClickHouse\Tests\TestCase;
+use ClickHouse\Tests\Unit\TestCase;
 use Exception;
 use Illuminate\Database\QueryException;
 use LogicException;

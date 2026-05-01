@@ -1,9 +1,9 @@
 <?php
 
-namespace ClickHouse\Tests\Testbench\DatabaseMigrations;
+namespace ClickHouse\Tests\Feature\DatabaseMigrations;
 
 use ClickHouse\Laravel\Testing\DatabaseMigrations;
-use ClickHouse\Tests\Testbench\ClickHouseOnlyTestCase;
+use ClickHouse\Tests\Feature\ClickHouseOnlyTestCase;
 use Illuminate\Support\Facades\DB;
 
 /**

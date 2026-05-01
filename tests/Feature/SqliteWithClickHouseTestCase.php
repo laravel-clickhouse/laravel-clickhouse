@@ -1,6 +1,6 @@
 <?php
 
-namespace ClickHouse\Tests\Testbench;
+namespace ClickHouse\Tests\Feature;
 
 use function Orchestra\Testbench\load_migration_paths;
 

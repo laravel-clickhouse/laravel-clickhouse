@@ -59,4 +59,4 @@ jobs:
           vendor/bin/pint src tests --test
           vendor/bin/phpstan analyse
           vendor/bin/phpunit --testsuite=Unit --coverage-text
-          vendor/bin/phpunit --testsuite=Testbench --coverage-text
+          vendor/bin/phpunit --testsuite=Feature --coverage-text

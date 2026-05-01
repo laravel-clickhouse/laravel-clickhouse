@@ -1,10 +1,10 @@
 <?php
 
-namespace ClickHouse\Tests\Laravel\Schema;
+namespace ClickHouse\Tests\Unit\Laravel\Schema;
 
 use ClickHouse\Laravel\Schema\Blueprint;
 use ClickHouse\Laravel\Schema\Builder;
-use ClickHouse\Tests\TestCase;
+use ClickHouse\Tests\Unit\TestCase;
 use ReflectionMethod;
 
 class BuilderTest extends TestCase

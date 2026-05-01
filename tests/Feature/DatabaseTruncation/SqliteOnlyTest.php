@@ -1,8 +1,8 @@
 <?php
 
-namespace ClickHouse\Tests\Testbench\DatabaseTruncation;
+namespace ClickHouse\Tests\Feature\DatabaseTruncation;
 
-use ClickHouse\Tests\Testbench\SqliteOnlyTestCase;
+use ClickHouse\Tests\Feature\SqliteOnlyTestCase;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 

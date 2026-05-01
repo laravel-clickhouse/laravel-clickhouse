@@ -35,7 +35,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "ClickHouse\\Tests\\": "tests/"
+            "ClickHouse\\Tests\\Unit\\": "tests/Unit/",
+            "ClickHouse\\Tests\\Feature\\": "tests/Feature/"
         }
     },
     "extra": {
@@ -48,7 +49,7 @@
     "scripts": {
       "test": "phpunit --colors",
       "test:unit": "phpunit --colors --testsuite=Unit",
-      "test:testbench": "phpunit --colors --testsuite=Testbench",
+      "test:feature": "phpunit --colors --testsuite=Feature",
       "phpstan": "phpstan analyse --memory-limit=-1",
       "cs": "pint src tests --test",
       "cs:fix": "pint src tests"

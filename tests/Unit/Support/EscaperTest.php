@@ -1,9 +1,9 @@
 <?php
 
-namespace ClickHouse\Tests\Support;
+namespace ClickHouse\Tests\Unit\Support;
 
 use ClickHouse\Support\Escaper;
-use ClickHouse\Tests\TestCase;
+use ClickHouse\Tests\Unit\TestCase;
 
 class EscaperTest extends TestCase
 {
