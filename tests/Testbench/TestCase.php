@@ -41,11 +41,6 @@ abstract class TestCase extends OrchestraTestCase
 
         static::$sqliteUri = 'file:lch_tb_'.bin2hex(random_bytes(6)).'?mode=memory&cache=shared';
         static::$sqliteKeepalive = new PDO('sqlite:'.static::$sqliteUri);
-
-        // migrate:fresh only drops tables on the default connection. In the
-        // combined scenario ClickHouse-side tables would be left over and
-        // cause TABLE_ALREADY_EXISTS. Wipe them directly via the HTTP API.
-        static::resetClickHouseTestDatabase();
     }
 
     public static function tearDownAfterClass(): void
@@ -127,70 +122,5 @@ abstract class TestCase extends OrchestraTestCase
             'username' => env('CLICKHOUSE_USERNAME', 'default'),
             'password' => env('CLICKHOUSE_PASSWORD', 'default'),
         ];
-    }
-
-    /**
-     * Drop every non-system table in the ClickHouse test database via HTTP.
-     * We bypass the Laravel connection because this runs before the app boots.
-     */
-    protected static function resetClickHouseTestDatabase(): void
-    {
-        ['host' => $host, 'port' => $port, 'database' => $database, 'username' => $username, 'password' => $password] = static::clickHouseConfig();
-
-        $send = function (string $sql) use ($host, $port, $username, $password, $database): void {
-            $url = sprintf(
-                'http://%s:%s/?database=%s&default_format=JSON',
-                $host,
-                $port,
-                urlencode($database),
-            );
-
-            $context = stream_context_create([
-                'http' => [
-                    'method' => 'POST',
-                    'header' => 'Authorization: Basic '.base64_encode($username.':'.$password)."\r\n".
-                                "Content-Type: text/plain\r\n",
-                    'content' => $sql,
-                    'ignore_errors' => true,
-                    'timeout' => 5,
-                ],
-            ]);
-
-            @file_get_contents($url, false, $context);
-        };
-
-        $listSql = sprintf("SELECT name FROM system.tables WHERE database = '%s' FORMAT JSONEachRow", addslashes($database));
-        $url = sprintf(
-            'http://%s:%s/?database=%s',
-            $host,
-            $port,
-            urlencode($database),
-        );
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => 'Authorization: Basic '.base64_encode($username.':'.$password)."\r\n".
-                            "Content-Type: text/plain\r\n",
-                'content' => $listSql,
-                'ignore_errors' => true,
-                'timeout' => 5,
-            ],
-        ]);
-        $response = @file_get_contents($url, false, $context);
-
-        if ($response === false || $response === '') {
-            return;
-        }
-
-        foreach (explode("\n", trim($response)) as $line) {
-            /** @var array{name?: string}|null $row */
-            $row = json_decode($line, true);
-
-            if (! is_array($row) || empty($row['name'])) {
-                continue;
-            }
-
-            $send('DROP TABLE IF EXISTS `'.$row['name'].'` SYNC');
-        }
     }
 }

@@ -2,41 +2,39 @@
 
 namespace ClickHouse\Laravel\Testing;
 
-use Illuminate\Foundation\Testing\DatabaseMigrations as BaseDatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation as BaseDatabaseTruncation;
+use Illuminate\Foundation\Testing\RefreshDatabaseState;
 
 /**
- * Drop-in replacement for the framework's DatabaseMigrations trait that
+ * Drop-in replacement for the framework's DatabaseTruncation trait that
  * supports running migrations across multiple connections in a single test
  * class.
  *
- * `migrate:fresh` only drops tables on the connection passed via --database,
- * but always re-runs every registered migration (each landing on the
- * connection it declares via $connection). When migrations target more than
- * one connection, secondary connections accumulate tables across test
- * classes and CREATE TABLE eventually conflicts.
+ * The framework's trait runs `migrate:fresh` on the default connection on
+ * first setup, but `migrate:fresh` always re-runs every registered migration
+ * (each landing on the connection it declares via $connection). When
+ * migrations target more than one connection, secondary connections
+ * accumulate tables across test classes and CREATE TABLE eventually
+ * conflicts.
  *
  * Declare the secondary connections via `$connectionsToMigrate` (mirroring
- * `$connectionsToTruncate` on DatabaseTruncation) and they will be wiped via
- * `db:wipe` before the standard migrate:fresh.
+ * `$connectionsToTruncate`) and they will be wiped via `db:wipe` before the
+ * one-time `migrate:fresh`.
  */
-trait DatabaseMigrations
+trait DatabaseTruncation
 {
-    use BaseDatabaseMigrations {
-        refreshTestDatabase as protected baseRefreshTestDatabase;
+    use BaseDatabaseTruncation {
+        beforeTruncatingDatabase as protected baseBeforeTruncatingDatabase;
     }
 
-    /**
-     * @return void
-     */
-    protected function refreshTestDatabase()
+    protected function beforeTruncatingDatabase(): void
     {
-        $this->wipeAdditionalConnections();
+        $this->baseBeforeTruncatingDatabase();
 
-        $this->baseRefreshTestDatabase();
-    }
+        if (RefreshDatabaseState::$migrated) {
+            return;
+        }
 
-    private function wipeAdditionalConnections(): void
-    {
         $default = $this->app['config']->get('database.default');
 
         /** @var array<int, string> $extra */

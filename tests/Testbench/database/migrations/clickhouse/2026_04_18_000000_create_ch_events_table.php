@@ -19,6 +19,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::drop('ch_events');
+        Schema::dropIfExistsSync('ch_events');
     }
 };

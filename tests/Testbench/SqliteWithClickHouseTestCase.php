@@ -27,6 +27,9 @@ abstract class SqliteWithClickHouseTestCase extends TestCase
 
     protected function defineDatabaseMigrations(): void
     {
-        load_migration_paths($this->app, __DIR__.'/database/migrations');
+        load_migration_paths($this->app, [
+            __DIR__.'/database/migrations',
+            __DIR__.'/database/migrations/clickhouse',
+        ]);
     }
 }

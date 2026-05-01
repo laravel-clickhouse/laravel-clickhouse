@@ -2,8 +2,8 @@
 
 namespace ClickHouse\Tests\Testbench\DatabaseTruncation;
 
+use ClickHouse\Laravel\Testing\DatabaseTruncation;
 use ClickHouse\Tests\Testbench\ClickHouseOnlyTestCase;
-use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 
 /**
