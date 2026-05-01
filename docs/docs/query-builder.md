@@ -588,6 +588,85 @@ $query->whereTime('created_at', '10:20:30')->get();
 | `whereYear()` | `toYear()` |
 | `whereTime()` | `toTime()` |
 
+## PREWHERE Clause
+
+`PREWHERE` is a ClickHouse-specific optimisation that filters rows before reading all selected columns. ClickHouse evaluates `PREWHERE` first, reads only the columns it references, and then applies `WHERE` on the reduced row set. This can significantly reduce I/O for wide tables.
+
+All `where*` variants are supported — closures, subqueries, `IN`, `NULL`, and raw expressions all work exactly as they do for `WHERE`.
+
+### Basic PREWHERE
+
+```php
+$query->from('events')->prewhere('type', 'click')->get();
+// select * from `events` prewhere `type` = 'click'
+
+$query->from('events')
+    ->prewhere('type', 'click')
+    ->where('user_id', 42)
+    ->get();
+// select * from `events` prewhere `type` = 'click' where `user_id` = 42
+```
+
+### OR PREWHERE
+
+```php
+$query->from('events')
+    ->prewhere('type', 'click')
+    ->orPrewhere('type', 'view')
+    ->get();
+// select * from `events` prewhere `type` = 'click' or `type` = 'view'
+```
+
+### Raw PREWHERE
+
+```php
+$query->from('events')->prewhereRaw('type = ?', ['click'])->get();
+// select * from `events` prewhere type = 'click'
+
+$query->from('events')
+    ->prewhereRaw('type = ?', ['click'])
+    ->orPrewhereRaw('type = ?', ['view'])
+    ->get();
+// select * from `events` prewhere type = 'click' or type = 'view'
+```
+
+### PREWHERE IN / NOT IN
+
+```php
+$query->from('events')->prewhereIn('type', ['click', 'view'])->get();
+// select * from `events` prewhere `type` in ('click', 'view')
+
+$query->from('events')->prewhereNotIn('type', ['spam', 'bot'])->get();
+// select * from `events` prewhere `type` not in ('spam', 'bot')
+
+// Subquery
+$subquery = DB::connection('clickhouse')->table('active_types')->select('type');
+$query->from('events')->prewhereIn('type', $subquery)->get();
+// select * from `events` prewhere `type` in (select `type` from `active_types`)
+```
+
+### PREWHERE NULL / NOT NULL
+
+```php
+$query->from('events')->prewhereNull('deleted_at')->get();
+// select * from `events` prewhere `deleted_at` is null
+
+$query->from('events')->prewhereNotNull('published_at')->get();
+// select * from `events` prewhere `published_at` is not null
+```
+
+### Closures (grouped conditions)
+
+```php
+$query->from('events')
+    ->prewhere(function ($q) {
+        $q->where('type', 'click')->orWhere('type', 'view');
+    })
+    ->where('user_id', 42)
+    ->get();
+// select * from `events` prewhere (`type` = 'click' or `type` = 'view') where `user_id` = 42
+```
+
 ## Settings Clause
 
 ClickHouse allows appending `SETTINGS` to queries for per-query configuration.

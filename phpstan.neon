@@ -19,6 +19,11 @@ parameters:
       message: '#Parameter \#2 \$type of method Illuminate\\Database\\Query\\Builder::(addBinding|setBindings)\(\) expects#'
       path: src/Laravel/Query/Builder.php
       reportUnmatched: false
+    # Dynamic SQL vs L13's literal-string typing on whereRaw.
+    -
+      message: '#Parameter \#1 \$sql of method Illuminate\\Database\\Query\\Builder::whereRaw\(\) expects .+, mixed given\.#'
+      path: src/Laravel/Query/Builder.php
+      reportUnmatched: false
     # Dead branch of the conditional trait (see BlueprintLaravelCompatibility.php).
     -
       message: '#Parameter \#\d+ \$\w+ of method Illuminate\\Database\\Schema\\Blueprint::__construct\(\) expects#'
