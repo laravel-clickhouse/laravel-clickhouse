@@ -26,9 +26,6 @@
     <env name="CLICKHOUSE_DATABASE" value="default" />
     <env name="CLICKHOUSE_USERNAME" value="default" />
     <env name="CLICKHOUSE_PASSWORD" value="default" />
-    <env name="APP_KEY" value="base64:AckfSECXIvnK5r28GVIWUAxmbBSjTsmF/5xDdpb5fBQ=" force="true" />
-    <env name="DB_CONNECTION" value="sqlite" force="true" />
-    <env name="DB_DATABASE" value=":memory:" force="true" />
   </php>
   <source restrictNotices="true" restrictWarnings="true" ignoreIndirectDeprecations="true">
     <include>
