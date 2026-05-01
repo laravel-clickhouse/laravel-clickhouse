@@ -464,6 +464,7 @@ class Builder extends BaseBuilder
      */
     public function prewhereRaw(mixed $sql, array $bindings = [], string $boolean = 'and'): static
     {
+        /** @phpstan-ignore argument.type */
         return $this->redirectToPrewheres(fn () => $this->whereRaw($sql, $bindings, $boolean));
     }
 
