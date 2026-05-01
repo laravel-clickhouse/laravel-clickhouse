@@ -12,19 +12,46 @@ use PDO;
 abstract class TestCase extends OrchestraTestCase
 {
     /**
-     * Shared-cache in-memory SQLite URI for this test class. A bare ":memory:"
-     * cannot be used because DatabaseTruncation / DatabaseMigrations disconnect
-     * between tests and a private in-memory DB dies on disconnect. The
-     * "file:xxx?mode=memory&cache=shared" URI lets multiple PDO instances
-     * share the same in-memory DB inside one process, and the keepalive PDO
-     * below holds it alive across reconnects.
+     * Shared-cache in-memory SQLite URI for the entire test run.
+     *
+     * This testbench exists to demonstrate the package's testing traits —
+     * including DatabaseTruncation — against a single SQLite connection.
+     * DatabaseTruncation runs `migrate:fresh` once and then assumes the
+     * schema persists across reconnects, so bare `:memory:` is unusable
+     * here: a private in-memory DB dies the moment its only PDO
+     * disconnects. A URI with `mode=memory&cache=shared` lets every PDO
+     * opened in this process join the same in-memory DB, and the keepalive
+     * PDO below holds the cache alive across Laravel-side reconnects.
+     *
+     * Why the named form (`file:testing?mode=memory&cache=shared`) and
+     * not the simpler `file::memory:?cache=shared`: Laravel's
+     * `Schema\SQLiteBuilder::dropAllTables()` decides whether to drop
+     * tables via SQL or just `file_put_contents('', $database)` by
+     * text-matching the database string for `:memory:`, `?mode=memory`,
+     * or `&mode=memory`. `file::memory:?cache=shared` matches none of
+     * those substrings (it has `:memory:` inside but not equal to it),
+     * so `db:wipe` would silently truncate a literal file in the cwd
+     * instead of dropping the in-memory tables — leaving stale data
+     * across `migrate:fresh` calls. The named form satisfies the
+     * `?mode=memory` substring check and routes through the SQL path.
+     *
+     * The URI is constant across test classes (same posture as the
+     * shared ClickHouse / MySQL server you'd point at in production).
+     * Cross-class isolation is provided by `RefreshDatabaseState` reset
+     * + the package's pre-wipe in `beforeRefreshingDatabase` /
+     * `beforeTruncatingDatabase`, not by physical DB separation.
+     *
+     * This setup is purely a demo concern. Application code consuming
+     * the package's traits does not need it — bare `:memory:` is fine
+     * for RefreshDatabase and DatabaseMigrations, and any persistent
+     * database (file SQLite, MySQL, …) works for DatabaseTruncation.
      */
-    protected static ?string $sqliteUri = null;
+    private const SQLITE_URI = 'file:testing?mode=memory&cache=shared';
 
     /**
-     * Long-lived PDO that keeps the shared in-memory database alive for the
-     * lifetime of the test class. Cleared in tearDownAfterClass so the DB is
-     * released between classes.
+     * Long-lived PDO that keeps the shared in-memory database alive for
+     * the entire test run. Lazily opened on the first class's setUp and
+     * left in place — process exit releases it.
      */
     protected static ?PDO $sqliteKeepalive = null;
 
@@ -32,25 +59,17 @@ abstract class TestCase extends OrchestraTestCase
     {
         parent::setUpBeforeClass();
 
-        // Reset static state so each test class re-runs migrate:fresh. Without
-        // this the second class would see the first class's migrated flag,
-        // skip migrations, and end up with stale table metadata.
+        // Force every testbench class to run its own `migrate:fresh` instead
+        // of inheriting the previous class's latched state. The testbench
+        // deliberately registers different migration paths per class via
+        // `defineDatabaseMigrations()` (ClickHouse-only, SQLite-only, both)
+        // to demo each scenario; without this reset, the second class
+        // skips migrate:fresh and queries tables that were never created.
+        // Application code with one global migration set never hits this —
+        // see docs/docs/testing.md "Caveats" for the full explanation.
         RefreshDatabaseState::$migrated = false;
-        RefreshDatabaseState::$lazilyRefreshed = false;
-        RefreshDatabaseState::$inMemoryConnections = [];
 
-        static::$sqliteUri = 'file:lch_tb_'.bin2hex(random_bytes(6)).'?mode=memory&cache=shared';
-        static::$sqliteKeepalive = new PDO('sqlite:'.static::$sqliteUri);
-    }
-
-    public static function tearDownAfterClass(): void
-    {
-        // Releasing the last PDO referencing the shared in-memory cache lets
-        // SQLite free the database. Subsequent classes get a fresh one.
-        static::$sqliteKeepalive = null;
-        static::$sqliteUri = null;
-
-        parent::tearDownAfterClass();
+        self::$sqliteKeepalive ??= new PDO('sqlite:'.self::SQLITE_URI);
     }
 
     /**
@@ -67,11 +86,13 @@ abstract class TestCase extends OrchestraTestCase
      */
     protected function defineEnvironment($app): void
     {
-        // Register a custom sqlite driver that accepts URI-mode database
-        // strings. Laravel's stock SQLiteConnector calls realpath() on any
-        // non-":memory:" database value, which would reject our shared-cache
-        // URI. Each Laravel-side reconnect opens a fresh PDO against the same
-        // URI, transparently sharing schema with the keepalive PDO.
+        // Custom sqlite driver wired for the demo testbench. It opens a
+        // PDO directly against the shared-cache in-memory URI (see
+        // SQLITE_URI above) so each Laravel-side reconnect lands on the
+        // same in-memory DB that the keepalive PDO is holding. Wiring our
+        // own driver here keeps the demo's SQLite layer self-contained and
+        // independent of any stock-driver behaviour around URI-mode
+        // database strings — application code never needs this.
         $app->resolving('db', function ($db) {
             $db->extend('sqlite_memory_shared', function (array $config, string $name) {
                 $pdoFactory = function () use ($config): PDO {
@@ -99,7 +120,7 @@ abstract class TestCase extends OrchestraTestCase
 
         $app['config']->set('database.connections.sqlite', [
             'driver' => 'sqlite_memory_shared',
-            'database' => static::$sqliteUri,
+            'database' => self::SQLITE_URI,
             'prefix' => '',
             'foreign_key_constraints' => false,
         ]);
