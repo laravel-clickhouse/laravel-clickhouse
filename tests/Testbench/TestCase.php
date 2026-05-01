@@ -12,6 +12,13 @@ use PDO;
 abstract class TestCase extends OrchestraTestCase
 {
     /**
+     * Long-lived PDO that keeps the shared in-memory database alive for
+     * the entire test run. Lazily opened on the first `defineEnvironment`
+     * call and left in place — process exit releases it.
+     */
+    protected static ?PDO $sqliteKeepalive = null;
+
+    /**
      * Shared-cache in-memory SQLite URI for the entire test run.
      *
      * This testbench exists to demonstrate the package's testing traits —
@@ -21,7 +28,7 @@ abstract class TestCase extends OrchestraTestCase
      * here: a private in-memory DB dies the moment its only PDO
      * disconnects. A URI with `mode=memory&cache=shared` lets every PDO
      * opened in this process join the same in-memory DB, and the keepalive
-     * PDO below holds the cache alive across Laravel-side reconnects.
+     * PDO above holds the cache alive across Laravel-side reconnects.
      *
      * Why the named form (`file:testing?mode=memory&cache=shared`) and
      * not the simpler `file::memory:?cache=shared`: Laravel's
@@ -46,14 +53,7 @@ abstract class TestCase extends OrchestraTestCase
      * for RefreshDatabase and DatabaseMigrations, and any persistent
      * database (file SQLite, MySQL, …) works for DatabaseTruncation.
      */
-    private const SQLITE_URI = 'file:testing?mode=memory&cache=shared';
-
-    /**
-     * Long-lived PDO that keeps the shared in-memory database alive for
-     * the entire test run. Lazily opened on the first class's setUp and
-     * left in place — process exit releases it.
-     */
-    protected static ?PDO $sqliteKeepalive = null;
+    protected string $sqliteUri = 'file:testing?mode=memory&cache=shared';
 
     public static function setUpBeforeClass(): void
     {
@@ -68,8 +68,14 @@ abstract class TestCase extends OrchestraTestCase
         // Application code with one global migration set never hits this —
         // see docs/docs/testing.md "Caveats" for the full explanation.
         RefreshDatabaseState::$migrated = false;
+    }
 
-        self::$sqliteKeepalive ??= new PDO('sqlite:'.self::SQLITE_URI);
+    protected function openSqlitePdo(): PDO
+    {
+        $pdo = new PDO('sqlite:'.$this->sqliteUri);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        return $pdo;
     }
 
     /**
@@ -86,29 +92,25 @@ abstract class TestCase extends OrchestraTestCase
      */
     protected function defineEnvironment($app): void
     {
+        // Open the keepalive lazily on the first env definition so the
+        // shared in-memory cache survives Laravel's reconnects between
+        // tests. `??=` keeps it process-wide — opened once, reused after.
+        self::$sqliteKeepalive ??= $this->openSqlitePdo();
+
         // Custom sqlite driver wired for the demo testbench. It opens a
         // PDO directly against the shared-cache in-memory URI (see
-        // SQLITE_URI above) so each Laravel-side reconnect lands on the
+        // $sqliteUri above) so each Laravel-side reconnect lands on the
         // same in-memory DB that the keepalive PDO is holding. Wiring our
         // own driver here keeps the demo's SQLite layer self-contained and
         // independent of any stock-driver behaviour around URI-mode
         // database strings — application code never needs this.
         $app->resolving('db', function ($db) {
-            $db->extend('sqlite_memory_shared', function (array $config, string $name) {
-                $pdoFactory = function () use ($config): PDO {
-                    $pdo = new PDO('sqlite:'.$config['database']);
-                    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-                    return $pdo;
-                };
-
-                return new SQLiteConnection(
-                    $pdoFactory,
-                    $config['database'],
-                    $config['prefix'] ?? '',
-                    array_merge($config, ['name' => $name]),
-                );
-            });
+            $db->extend('sqlite_memory_shared', fn (array $config, string $name) => new SQLiteConnection(
+                fn (): PDO => $this->openSqlitePdo(),
+                $config['database'],
+                $config['prefix'] ?? '',
+                array_merge($config, ['name' => $name]),
+            ));
         });
 
         $app['config']->set('database.default', $this->defaultConnection());
@@ -120,7 +122,7 @@ abstract class TestCase extends OrchestraTestCase
 
         $app['config']->set('database.connections.sqlite', [
             'driver' => 'sqlite_memory_shared',
-            'database' => self::SQLITE_URI,
+            'database' => $this->sqliteUri,
             'prefix' => '',
             'foreign_key_constraints' => false,
         ]);
