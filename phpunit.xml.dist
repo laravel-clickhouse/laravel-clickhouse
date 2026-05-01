@@ -17,9 +17,7 @@
       <directory>tests/Support</directory>
     </testsuite>
     <testsuite name="Testbench">
-      <directory>tests/Testbench/RefreshDatabase</directory>
-      <directory>tests/Testbench/DatabaseTruncation</directory>
-      <directory>tests/Testbench/DatabaseMigrations</directory>
+      <directory>tests/Testbench</directory>
     </testsuite>
   </testsuites>
   <php>
