@@ -27,6 +27,7 @@ class Builder extends BaseBuilder
      *     select: list<mixed>,
      *     from: list<mixed>,
      *     join: list<mixed>,
+     *     prewhere: list<mixed>,
      *     where: list<mixed>,
      *     groupBy: list<mixed>,
      *     having: list<mixed>,
@@ -46,6 +47,7 @@ class Builder extends BaseBuilder
         'join' => [],
         'arrayJoin' => [],
         'partition' => [],
+        'prewhere' => [],
         'where' => [],
         'groupBy' => [],
         'having' => [],
@@ -84,6 +86,13 @@ class Builder extends BaseBuilder
      * @var array<string, int|float|bool|string>
      */
     public $settings = [];
+
+    /**
+     * The pre-where clauses for the query (PREWHERE).
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    public $prewheres = [];
 
     /**
      * The cluster name for ON CLUSTER queries.
@@ -407,6 +416,105 @@ class Builder extends BaseBuilder
     public function ignoreIndex($index): static
     {
         throw new LogicException('ClickHouse does not support specify indexes.');
+    }
+
+    /**
+     * Temporarily swap wheres/bindings to the preWhere arrays and run the callback.
+     */
+    private function redirectToPrewheres(callable $callback): static
+    {
+        [$this->wheres, $this->prewheres] = [$this->prewheres, $this->wheres];
+        [$this->bindings['where'], $this->bindings['prewhere']] = [$this->bindings['prewhere'], $this->bindings['where']];
+
+        try {
+            $callback();
+        } finally {
+            // Swap back after the callback so the builder is in a consistent state for the next call.
+            [$this->wheres, $this->prewheres] = [$this->prewheres, $this->wheres];
+            [$this->bindings['where'], $this->bindings['prewhere']] = [$this->bindings['prewhere'], $this->bindings['where']];
+        }
+
+        return $this;
+    }
+
+    /**
+     * Add a PREWHERE clause to the query.
+     *
+     * @param  Closure|string|array<mixed>|ExpressionContract  $column
+     */
+    public function prewhere(mixed $column, mixed $operator = null, mixed $value = null, string $boolean = 'and'): static
+    {
+        return $this->redirectToPrewheres(fn () => $this->where($column, $operator, $value, $boolean));
+    }
+
+    /**
+     * Add an OR PREWHERE clause to the query.
+     *
+     * @param  Closure|string|array<mixed>|ExpressionContract  $column
+     */
+    public function orPrewhere(mixed $column, mixed $operator = null, mixed $value = null): static
+    {
+        return $this->prewhere($column, $operator, $value, 'or');
+    }
+
+    /**
+     * Add a raw PREWHERE clause to the query.
+     *
+     * @param  array<mixed>  $bindings
+     */
+    public function prewhereRaw(mixed $sql, array $bindings = [], string $boolean = 'and'): static
+    {
+        return $this->redirectToPrewheres(fn () => $this->whereRaw($sql, $bindings, $boolean));
+    }
+
+    /**
+     * Add a raw OR PREWHERE clause to the query.
+     *
+     * @param  array<mixed>  $bindings
+     */
+    public function orPrewhereRaw(mixed $sql, array $bindings = []): static
+    {
+        return $this->prewhereRaw($sql, $bindings, 'or');
+    }
+
+    /**
+     * Add a PREWHERE IN clause to the query.
+     *
+     * @param  Closure|self|EloquentBuilder<Model>|array<mixed>  $values
+     */
+    public function prewhereIn(string $column, mixed $values, string $boolean = 'and', bool $not = false): static
+    {
+        return $this->redirectToPrewheres(fn () => $this->whereIn($column, $values, $boolean, $not));
+    }
+
+    /**
+     * Add a PREWHERE NOT IN clause to the query.
+     *
+     * @param  Closure|self|EloquentBuilder<Model>|array<mixed>  $values
+     */
+    public function prewhereNotIn(string $column, mixed $values, string $boolean = 'and'): static
+    {
+        return $this->prewhereIn($column, $values, $boolean, true);
+    }
+
+    /**
+     * Add a PREWHERE NULL clause to the query.
+     *
+     * @param  string|string[]  $columns
+     */
+    public function prewhereNull(string|array $columns, string $boolean = 'and', bool $not = false): static
+    {
+        return $this->redirectToPrewheres(fn () => $this->whereNull($columns, $boolean, $not));
+    }
+
+    /**
+     * Add a PREWHERE NOT NULL clause to the query.
+     *
+     * @param  string|string[]  $columns
+     */
+    public function prewhereNotNull(string|array $columns, string $boolean = 'and'): static
+    {
+        return $this->prewhereNull($columns, $boolean, true);
     }
 
     /**

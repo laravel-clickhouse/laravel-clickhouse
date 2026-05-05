@@ -9,7 +9,7 @@ A ClickHouse database driver for Laravel. Provides a familiar Eloquent Model, Qu
 ## Features
 
 - **Eloquent Model** support with non-incrementing IDs
-- **Query Builder** with ClickHouse extensions — ARRAY JOIN, FINAL clause, SAMPLE, LIMIT BY, GLOBAL IN/NOT IN, ON CLUSTER, CTE (WITH), set operations (UNION/INTERSECT/EXCEPT DISTINCT), ClickHouse-specific joins (ANY, SEMI, ANTI, ASOF), empty/notEmpty checks, SETTINGS clause
+- **Query Builder** with ClickHouse extensions — ARRAY JOIN, FINAL clause, PREWHERE, SAMPLE, LIMIT BY, GLOBAL IN/NOT IN, ON CLUSTER, CTE (WITH), set operations (UNION/INTERSECT/EXCEPT DISTINCT), ClickHouse-specific joins (ANY, SEMI, ANTI, ASOF), empty/notEmpty checks, SETTINGS clause
 - **Schema Builder** with ClickHouse DDL — ENGINE, PARTITION BY, ORDER BY, LowCardinality, Array types, index granularity
 - **Lightweight DELETE** with partition targeting
 - **Parallel query execution** via Guzzle async HTTP pool
