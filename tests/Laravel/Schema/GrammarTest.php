@@ -1475,6 +1475,32 @@ class GrammarTest extends TestCase
         $this->assertSame('ALTER TABLE users ADD COLUMN foo Array(UInt32)', $statements[0]);
     }
 
+    public function testCompileColumnsWithNullSchema()
+    {
+        $grammar = $this->getGrammar(Grammar::class);
+        $sql = $grammar->compileColumns(null, 'users');
+
+        $this->assertEquals(
+            <<<'SQL'
+            SELECT name AS name, type AS type_name, type AS type, '' AS collation, position(type, 'Nullable(') > 0 AS nullable, default_expression AS default, comment AS comment, FROM system.columns WHERE database = currentDatabase() AND table = 'users' ORDER BY position ASC
+            SQL,
+            $sql
+        );
+    }
+
+    public function testCompileColumnsWithSchema()
+    {
+        $grammar = $this->getGrammar(Grammar::class);
+        $sql = $grammar->compileColumns('default', 'users');
+
+        $this->assertEquals(
+            <<<'SQL'
+            SELECT name AS name, type AS type_name, type AS type, '' AS collation, position(type, 'Nullable(') > 0 AS nullable, default_expression AS default, comment AS comment, FROM system.columns WHERE database = 'default' AND table = 'users' ORDER BY position ASC
+            SQL,
+            $sql
+        );
+    }
+
     private function getBlueprint(string $table, ?Connection $connection = null): Blueprint
     {
         return new Blueprint($connection ?? $this->getConnection(), $table);
