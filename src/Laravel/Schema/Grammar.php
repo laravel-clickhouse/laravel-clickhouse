@@ -58,6 +58,28 @@ class Grammar extends BaseGrammar
     }
 
     /**
+     * Compile the query to determine the columns.
+     *
+     * @param  string|null  $schema
+     * @param  string  $table
+     *
+     * @throws RuntimeException
+     */
+    public function compileColumns($schema, $table): string
+    {
+        return sprintf(
+            "SELECT name AS name, type AS type_name, type AS type, '' AS collation, "
+            ."position(type, 'Nullable(') > 0 AS nullable, "
+            .'default_expression AS default, comment AS comment, '
+            .'FROM system.columns '
+            .'WHERE database = %s AND table = %s '
+            .'ORDER BY position ASC',
+            $schema ? $this->quoteString($schema) : 'currentDatabase()',
+            $this->quoteString($table)
+        );
+    }
+
+    /**
      * Compile a create table command.
      *
      * @param  Fluent<string, mixed>  $command
