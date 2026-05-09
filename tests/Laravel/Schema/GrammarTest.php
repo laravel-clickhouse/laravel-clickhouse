@@ -1482,7 +1482,7 @@ class GrammarTest extends TestCase
 
         $this->assertEquals(
             <<<'SQL'
-            SELECT name AS name, type AS type_name, type AS type, '' AS collation, position(type, 'Nullable(') > 0 AS nullable, default_expression AS default, comment AS comment, FROM system.columns WHERE database = currentDatabase() AND table = 'users' ORDER BY position ASC
+            SELECT name AS name, type AS type_name, type AS type, '' AS collation, position(type, 'Nullable(') > 0 AS nullable, default_expression AS default, comment AS comment FROM system.columns WHERE database = currentDatabase() AND table = 'users' ORDER BY position ASC
             SQL,
             $sql
         );
@@ -1495,7 +1495,7 @@ class GrammarTest extends TestCase
 
         $this->assertEquals(
             <<<'SQL'
-            SELECT name AS name, type AS type_name, type AS type, '' AS collation, position(type, 'Nullable(') > 0 AS nullable, default_expression AS default, comment AS comment, FROM system.columns WHERE database = 'default' AND table = 'users' ORDER BY position ASC
+            SELECT name AS name, type AS type_name, type AS type, '' AS collation, position(type, 'Nullable(') > 0 AS nullable, default_expression AS default, comment AS comment FROM system.columns WHERE database = 'default' AND table = 'users' ORDER BY position ASC
             SQL,
             $sql
         );
