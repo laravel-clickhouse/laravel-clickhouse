@@ -80,6 +80,7 @@ class Curl implements Transport
             'port' => $this->port,
             'username' => $this->username,
             'password' => $this->password,
+            'https' => $this->https,
         ]);
 
         $client->database($this->database);
