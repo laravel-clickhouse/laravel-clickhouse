@@ -44,6 +44,30 @@ class Grammar extends BaseGrammar
         return 'randCanonical()';
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @param array{
+     *     function: string,
+     *     columns: array<ExpressionContract|string>,
+     * } $aggregate
+     */
+    protected function compileAggregate(BaseBuilder $query, $aggregate)
+    {
+        $column = $this->columnize($aggregate['columns']);
+
+        // If the query has a "distinct" constraint and we're not asking for all columns
+        // we need to prepend "distinct" onto the column name so that the query takes
+        // it into account when it performs the aggregating operations on the data.
+        if (is_array($query->distinct)) {
+            $column = 'distinct '.$this->columnize($query->distinct);
+        } elseif ($query->distinct && $column !== '*') {
+            $column = 'distinct '.$column;
+        }
+
+        return 'select '.$aggregate['function'].'('.$column.') as '.$this->wrap('aggregate');
+    }
+
     /** {@inheritDoc} */
     public function compileSelect(BaseBuilder $query): string
     {
