@@ -27,19 +27,14 @@ class Curl implements Transport
 
     public function execute(string $sql): Response
     {
-        // FIXME: correct is select condition
-        $isSelect = (bool) preg_match('/^(select|with)/i', $sql) || str_contains($sql, ' union ');
-        $method = $isSelect ? 'select' : 'write';
-
         /** @var ClickHouseDBStatement $statement */
-        $statement = $this->client->{$method}($sql);
+        $statement = $this->client->write($sql, querySettings: ['default_format' => 'JSON']);
+        $records = $this->parseRecords($statement->getRequest()->response()->body());
 
         return new Response(
             $sql,
-            $isSelect,
-            // FIXME: correct affected rows
-            $isSelect ? null : 1,
-            $isSelect ? $statement->rows() : null,
+            $records === null ? $this->parseAffectedRows($statement) : null,
+            $records,
         );
     }
 
@@ -55,7 +50,6 @@ class Curl implements Transport
             try {
                 $results['responses'][$key] = new Response(
                     $sqls[$key],
-                    true,
                     null,
                     $statement->rows()
                 );
@@ -86,5 +80,26 @@ class Curl implements Transport
         $client->database($this->database);
 
         return $client;
+    }
+
+    protected function parseAffectedRows(ClickHouseDBStatement $statement): ?int
+    {
+        $writtenRows = $statement->summary('written_rows');
+
+        return is_numeric($writtenRows) ? (int) $writtenRows : null;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>|null
+     */
+    protected function parseRecords(string $body): ?array
+    {
+        $data = json_decode($body, true);
+
+        if (! is_array($data) || ! isset($data['data']) || ! is_array($data['data'])) {
+            return null;
+        }
+
+        return $data['data'];
     }
 }

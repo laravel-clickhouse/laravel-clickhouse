@@ -41,12 +41,10 @@ class Guzzle implements Transport
     public function execute(string $sql): Response
     {
         try {
-            $isSelect = $this->isSelectQuery($sql);
-
-            $request = $this->createRequest($sql, $isSelect);
+            $request = $this->createRequest($sql);
             $response = $this->client->send($request);
 
-            return $this->parseResponse($sql, $isSelect, $response);
+            return $this->parseResponse($sql, $response);
         } catch (RequestException $e) {
             throw new QueryException('ClickHouse request failed: '.$e->getMessage(), previous: $e);
         } catch (GuzzleException $e) {
@@ -58,7 +56,7 @@ class Guzzle implements Transport
 
     public function executeParallelly(array $sqls): array
     {
-        $requests = array_map(fn ($sql) => $this->createRequest($sql, false), $sqls);
+        $requests = array_map(fn ($sql) => $this->createRequest($sql), $sqls);
 
         /** @var array<int|string, Response> $responses */
         $responses = [];
@@ -69,13 +67,13 @@ class Guzzle implements Transport
         $pool = new Pool($this->client, $requests, [
             'concurrency' => static::CLICKHOUSE_CONCURRENT_REQUESTS,
             'fulfilled' => function ($response, $key) use ($sqls, &$responses) {
-                $responses[$key] = $this->parseResponse($sqls[$key], true, $response);
+                $responses[$key] = $this->parseResponse($sqls[$key], $response);
             },
             'rejected' => function ($e, $key) use ($sqls, &$responses, &$errors) {
                 $response = null;
 
                 if ($e instanceof RequestException && $e->getResponse()) {
-                    $responses[$key] = $response = $this->parseResponse($sqls[$key], true, $e->getResponse());
+                    $responses[$key] = $response = $this->parseResponse($sqls[$key], $e->getResponse());
                 }
 
                 $errors[$key] = match (true) {
@@ -100,19 +98,18 @@ class Guzzle implements Transport
         return new Client($this->guzzleOptions);
     }
 
-    protected function createRequest(string $sql, bool $isSelect): Request
+    protected function createRequest(string $sql): Request
     {
-        return new Request('POST', $this->buildRequestUri($isSelect), $this->getAuthHeaders(), $sql);
+        return new Request('POST', $this->buildRequestUri(), $this->getAuthHeaders(), $sql);
     }
 
-    protected function buildRequestUri(bool $isSelect): string
+    protected function buildRequestUri(): string
     {
         $protocol = $this->https ? 'https' : 'http';
         $baseUrl = "{$protocol}://{$this->host}:{$this->port}/";
 
         $params = [
             'database' => $this->database,
-            'readonly' => $isSelect ? 2 : 0,
             'default_format' => 'JSON',
         ];
 
@@ -130,7 +127,7 @@ class Guzzle implements Transport
         ];
     }
 
-    protected function parseResponse(string $sql, bool $isSelect, ResponseInterface $response): Response
+    protected function parseResponse(string $sql, ResponseInterface $response): Response
     {
         $contentType = $response->getHeaderLine('Content-Type');
         $body = $response->getBody()->getContents();
@@ -139,17 +136,13 @@ class Guzzle implements Transport
             throw new QueryException('ClickHouse query error: '.$body);
         }
 
+        $records = $this->parseRecords($body);
+
         return new Response(
             $sql,
-            $isSelect,
-            $isSelect ? null : $this->parseAffectedRows($response),
-            $isSelect ? $this->parseRecords($body) : null,
+            $records === null ? $this->parseAffectedRows($response) : null,
+            $records,
         );
-    }
-
-    protected function isSelectQuery(string $sql): bool
-    {
-        return (bool) preg_match('/^(select|with)/i', $sql) || str_contains($sql, ' union ');
     }
 
     protected function parseAffectedRows(ResponseInterface $response): ?int
@@ -172,14 +165,14 @@ class Guzzle implements Transport
     }
 
     /**
-     * @return array<int, array<string, mixed>>
+     * @return array<int, array<string, mixed>>|null
      */
-    protected function parseRecords(string $body): array
+    protected function parseRecords(string $body): ?array
     {
         $data = json_decode($body, true);
 
         if (! is_array($data) || ! isset($data['data']) || ! is_array($data['data'])) {
-            throw new QueryException('ClickHouse response parsing error: '.$body);
+            return null;
         }
 
         return $data['data'];

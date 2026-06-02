@@ -9,7 +9,6 @@ class Response
      */
     public function __construct(
         protected string $sql,
-        protected bool $isSelect,
         protected ?int $affectedRows = null,
         protected ?array $records = null,
     ) {}
