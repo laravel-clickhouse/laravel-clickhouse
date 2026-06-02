@@ -137,10 +137,15 @@ class Guzzle implements Transport
         }
 
         $records = $this->parseRecords($body);
+        $affectedRows = $records === null ? $this->parseAffectedRows($response) : null;
+
+        if ($records === null && $affectedRows === null && str_contains($contentType, 'application/json') && trim($body) !== '') {
+            throw new QueryException('ClickHouse response parsing error: '.$body);
+        }
 
         return new Response(
             $sql,
-            $records === null ? $this->parseAffectedRows($response) : null,
+            $affectedRows,
             $records,
         );
     }

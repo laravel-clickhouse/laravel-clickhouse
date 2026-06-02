@@ -29,13 +29,8 @@ class Curl implements Transport
     {
         /** @var ClickHouseDBStatement $statement */
         $statement = $this->client->write($sql, querySettings: ['default_format' => 'JSON']);
-        $records = $this->parseRecords($statement->getRequest()->response()->body());
 
-        return new Response(
-            $sql,
-            $records === null ? $this->parseAffectedRows($statement) : null,
-            $records,
-        );
+        return $this->parseResponse($sql, $statement);
     }
 
     public function executeParallelly(array $sqls): array
@@ -48,11 +43,7 @@ class Curl implements Transport
 
         $results = collect($statements)->reduce(function ($results, $statement, $key) use ($sqls) {
             try {
-                $results['responses'][$key] = new Response(
-                    $sqls[$key],
-                    null,
-                    $statement->rows()
-                );
+                $results['responses'][$key] = $this->parseResponse($sqls[$key], $statement);
             } catch (Exception $e) {
                 $results['errors'][$key] = $e;
             }
@@ -80,6 +71,21 @@ class Curl implements Transport
         $client->database($this->database);
 
         return $client;
+    }
+
+    protected function parseResponse(string $sql, ClickHouseDBStatement $statement): Response
+    {
+        if ($statement->isError()) {
+            $statement->error();
+        }
+
+        $records = $this->parseRecords($statement->getRequest()->response()->body());
+
+        return new Response(
+            $sql,
+            $records === null ? $this->parseAffectedRows($statement) : null,
+            $records,
+        );
     }
 
     protected function parseAffectedRows(ClickHouseDBStatement $statement): ?int
