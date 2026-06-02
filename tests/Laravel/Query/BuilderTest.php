@@ -841,7 +841,7 @@ class BuilderTest extends TestCase
 
     public function testCount()
     {
-        $expectedSql = 'select count(*) as aggregate from `table`';
+        $expectedSql = 'select count(*) as `aggregate` from `table`';
         $this->getBuilder(select: $expectedSql)->from('table')->count();
     }
 
@@ -863,25 +863,25 @@ class BuilderTest extends TestCase
 
     public function testMin()
     {
-        $expectedSql = 'select min(`column`) as aggregate from `table`';
+        $expectedSql = 'select min(`column`) as `aggregate` from `table`';
         $this->getBuilder(select: $expectedSql)->from('table')->min('column');
     }
 
     public function testMax()
     {
-        $expectedSql = 'select max(`column`) as aggregate from `table`';
+        $expectedSql = 'select max(`column`) as `aggregate` from `table`';
         $this->getBuilder(select: $expectedSql)->from('table')->max('column');
     }
 
     public function testSum()
     {
-        $expectedSql = 'select sum(`column`) as aggregate from `table`';
+        $expectedSql = 'select sum(`column`) as `aggregate` from `table`';
         $this->getBuilder(select: $expectedSql)->from('table')->sum('column');
     }
 
     public function testAvg()
     {
-        $expectedSql = 'select avg(`column`) as aggregate from `table`';
+        $expectedSql = 'select avg(`column`) as `aggregate` from `table`';
         $this->getBuilder(select: $expectedSql)->from('table')->avg('column');
     }
 
@@ -928,7 +928,7 @@ class BuilderTest extends TestCase
 
     public function testUnionWithAggregate()
     {
-        $expectedSql = 'select count(*) as aggregate from ((select * from `table_a`) union (select * from `table_b`)) as `temp_table`';
+        $expectedSql = 'select count(*) as `aggregate` from ((select * from `table_a`) union (select * from `table_b`)) as `temp_table`';
         $this->getBuilder(select: $expectedSql)->from('table_a')->union($this->getBuilder()->from('table_b'))->count();
     }
 

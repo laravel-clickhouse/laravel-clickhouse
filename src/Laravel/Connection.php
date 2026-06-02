@@ -36,6 +36,7 @@ class Connection extends BaseConnection
      *     username?: string,
      *     password?: string,
      *     transport?: string,
+     *     https?: bool,
      * }  $config
      */
     public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null, ?Escaper $escaper = null)
@@ -254,6 +255,7 @@ class Connection extends BaseConnection
      *     username?: string,
      *     password?: string,
      *     transport?: string,
+     *     https?: bool,
      * }  $config
      */
     protected function getDefaultClient(string $database, array $config): Client
@@ -265,6 +267,7 @@ class Connection extends BaseConnection
             username: $config['username'] ?? 'default',
             password: $config['password'] ?? 'default',
             transport: $config['transport'] ?? 'guzzle',
+            https: $config['https'] ?? false,
         );
     }
 }

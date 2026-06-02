@@ -19,10 +19,11 @@ class Client
         protected string $username,
         protected string $password,
         protected string $transport,
+        protected bool $https = false,
         ?TransportFactory $transportFactory = null,
         ?Escaper $escaper = null,
     ) {
-        $this->transportFactory = $transportFactory ?? new TransportFactory($host, $port, $database, $username, $password);
+        $this->transportFactory = $transportFactory ?? new TransportFactory($host, $port, $database, $username, $password, $https);
         $this->escaper = $escaper ?? new Escaper;
     }
 
