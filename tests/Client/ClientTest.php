@@ -71,8 +71,8 @@ class ClientTest extends TestCase
             ->with([$sql1, $sql2])
             ->once()
             ->andReturn([
-                new Response($sql1, true, null, $result1),
-                new Response($sql2, true, null, $result2),
+                new Response($sql1, null, $result1),
+                new Response($sql2, null, $result2),
             ]);
 
         $client = $this->getClient($transport);
@@ -105,7 +105,7 @@ class ClientTest extends TestCase
             ->with([$sql1, $sql2])
             ->once()
             ->andThrow(new ParallelQueryException(
-                [0 => new Response($sql1, true, null, $result1)],
+                [0 => new Response($sql1, null, $result1)],
                 [1 => $exception2 = new Exception('error')]
             ));
 
