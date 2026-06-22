@@ -38,6 +38,7 @@ Add a ClickHouse connection to your `config/database.php`:
         'database' => env('CLICKHOUSE_DATABASE', 'default'),
         'username' => env('CLICKHOUSE_USERNAME', 'default'),
         'password' => env('CLICKHOUSE_PASSWORD', ''),
+        'https'    => env('CLICKHOUSE_HTTPS', false),
     ],
 ],
 ```

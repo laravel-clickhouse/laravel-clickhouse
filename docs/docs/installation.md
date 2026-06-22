@@ -41,6 +41,7 @@ Add a `clickhouse` connection to your `config/database.php` file under the `conn
         'database' => env('CLICKHOUSE_DATABASE', 'default'),
         'username' => env('CLICKHOUSE_USERNAME', 'default'),
         'password' => env('CLICKHOUSE_PASSWORD', ''),
+        'https' => env('CLICKHOUSE_HTTPS', false),
         'transport' => env('CLICKHOUSE_TRANSPORT', 'guzzle'),
         'engine' => env('CLICKHOUSE_ENGINE'),
         'use_lightweight_delete' => env('CLICKHOUSE_USE_LIGHTWEIGHT_DELETE', false),
@@ -59,6 +60,7 @@ Add a `clickhouse` connection to your `config/database.php` file under the `conn
 | `database` | `'default'` | The database name. |
 | `username` | `'default'` | The username for authentication. |
 | `password` | `''` | The password for authentication. |
+| `https` | `false` | Enables TLS connections to ClickHouse. |
 | `transport` | `'guzzle'` | The HTTP transport driver. Supported: `'guzzle'`, `'curl'`. |
 | `engine` | `null` | The default table engine for migrations (e.g. `'MergeTree()'`). When not set, defaults to `MergeTree()`. |
 | `use_lightweight_delete` | `false` | When `true`, Eloquent `delete()` uses lightweight `DELETE` statements instead of `ALTER TABLE ... DELETE`. |
@@ -73,6 +75,7 @@ CLICKHOUSE_PORT=8123
 CLICKHOUSE_DATABASE=default
 CLICKHOUSE_USERNAME=default
 CLICKHOUSE_PASSWORD=
+CLICKHOUSE_HTTPS=
 CLICKHOUSE_TRANSPORT=guzzle
 CLICKHOUSE_ENGINE=
 CLICKHOUSE_USE_LIGHTWEIGHT_DELETE=false
@@ -92,6 +95,7 @@ You may define multiple ClickHouse connections by adding additional entries to t
         'database' => env('CLICKHOUSE_DATABASE', 'default'),
         'username' => env('CLICKHOUSE_USERNAME', 'default'),
         'password' => env('CLICKHOUSE_PASSWORD', ''),
+        'https' => env('CLICKHOUSE_HTTPS', false),
         'transport' => 'guzzle',
     ],
 
@@ -102,6 +106,7 @@ You may define multiple ClickHouse connections by adding additional entries to t
         'database' => env('CLICKHOUSE_ANALYTICS_DATABASE', 'analytics'),
         'username' => env('CLICKHOUSE_ANALYTICS_USERNAME', 'default'),
         'password' => env('CLICKHOUSE_ANALYTICS_PASSWORD', ''),
+        'https' => env('CLICKHOUSE_HTTPS', false),
         'transport' => 'guzzle',
     ],
 
