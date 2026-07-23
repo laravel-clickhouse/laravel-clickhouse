@@ -258,6 +258,21 @@ Schema::connection('clickhouse')->table('events', function (ClickHouseBlueprint 
 });
 ```
 
+### Renaming Columns
+
+```php
+Schema::connection('clickhouse')->table('events', function (ClickHouseBlueprint $table) {
+    $table->renameColumn('name', 'event_name');
+    // SQL: ALTER TABLE events RENAME COLUMN name TO event_name
+});
+```
+
+Renaming a column only changes metadata and does not rewrite its data. ClickHouse applies the following restrictions:
+
+- Columns used in `ORDER BY` or `PRIMARY KEY` expressions cannot be renamed.
+- For nested columns, the parent prefix must remain unchanged (for example, `a.b` may be renamed to `a.c`, but not `b.d`).
+- Renaming a column on a `Distributed` or `Merge` table does not rename it on the underlying tables.
+
 ### Renaming Tables
 
 ```php

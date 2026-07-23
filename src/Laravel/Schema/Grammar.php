@@ -372,6 +372,20 @@ class Grammar extends BaseGrammar
     }
 
     /**
+     * Compile a rename column command.
+     *
+     * @param  Fluent<string, mixed>  $command
+     */
+    public function compileRenameColumn(Blueprint $blueprint, Fluent $command, ?BaseConnection $connection = null): string
+    {
+        return sprintf('ALTER TABLE %s RENAME COLUMN %s TO %s',
+            $this->wrapTable($blueprint),
+            $this->wrap($command->from),
+            $this->wrap($command->to)
+        );
+    }
+
+    /**
      * Compile a rename index command.
      *
      * @param  Fluent<string, mixed>  $command

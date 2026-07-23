@@ -33,6 +33,7 @@ parameters:
     - '#Property Illuminate\\Database\\Schema\\Builder::\$resolver \(Closure\) in isset\(\) is not nullable#'
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$column\.#'
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$to\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$from\.#'
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$shouldBeSkipped\.#'
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$algorithm\.#'
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$index\.#'

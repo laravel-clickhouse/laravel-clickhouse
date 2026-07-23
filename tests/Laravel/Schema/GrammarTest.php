@@ -280,6 +280,16 @@ class GrammarTest extends TestCase
         $this->assertSame('RENAME TABLE users TO foo', $statements[0]);
     }
 
+    public function testRenameColumn()
+    {
+        $blueprint = $this->getBlueprint('users');
+        $blueprint->renameColumn('name', 'full_name');
+        $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar(Grammar::class));
+
+        $this->assertCount(1, $statements);
+        $this->assertSame('ALTER TABLE users RENAME COLUMN name TO full_name', $statements[0]);
+    }
+
     public function testRenameIndex()
     {
         $blueprint = $this->getBlueprint('users');
