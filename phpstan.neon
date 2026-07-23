@@ -63,5 +63,6 @@ parameters:
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$innerType\.#'
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$expression\.#'
     - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$lowCardinality\.#'
+    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$name\.#'
     - '#Call to an undefined method Illuminate\\Support\\Fluent<string, mixed>::default\(\)\.#'
     - '#Access to an undefined property Illuminate\\Database\\Schema\\ColumnDefinition::\$name\.#'

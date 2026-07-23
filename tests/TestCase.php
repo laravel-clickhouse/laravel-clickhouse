@@ -80,6 +80,11 @@ abstract class TestCase extends BaseTestCase
             ->andReturnNull()
             ->byDefault();
 
+        $mock->shouldReceive('selectOne')
+            ->zeroOrMoreTimes()
+            ->andReturnNull()
+            ->byDefault();
+
         return $mock;
     }
 

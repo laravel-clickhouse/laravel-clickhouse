@@ -107,6 +107,95 @@ class Grammar extends BaseGrammar
     }
 
     /**
+     * Compile a change column command.
+     *
+     * ClickHouse keeps unspecified column properties on MODIFY COLUMN, while
+     * Laravel expects modifiers omitted from change() to be dropped. To match
+     * Laravel semantics, the existing default kind (DEFAULT / MATERIALIZED /
+     * ALIAS) is removed first when the new definition does not specify one.
+     *
+     * @param  Fluent<string, mixed>  $command
+     * @return array<int, string>
+     */
+    public function compileChange(Blueprint $blueprint, Fluent $command): array
+    {
+        $statements = [];
+
+        $defaultKindToRemove = $this->defaultKindToRemove($blueprint, $command->column);
+
+        if (! is_null($defaultKindToRemove)) {
+            $statements[] = sprintf('ALTER TABLE %s MODIFY COLUMN %s REMOVE %s',
+                $this->wrapTable($blueprint),
+                $this->wrap($command->column),
+                $defaultKindToRemove
+            );
+        }
+
+        $statements[] = sprintf('ALTER TABLE %s MODIFY COLUMN %s',
+            $this->wrapTable($blueprint),
+            $this->getColumn($blueprint, $command->column)
+        );
+
+        return $statements;
+    }
+
+    /**
+     * Determine the existing default kind to remove before changing a column.
+     *
+     * @param  Fluent<string, mixed>  $column
+     */
+    protected function defaultKindToRemove(Blueprint $blueprint, Fluent $column): ?string
+    {
+        if ($this->specifiesDefaultKind($column)) {
+            return null;
+        }
+
+        $existingDefaultKind = $this->fetchExistingDefaultKind($blueprint, $column);
+
+        return in_array($existingDefaultKind, ['DEFAULT', 'MATERIALIZED', 'ALIAS'], true)
+            ? $existingDefaultKind
+            : null;
+    }
+
+    /**
+     * Determine whether the new column definition specifies a default kind.
+     *
+     * @param  Fluent<string, mixed>  $column
+     */
+    protected function specifiesDefaultKind(Fluent $column): bool
+    {
+        return ! is_null($column->default)
+            || ! is_null($column->storedAs)
+            || ! is_null($column->storedAsJson)
+            || ! is_null($column->virtualAs)
+            || ! is_null($column->virtualAsJson);
+    }
+
+    /**
+     * Fetch the existing default kind of a column from system.columns.
+     *
+     * @param  Fluent<string, mixed>  $column
+     */
+    protected function fetchExistingDefaultKind(Blueprint $blueprint, Fluent $column): ?string
+    {
+        $connection = $this->resolveConnection();
+
+        $row = $connection->selectOne(sprintf(
+            'SELECT default_kind FROM system.columns WHERE database = currentDatabase() AND table = %s AND name = %s',
+            $this->quoteString($connection->getTablePrefix().$blueprint->getTable()),
+            $this->quoteString((string) $column->name)
+        ));
+
+        if (is_null($row)) {
+            return null;
+        }
+
+        $defaultKind = ((array) $row)['default_kind'] ?? null;
+
+        return is_string($defaultKind) ? $defaultKind : null;
+    }
+
+    /**
      * Compile a primary key command.
      *
      * @param  Fluent<string, mixed>  $command

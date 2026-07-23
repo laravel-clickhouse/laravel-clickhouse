@@ -470,6 +470,93 @@ class GrammarTest extends TestCase
         $blueprint->toSql($this->getConnection(), $this->getGrammar(Grammar::class));
     }
 
+    public function testChangingColumn()
+    {
+        $blueprint = $this->getBlueprint('users');
+        $blueprint->string('name')->change();
+        $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar(Grammar::class));
+
+        $this->assertCount(1, $statements);
+        $this->assertSame('ALTER TABLE users MODIFY COLUMN name FixedString(255)', $statements[0]);
+    }
+
+    public function testChangingColumnToNullable()
+    {
+        $blueprint = $this->getBlueprint('users');
+        $blueprint->integer('age')->nullable()->change();
+        $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar(Grammar::class));
+
+        $this->assertCount(1, $statements);
+        $this->assertSame('ALTER TABLE users MODIFY COLUMN age Nullable(Int32)', $statements[0]);
+    }
+
+    public function testChangingColumnWithDefault()
+    {
+        $blueprint = $this->getBlueprint('users');
+        $blueprint->string('status')->default('active')->change();
+        $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar(Grammar::class));
+
+        $this->assertCount(1, $statements);
+        $this->assertSame("ALTER TABLE users MODIFY COLUMN status FixedString(255) DEFAULT 'active'", $statements[0]);
+    }
+
+    public function testChangingColumnAfterAnotherColumn()
+    {
+        $blueprint = $this->getBlueprint('users');
+        $blueprint->string('name')->after('foo')->change();
+        $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar(Grammar::class));
+
+        $this->assertCount(1, $statements);
+        $this->assertSame('ALTER TABLE users MODIFY COLUMN name FixedString(255) AFTER foo', $statements[0]);
+    }
+
+    public function testChangingColumnRemovesExistingDefault()
+    {
+        $connection = $this->getConnectionWithDefaultKind('DEFAULT');
+        $blueprint = $this->getBlueprint('users', $connection);
+        $blueprint->string('status')->change();
+        $statements = $blueprint->toSql($connection, $this->getGrammar(Grammar::class, $connection));
+
+        $this->assertCount(2, $statements);
+        $this->assertSame('ALTER TABLE users MODIFY COLUMN status REMOVE DEFAULT', $statements[0]);
+        $this->assertSame('ALTER TABLE users MODIFY COLUMN status FixedString(255)', $statements[1]);
+    }
+
+    public function testChangingColumnRemovesExistingMaterialized()
+    {
+        $connection = $this->getConnectionWithDefaultKind('MATERIALIZED');
+        $blueprint = $this->getBlueprint('users', $connection);
+        $blueprint->string('status')->change();
+        $statements = $blueprint->toSql($connection, $this->getGrammar(Grammar::class, $connection));
+
+        $this->assertCount(2, $statements);
+        $this->assertSame('ALTER TABLE users MODIFY COLUMN status REMOVE MATERIALIZED', $statements[0]);
+        $this->assertSame('ALTER TABLE users MODIFY COLUMN status FixedString(255)', $statements[1]);
+    }
+
+    public function testChangingColumnRemovesExistingAlias()
+    {
+        $connection = $this->getConnectionWithDefaultKind('ALIAS');
+        $blueprint = $this->getBlueprint('users', $connection);
+        $blueprint->string('status')->change();
+        $statements = $blueprint->toSql($connection, $this->getGrammar(Grammar::class, $connection));
+
+        $this->assertCount(2, $statements);
+        $this->assertSame('ALTER TABLE users MODIFY COLUMN status REMOVE ALIAS', $statements[0]);
+        $this->assertSame('ALTER TABLE users MODIFY COLUMN status FixedString(255)', $statements[1]);
+    }
+
+    public function testChangingColumnKeepsNewDefaultWithoutRemove()
+    {
+        $connection = $this->getConnectionWithDefaultKind('DEFAULT');
+        $blueprint = $this->getBlueprint('users', $connection);
+        $blueprint->string('status')->default('active')->change();
+        $statements = $blueprint->toSql($connection, $this->getGrammar(Grammar::class, $connection));
+
+        $this->assertCount(1, $statements);
+        $this->assertSame("ALTER TABLE users MODIFY COLUMN status FixedString(255) DEFAULT 'active'", $statements[0]);
+    }
+
     public function testAddingColumnInTableFirst()
     {
         $blueprint = $this->getBlueprint('users');
@@ -1499,6 +1586,16 @@ class GrammarTest extends TestCase
             SQL,
             $sql
         );
+    }
+
+    private function getConnectionWithDefaultKind(string $defaultKind): Connection
+    {
+        $connection = $this->getConnection();
+        $connection->shouldReceive('selectOne')
+            ->zeroOrMoreTimes()
+            ->andReturn(['default_kind' => $defaultKind]);
+
+        return $connection;
     }
 
     private function getBlueprint(string $table, ?Connection $connection = null): Blueprint
