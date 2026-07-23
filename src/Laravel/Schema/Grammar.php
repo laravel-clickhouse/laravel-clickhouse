@@ -117,7 +117,7 @@ class Grammar extends BaseGrammar
      * @param  Fluent<string, mixed>  $command
      * @return array<int, string>
      */
-    public function compileChange(Blueprint $blueprint, Fluent $command): array
+    public function compileChange(Blueprint $blueprint, Fluent $command, ?BaseConnection $connection = null): array
     {
         $statements = [];
 
