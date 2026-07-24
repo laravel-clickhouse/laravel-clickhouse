@@ -220,6 +220,35 @@ Schema::connection('clickhouse')->table('events', function (ClickHouseBlueprint 
 });
 ```
 
+### Modifying Columns
+
+```php
+Schema::connection('clickhouse')->table('events', function (ClickHouseBlueprint $table) {
+    $table->string('name')->change();
+    // SQL: ALTER TABLE events MODIFY COLUMN name FixedString(255)
+
+    $table->integer('age')->nullable()->change();
+    // SQL: ALTER TABLE events MODIFY COLUMN age Nullable(Int32)
+});
+```
+
+Following Laravel semantics, modifiers omitted from `change()` are dropped. Since ClickHouse `MODIFY COLUMN` keeps unspecified properties, the existing `DEFAULT` / `MATERIALIZED` / `ALIAS` expression is removed automatically (via `MODIFY COLUMN ... REMOVE ...`) when the new definition does not include one:
+
+```php
+// Existing column: status FixedString(255) DEFAULT 'active'
+Schema::connection('clickhouse')->table('events', function (ClickHouseBlueprint $table) {
+    $table->string('status')->change();
+    // SQL: ALTER TABLE events MODIFY COLUMN status REMOVE DEFAULT
+    // SQL: ALTER TABLE events MODIFY COLUMN status FixedString(255)
+});
+```
+
+::: warning
+- Properties without a fluent API in this package (`CODEC`, `TTL`, `COMMENT`, column `SETTINGS`) are left untouched — ClickHouse keeps their existing values.
+- Changing the type of a column in the primary key or sorting key is restricted by ClickHouse.
+- A type change rewrites the column data (a mutation) and can take a long time on large tables.
+:::
+
 ### Dropping Columns
 
 ```php
@@ -228,6 +257,21 @@ Schema::connection('clickhouse')->table('events', function (ClickHouseBlueprint 
     // SQL: ALTER TABLE events DROP COLUMN name
 });
 ```
+
+### Renaming Columns
+
+```php
+Schema::connection('clickhouse')->table('events', function (ClickHouseBlueprint $table) {
+    $table->renameColumn('name', 'event_name');
+    // SQL: ALTER TABLE events RENAME COLUMN name TO event_name
+});
+```
+
+Renaming a column only changes metadata and does not rewrite its data. ClickHouse applies the following restrictions:
+
+- Columns used in `ORDER BY` or `PRIMARY KEY` expressions cannot be renamed.
+- For nested columns, the parent prefix must remain unchanged (for example, `a.b` may be renamed to `a.c`, but not `b.d`).
+- Renaming a column on a `Distributed` or `Merge` table does not rename it on the underlying tables.
 
 ### Renaming Tables
 
