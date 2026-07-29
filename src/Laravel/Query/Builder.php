@@ -2,14 +2,17 @@
 
 namespace ClickHouse\Laravel\Query;
 
+use ClickHouse\Laravel\Connection;
 use ClickHouse\Laravel\Eloquent\Builder as EloquentBuilder;
 use ClickHouse\Laravel\Eloquent\Model;
+use ClickHouse\Support\JsonEachRowEncoder;
 use Closure;
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Arr;
 use LogicException;
+use Traversable;
 
 class Builder extends BaseBuilder
 {
@@ -332,6 +335,55 @@ class Builder extends BaseBuilder
         string $identifier,
     ): static {
         return $this->withQuerySub($expression, $identifier, true);
+    }
+
+    /**
+     * Insert rows using the JSONEachRow input format.
+     *
+     * Rows are streamed to ClickHouse as newline-delimited JSON after the
+     * query instead of being escaped into an inline VALUES list, which is
+     * significantly faster for large batches.
+     *
+     * @param  iterable<array<string, mixed>>|array<string, mixed>  $rows
+     * @return int The number of written rows reported by ClickHouse.
+     */
+    public function insertBulk(iterable $rows): int
+    {
+        if ($rows instanceof Traversable) {
+            $rows = iterator_to_array($rows, false);
+        }
+
+        if ($rows === []) {
+            return 0;
+        }
+
+        $first = reset($rows);
+
+        if (! is_array($first)) {
+            $first = $rows;
+            $rows = [$rows];
+        }
+
+        /** @var array<string, mixed>[] $rows */
+        foreach ($rows as $row) {
+            // ClickHouse silently drops unknown keys and defaults missing ones
+            // in JSONEachRow input, so a key mismatch must fail loudly here.
+            if (array_diff_key($row, $first) !== [] || array_diff_key($first, $row) !== []) {
+                throw new LogicException('All rows passed to insertBulk must have the same keys.');
+            }
+        }
+
+        $columns = array_keys($first);
+
+        $this->applyBeforeQueryCallbacks();
+
+        /** @var Connection $connection */
+        $connection = $this->connection;
+
+        return $connection->insertUsingFormat(
+            $this->grammar->compileInsertUsingFormat($this, $columns, 'JSONEachRow'),
+            (new JsonEachRowEncoder)->encode($rows)
+        );
     }
 
     /**

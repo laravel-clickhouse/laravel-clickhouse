@@ -101,6 +101,57 @@ class IntegrationTest extends TestCase
         $this->dropSQLiteTestTable();
     }
 
+    public function testInsertBulk()
+    {
+        $written = $this->db->getConnection('clickhouse')->table('test')->insertBulk([
+            ['id' => 1, 'column' => 'value_1'],
+            ['id' => 2, 'column' => 'héllo 👋'],
+        ]);
+
+        $this->assertEquals(2, $written);
+        $this->assertEquals(
+            [
+                ['id' => 1, 'column' => 'value_1'],
+                ['id' => 2, 'column' => 'héllo 👋'],
+            ],
+            ClickHouseModel::orderBy('id')->get()->toArray()
+        );
+    }
+
+    public function testInsertBulkWithTypedColumns()
+    {
+        $connection = $this->db->getConnection('clickhouse');
+
+        $connection->statement('create table test_bulk_types (id UInt64, created_at DateTime, tags Array(String)) engine = Memory');
+
+        try {
+            $written = $connection->table('test_bulk_types')->insertBulk([
+                ['id' => 1, 'created_at' => new \DateTimeImmutable('2026-07-29 12:34:56'), 'tags' => ['a', 'b']],
+            ]);
+
+            $this->assertEquals(1, $written);
+            $this->assertEquals(
+                [['id' => 1, 'created_at' => '2026-07-29 12:34:56', 'tags' => ['a', 'b']]],
+                $connection->table('test_bulk_types')->get()->map(fn ($row) => (array) $row)->all()
+            );
+        } finally {
+            $connection->statement('drop table test_bulk_types');
+        }
+    }
+
+    public function testInsertBulkThroughModel()
+    {
+        $written = ClickHouseModel::insertBulk([
+            ['id' => 1, 'column' => 'value'],
+        ]);
+
+        $this->assertEquals(1, $written);
+        $this->assertEquals(
+            [['id' => 1, 'column' => 'value']],
+            ClickHouseModel::all()->toArray()
+        );
+    }
+
     public function testGetParallelly()
     {
         ClickHouseModel::create(['id' => 1, 'column' => 'value']);

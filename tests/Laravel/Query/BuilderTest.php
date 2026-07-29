@@ -1089,6 +1089,72 @@ class BuilderTest extends TestCase
         $this->getBuilder(insert: $expectedSql, bindings: $bindings)->from('table')->insert([['column' => 'value_1'], ['column' => 'value_2']]);
     }
 
+    public function testInsertBulk()
+    {
+        $builder = $this->getBuilder()->from('table');
+
+        $builder->getConnection()->shouldReceive('insertUsingFormat')
+            ->with(
+                'insert into `table` (`id`, `column`) format JSONEachRow',
+                '{"id":1,"column":"value_1"}'."\n".'{"id":2,"column":"value_2"}'
+            )
+            ->once()
+            ->andReturn(2);
+
+        $this->assertEquals(2, $builder->insertBulk([
+            ['id' => 1, 'column' => 'value_1'],
+            ['id' => 2, 'column' => 'value_2'],
+        ]));
+    }
+
+    public function testInsertBulkWithSingleRow()
+    {
+        $builder = $this->getBuilder()->from('table');
+
+        $builder->getConnection()->shouldReceive('insertUsingFormat')
+            ->with('insert into `table` (`column`) format JSONEachRow', '{"column":"value"}')
+            ->once()
+            ->andReturn(1);
+
+        $this->assertEquals(1, $builder->insertBulk(['column' => 'value']));
+    }
+
+    public function testInsertBulkWithGenerator()
+    {
+        $builder = $this->getBuilder()->from('table');
+
+        $builder->getConnection()->shouldReceive('insertUsingFormat')
+            ->with(
+                'insert into `table` (`id`) format JSONEachRow',
+                '{"id":1}'."\n".'{"id":2}'
+            )
+            ->once()
+            ->andReturn(2);
+
+        $rows = (function () {
+            yield ['id' => 1];
+            yield ['id' => 2];
+        })();
+
+        $this->assertEquals(2, $builder->insertBulk($rows));
+    }
+
+    public function testInsertBulkWithEmptyRows()
+    {
+        $this->assertEquals(0, $this->getBuilder()->from('table')->insertBulk([]));
+    }
+
+    public function testInsertBulkWithMismatchedKeys()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('All rows passed to insertBulk must have the same keys.');
+
+        $this->getBuilder()->from('table')->insertBulk([
+            ['id' => 1, 'column' => 'value'],
+            ['id' => 2, 'extra' => 'value'],
+        ]);
+    }
+
     public function testInsertGetId()
     {
         $this->expectException(LogicException::class);

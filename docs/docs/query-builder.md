@@ -723,6 +723,46 @@ DB::connection('clickhouse')->table('events')->insert([
 // insert into `events` (`id`, `name`) values (1, 'page_view'), (2, 'click')
 ```
 
+### Bulk Insert (JSONEachRow)
+
+For large batches, `insertBulk()` sends the rows to ClickHouse as a single
+[JSONEachRow](https://clickhouse.com/docs/interfaces/formats/JSONEachRow)
+request body instead of compiling them into an inline `VALUES` list. This
+avoids SQL value escaping and server-side SQL parsing of the row data, which is
+significantly faster for high row counts. It returns the number of written rows
+reported by ClickHouse:
+
+```php
+$written = DB::connection('clickhouse')->table('events')->insertBulk([
+    ['id' => 1, 'name' => 'page_view'],
+    ['id' => 2, 'name' => 'click'],
+]);
+// insert into `events` (`id`, `name`) format JSONEachRow
+// {"id":1,"name":"page_view"}
+// {"id":2,"name":"click"}
+```
+
+It is also available on Eloquent models:
+
+```php
+Event::insertBulk($rows);
+```
+
+`DateTimeInterface` values are formatted as `Y-m-d H:i:s` (sub-second precision
+is dropped, matching `insert()`), enums are converted to their value (or name
+for pure enums), and nested PHP arrays map to ClickHouse `Array` columns.
+
+Things to keep in mind:
+
+- The column list is taken from the first row, and every row must have the
+  same keys — a mismatch throws a `LogicException`, because ClickHouse would
+  otherwise silently drop unknown keys and default missing ones.
+- JSONEachRow parses numbers more strictly than `VALUES`: a fractional float
+  (e.g. `3.5`) sent to an integer column throws, where `insert()` would let
+  ClickHouse coerce it.
+- The rows are buffered into a single request body; for very large batches,
+  chunk the rows and call `insertBulk()` per chunk.
+
 ### Update
 
 Updates use ClickHouse's `ALTER TABLE ... UPDATE` syntax:
