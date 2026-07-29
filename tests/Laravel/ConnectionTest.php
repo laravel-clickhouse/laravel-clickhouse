@@ -91,6 +91,23 @@ class ConnectionTest extends TestCase
         $this->assertEquals($rowCount, $actual);
     }
 
+    public function testDeleteWithoutAffectedRowsSummary()
+    {
+        $client = $this->mock(Client::class);
+        $statement = $this->mock(Statement::class);
+        $connection = new Connection(client: $client);
+
+        $query = 'delete from `table` where `column` = ?';
+        $bindings = ['value'];
+
+        $client->shouldReceive('prepare')->with($query)->once()->andReturn($statement);
+        $statement->shouldReceive('bindValue')->with(1, $bindings[0], PDO::PARAM_STR)->once();
+        $statement->shouldReceive('execute')->withNoArgs()->once()->andReturnTrue();
+        $statement->shouldReceive('rowCount')->withNoArgs()->once()->andReturnNull();
+
+        $this->assertSame(0, $connection->delete($query, $bindings));
+    }
+
     public function testSelectParallelly()
     {
         $expectedA = [['column' => 'value_a']];
