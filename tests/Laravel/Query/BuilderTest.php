@@ -1144,6 +1144,17 @@ class BuilderTest extends TestCase
         $this->assertEquals(0, $this->getBuilder()->from('table')->insertBulk([]));
     }
 
+    public function testInsertBulkWithNonArrayRow()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('All rows passed to insertBulk must be arrays.');
+
+        $this->getBuilder()->from('table')->insertBulk([
+            ['id' => 1],
+            'not_a_row',
+        ]);
+    }
+
     public function testInsertBulkWithMismatchedKeys()
     {
         $this->expectException(LogicException::class);

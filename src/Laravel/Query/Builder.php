@@ -366,6 +366,10 @@ class Builder extends BaseBuilder
 
         /** @var array<string, mixed>[] $rows */
         foreach ($rows as $row) {
+            if (! is_array($row)) {
+                throw new LogicException('All rows passed to insertBulk must be arrays.');
+            }
+
             // ClickHouse silently drops unknown keys and defaults missing ones
             // in JSONEachRow input, so a key mismatch must fail loudly here.
             if (array_diff_key($row, $first) !== [] || array_diff_key($first, $row) !== []) {
