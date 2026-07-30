@@ -122,6 +122,7 @@ jobs:
       - name: Install dependencies
         run: |
           composer config minimum-stability dev
+          composer remove illuminate/database orchestra/testbench --dev --no-update
           composer require "hypervel/components:${{ matrix.hypervel }}" --dev --no-update
           COMPOSER_MEMORY_LIMIT=-1 composer update --prefer-dist -n -o
 
