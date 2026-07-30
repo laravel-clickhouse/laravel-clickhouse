@@ -66,6 +66,9 @@ This is a Laravel ClickHouse integration package that provides:
 **Migrations** (`src/Laravel/Migrations/`)
 - `DatabaseMigrationRepository.php` - ClickHouse-compatible migration repository
 
+**Testing Traits** (`src/Laravel/Testing/`, `src/Hypervel/Testing/`)
+- `RefreshDatabase.php` / `DatabaseMigrations.php` / `DatabaseTruncation.php` - ClickHouse-aware wrappers over each framework's testing traits; shared `db:wipe` pre-pass logic lives in `src/Core/Testing/WipesClickHouseConnections.php`
+
 **Enums** (`src/Enums/`)
 - `Format.php` - ClickHouse input format options
 

@@ -42,6 +42,7 @@ export default defineConfig({
         text: 'Reference',
         items: [
           { text: 'Advanced', link: '/docs/advanced' },
+          { text: 'Hypervel', link: '/docs/hypervel' },
         ],
       },
     ],

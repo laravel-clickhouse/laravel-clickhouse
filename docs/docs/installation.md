@@ -15,6 +15,8 @@ Before installing the package, make sure your environment meets the following re
 - **Laravel** >= 11.0
 - **ClickHouse Server** (any currently supported version)
 
+Using Hypervel instead of Laravel? See [Hypervel Support](./hypervel.md).
+
 ## Installation
 
 Install the package via Composer:
