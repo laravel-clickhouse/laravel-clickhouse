@@ -10,7 +10,7 @@ class Escaper
     public function escape(mixed $value, bool $binary = false): string
     {
         if (is_array($value)) {
-            return $this->escapeArray($value);
+            return $this->escapeArray($value, $binary);
         }
 
         if (is_null($value)) {
@@ -55,9 +55,9 @@ class Escaper
     /**
      * @param  mixed[]  $values
      */
-    public function escapeArray(array $values): string
+    public function escapeArray(array $values, bool $binary = false): string
     {
-        return '['.implode(', ', array_map(fn ($value) => $this->escape($value), $values)).']';
+        return '['.implode(', ', array_map(fn ($value) => $this->escape($value, $binary), $values)).']';
     }
 
     public function escapeBinary(mixed $value): string

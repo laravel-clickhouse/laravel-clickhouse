@@ -4,6 +4,7 @@ namespace ClickHouse\Tests\Support;
 
 use ClickHouse\Support\Escaper;
 use ClickHouse\Tests\TestCase;
+use RuntimeException;
 
 class EscaperTest extends TestCase
 {
@@ -49,5 +50,34 @@ class EscaperTest extends TestCase
     {
         $this->assertEquals('[1, 2]', (new Escaper)->escape([1, 2]));
         $this->assertEquals("['1', '2']", (new Escaper)->escape(['1', '2']));
+    }
+
+    public function testBinary()
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The database connection does not support escaping binary values.');
+
+        (new Escaper)->escape('binary-data', true);
+    }
+
+    /**
+     * escapeArray() must propagate the $binary flag to each element instead
+     * of silently falling back to plain string escaping, so binary values
+     * nested in an array fail the same way a top-level binary value does.
+     */
+    public function testArrayPropagatesBinaryFlagToElements()
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The database connection does not support escaping binary values.');
+
+        (new Escaper)->escape(['binary-data'], true);
+    }
+
+    public function testEscapeArrayPropagatesBinaryFlagToElements()
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The database connection does not support escaping binary values.');
+
+        (new Escaper)->escapeArray(['binary-data'], true);
     }
 }
