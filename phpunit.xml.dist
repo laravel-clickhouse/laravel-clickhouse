@@ -17,6 +17,9 @@
     <testsuite name="Feature">
       <directory>tests/Feature</directory>
     </testsuite>
+    <testsuite name="Hypervel">
+      <directory>tests/Hypervel</directory>
+    </testsuite>
   </testsuites>
   <php>
     <env name="CLICKHOUSE_HOST" value="127.0.0.1" />
