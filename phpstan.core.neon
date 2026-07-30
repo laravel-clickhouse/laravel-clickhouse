@@ -1,0 +1,12 @@
+parameters:
+  level: 9
+  paths:
+    # Framework-free code only. src/Core is absent on purpose: PHPStan
+    # analyses traits solely in the context of classes using them, so the
+    # core traits are covered by phpstan.laravel.neon and
+    # phpstan.hypervel.neon through their bridge classes.
+    - src/Client
+    - src/Enums
+    - src/Exceptions
+    - src/Support
+  reportUnmatchedIgnoredErrors: true

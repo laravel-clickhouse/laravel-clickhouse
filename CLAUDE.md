@@ -20,7 +20,8 @@ This is a Laravel ClickHouse integration package that provides:
 - **Local runs use `phpunit.xml`** (gitignored, copied from `phpunit.xml.dist`) to override env vars like `CLICKHOUSE_HOST` for the local environment. PHPUnit auto-loads `phpunit.xml` when present, so existing commands (`composer test`, `vendor/bin/phpunit ...`) just work — no extra `--configuration` flag needed.
 
 ### Code Quality
-- `composer phpstan` - Run static analysis with PHPStan (level 9)
+- `composer phpstan` - Run static analysis with PHPStan (level 9): core + laravel configs
+- `composer phpstan:core` / `phpstan:laravel` / `phpstan:hypervel` - Run one config (`phpstan.core.neon` covers framework-free code; the laravel/hypervel configs analyse the core traits in each bridge's context; `phpstan:hypervel` needs hypervel/components installed)
 - `composer cs` - Check code style with Laravel Pint
 - `composer cs:fix` - Fix code style issues with Laravel Pint
 

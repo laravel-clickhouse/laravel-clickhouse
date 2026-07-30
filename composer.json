@@ -1,9 +1,10 @@
 {
     "name": "laravel-clickhouse/laravel-clickhouse",
-    "description": "A ClickHouse based Eloquent model and Query builder for Laravel",
+    "description": "A ClickHouse based Eloquent model and Query builder for Laravel and Hypervel",
     "keywords": [
         "php",
         "laravel",
+        "hypervel",
         "eloquent",
         "clickhouse",
         "database",
@@ -16,17 +17,22 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "illuminate/database": "^11.21 || ^12.0 || ^13.0",
         "smi2/phpclickhouse": "^1.5",
-        "guzzlehttp/guzzle": "^7.0"
+        "guzzlehttp/guzzle": "^7.0",
+        "nesbot/carbon": "^2.0 || ^3.0"
     },
     "require-dev": {
+        "illuminate/database": "^11.21 || ^12.0 || ^13.0",
         "phpunit/phpunit": "^11.3",
         "mockery/mockery": "^1.6",
         "phpstan/phpstan": "^1.12",
         "laravel/pint": "^1.17",
         "laravel/serializable-closure": "^1.3 || ^2.0",
         "orchestra/testbench": "^9.0 || ^10.0 || ^11.0"
+    },
+    "suggest": {
+        "illuminate/database": "Required to use the Laravel bridge (^11.21 || ^12.0 || ^13.0).",
+        "hypervel/database": "Required to use the Hypervel bridge (~0.4, needs PHP >= 8.4 and ext-swoole)."
     },
     "autoload": {
         "psr-4": {
@@ -36,7 +42,8 @@
     "autoload-dev": {
         "psr-4": {
             "ClickHouse\\Tests\\Unit\\": "tests/Unit/",
-            "ClickHouse\\Tests\\Feature\\": "tests/Feature/"
+            "ClickHouse\\Tests\\Feature\\": "tests/Feature/",
+            "ClickHouse\\Tests\\Hypervel\\": "tests/Hypervel/"
         }
     },
     "extra": {
@@ -44,13 +51,25 @@
             "providers": [
                 "ClickHouse\\Laravel\\ClickHouseServiceProvider"
             ]
+        },
+        "hypervel": {
+            "providers": [
+                "ClickHouse\\Hypervel\\ClickHouseServiceProvider"
+            ]
         }
     },
     "scripts": {
-      "test": "phpunit --colors",
+      "test": "phpunit --colors --testsuite=Unit,Feature",
       "test:unit": "phpunit --colors --testsuite=Unit",
       "test:feature": "phpunit --colors --testsuite=Feature",
-      "phpstan": "phpstan analyse --memory-limit=-1",
+      "test:hypervel": "phpunit --colors --testsuite=Hypervel",
+      "phpstan": [
+        "@phpstan:core",
+        "@phpstan:laravel"
+      ],
+      "phpstan:core": "phpstan analyse -c phpstan.core.neon --memory-limit=-1",
+      "phpstan:laravel": "phpstan analyse -c phpstan.laravel.neon --memory-limit=-1",
+      "phpstan:hypervel": "phpstan analyse -c phpstan.hypervel.neon --memory-limit=-1",
       "cs": "pint src tests --test",
       "cs:fix": "pint src tests"
     }

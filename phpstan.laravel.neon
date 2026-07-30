@@ -1,11 +1,11 @@
 parameters:
   level: 9
   paths:
-    - src
-  excludePaths:
-    # Analysed by phpstan-hypervel.neon in the swoole CI job, where
-    # hypervel/database is installed.
-    - src/Hypervel
+    # The core traits are analysed here in the context of the Laravel
+    # bridge classes; framework-free code lives in phpstan.core.neon and
+    # the Hypervel bridge in phpstan.hypervel.neon.
+    - src/Core
+    - src/Laravel
   reportUnmatchedIgnoredErrors: true
   ignoreErrors:
     # Dynamic SQL vs L13's literal-string typing on Expression / fromRaw / Arr::wrap.

@@ -80,6 +80,55 @@ jobs:
       - name: Execute tests
         run: |
           vendor/bin/pint src tests --test
-          vendor/bin/phpstan analyse
+          vendor/bin/phpstan analyse -c phpstan.core.neon
+          vendor/bin/phpstan analyse -c phpstan.laravel.neon
           vendor/bin/phpunit --testsuite=Unit --coverage-text
           vendor/bin/phpunit --testsuite=Feature --coverage-text
+
+  hypervel:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]')"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php:
+          - "8.4"
+          - "8.5"
+        swoole:
+          - "6.2"
+        hypervel:
+          - "0.4.x-dev"
+
+    name: PHP ${{ matrix.php }} (swoole-${{ matrix.swoole }}) / Hypervel ${{ matrix.hypervel }}
+
+    container:
+      image: phpswoole/swoole:${{ matrix.swoole }}-php${{ matrix.php }}
+
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:24-alpine
+        env:
+          CLICKHOUSE_DB: default
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: default
+        ports:
+          - 8123:8123
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          composer config minimum-stability dev
+          composer require "hypervel/components:${{ matrix.hypervel }}" --dev --no-update
+          COMPOSER_MEMORY_LIMIT=-1 composer update --prefer-dist -n -o
+
+      - name: Execute tests
+        env:
+          CLICKHOUSE_HOST: clickhouse
+        run: |
+          vendor/bin/phpstan analyse -c phpstan.core.neon --memory-limit=-1
+          vendor/bin/phpstan analyse -c phpstan.hypervel.neon --memory-limit=-1
+          vendor/bin/phpunit --testsuite=Hypervel

@@ -54,6 +54,13 @@ trait BuildsClickHouseSchema
     }
 
     /**
+     * Hypervel's withoutForeignKeyConstraints() toggles constraints through
+     * this hook instead of the public enable/disable methods, so it needs
+     * its own no-op; on Laravel the method simply goes unused.
+     */
+    protected function setForeignKeyConstraints(bool $enabled): void {}
+
+    /**
      * {@inheritDoc}
      */
     public function dropAllTables(): void
