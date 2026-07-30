@@ -23,7 +23,7 @@
     },
     "require-dev": {
         "illuminate/database": "^11.21 || ^12.0 || ^13.0",
-        "phpunit/phpunit": "^11.3",
+        "phpunit/phpunit": "^11.3 || ^12.0 || ^13.0",
         "mockery/mockery": "^1.6",
         "phpstan/phpstan": "^1.12",
         "laravel/pint": "^1.17",
