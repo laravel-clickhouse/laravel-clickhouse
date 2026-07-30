@@ -8,6 +8,7 @@
 - [SQLite + ClickHouse (Combined)](#sqlite-clickhouse-combined)
 - [Pure SQLite (No ClickHouse)](#pure-sqlite-no-clickhouse)
 - [Caveats](#caveats)
+- [Hypervel](#hypervel)
 
 ## Overview
 
@@ -309,3 +310,56 @@ public static function setUpBeforeClass(): void
 
 Most application test suites don't hit this — it surfaces only when migration registration varies per test class.
 
+
+## Hypervel
+
+The same three testing traits exist in the Hypervel bridge, with identical
+behaviour and identical property conventions:
+
+| Laravel | Hypervel |
+|---------|----------|
+| `ClickHouse\Laravel\Testing\RefreshDatabase` | `ClickHouse\Hypervel\Testing\RefreshDatabase` |
+| `ClickHouse\Laravel\Testing\DatabaseMigrations` | `ClickHouse\Hypervel\Testing\DatabaseMigrations` |
+| `ClickHouse\Laravel\Testing\DatabaseTruncation` | `ClickHouse\Hypervel\Testing\DatabaseTruncation` |
+
+Everything above applies unchanged — `$connectionsToTruncate`,
+`$connectionsToMigrate`, the hybrid stacking, the TRUNCATE engine caveats,
+and the `RefreshDatabaseState::$migrated` reset (import it from
+`Hypervel\Foundation\Testing\RefreshDatabaseState` instead):
+
+```php
+use ClickHouse\Hypervel\Testing\DatabaseTruncation;
+
+class EventTest extends TestCase
+{
+    use DatabaseTruncation;
+
+    protected array $connectionsToTruncate = ['clickhouse'];
+}
+```
+
+Transactions on a ClickHouse connection throw the same
+`LogicException` with the same message as on Laravel, so the
+transaction-based traits can never wrap a ClickHouse connection — and
+cross-framework code can catch one exception type.
+
+One Hypervel-specific caveat: as of Hypervel 0.4, `Hypervel\Testbench\TestCase`'s
+trait dispatcher does not invoke `DatabaseTruncation` (the foundation
+`TestCase` does). When testing a package against the testbench, restore the
+dispatch in your base test case:
+
+```php
+use Hypervel\Foundation\Testing\DatabaseTruncation;
+
+protected function setUpDatabaseTraits(array $uses): void
+{
+    parent::setUpDatabaseTraits($uses);
+
+    if (isset($uses[DatabaseTruncation::class])) {
+        $this->truncateDatabaseTables();
+    }
+}
+```
+
+Application test suites extending `Hypervel\Foundation\Testing\TestCase`
+are not affected.
