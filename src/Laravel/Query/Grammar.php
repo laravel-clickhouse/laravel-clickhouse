@@ -47,6 +47,18 @@ class Grammar extends BaseGrammar
     /**
      * {@inheritDoc}
      *
+     * Includes microseconds so that precision is preserved when binding to
+     * a `DateTime64` column; ClickHouse silently truncates the fractional
+     * part when the target column is a second-precision `DateTime`.
+     */
+    public function getDateFormat(): string
+    {
+        return 'Y-m-d H:i:s.u';
+    }
+
+    /**
+     * {@inheritDoc}
+     *
      * @param array{
      *     function: string,
      *     columns: array<ExpressionContract|string>,
