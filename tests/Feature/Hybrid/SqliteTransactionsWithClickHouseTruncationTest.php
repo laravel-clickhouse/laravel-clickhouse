@@ -15,6 +15,13 @@ use Illuminate\Support\Facades\DB;
  * test — both connections reset with the same cadence, without the per-test
  * migrate:fresh cost of DatabaseMigrations.
  *
+ * Where the SQLite schema comes from — since DatabaseTransactions never
+ * runs migrations: DatabaseTruncation's first-run migrate:fresh does. The
+ * two connection-list properties only pick each trait's per-test cleanup
+ * targets; migrate:fresh ignores them and runs every registered migration
+ * against whatever connection the migration declares. So sq_users lands on
+ * sqlite even though sqlite is not in $connectionsToTruncate.
+ *
  * The stacking order is what makes this sound: Testbench runs the truncation
  * setup (pre-wipe + one-time migrate:fresh building both schemas) before
  * DatabaseTransactions opens its transaction, and DatabaseTransactions never

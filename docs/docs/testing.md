@@ -155,6 +155,8 @@ Every connection resets before every test — SQLite by transaction rollback, Cl
 
 The lifecycle: `RefreshDatabase` owns the one-time `migrate:fresh`, preceded by the package's pre-wipe of every connection the class works with — derived as the union of `$connectionsToTransact` and `$connectionsToTruncate`, no extra property needed — which is what stops leftover ClickHouse tables from colliding on `CREATE TABLE`. It then latches `RefreshDatabaseState::$migrated`, so `DatabaseTruncation`'s own first-run branch short-circuits and it only ever truncates between tests. Keep `$connectionsToTransact` and `$connectionsToTruncate` disjoint: a connection resets by rollback *or* by truncation, never both.
 
+Note what these two properties do **not** control: which connections get migrated. `migrate:fresh` runs every registered migration against whatever connection the migration declares via `protected $connection` — the properties only assign each trait's per-test cleanup targets. A connection absent from both lists still gets its schema built; it just never gets cleaned between tests.
+
 ### Which trait pairs can stack
 
 Only two combinations are viable — the two shown on this page:
