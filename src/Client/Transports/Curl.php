@@ -41,15 +41,15 @@ class Curl implements Transport
 
         $this->client->executeAsync();
 
-        $results = collect($statements)->reduce(function ($results, $statement, $key) use ($sqls) {
+        $results = ['responses' => [], 'errors' => []];
+
+        foreach ($statements as $key => $statement) {
             try {
                 $results['responses'][$key] = $this->parseResponse($sqls[$key], $statement);
             } catch (Exception $e) {
                 $results['errors'][$key] = $e;
             }
-
-            return $results;
-        }, ['responses' => [], 'errors' => []]);
+        }
 
         if (count($results['errors'])) {
             throw new ParallelQueryException($results['responses'], $results['errors']);

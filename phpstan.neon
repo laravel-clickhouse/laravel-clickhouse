@@ -2,11 +2,20 @@ parameters:
   level: 9
   paths:
     - src
+  excludePaths:
+    # Analysed by phpstan-hypervel.neon in the swoole CI job, where
+    # hypervel/database is installed.
+    - src/Hypervel
   reportUnmatchedIgnoredErrors: true
   ignoreErrors:
     # Dynamic SQL vs L13's literal-string typing on Expression / fromRaw / Arr::wrap.
     -
       message: '#Expression constructor expects TValue#'
+      reportUnmatched: false
+    # Expression's TValue template differs across Laravel versions (12:
+    # string, 13: literal-string); one phpdoc can't satisfy both.
+    -
+      message: '#newExpression\(\) should return Illuminate\\Database\\Query\\Expression<.+> but returns Illuminate\\Database\\Query\\Expression<.+>\.#'
       reportUnmatched: false
     -
       message: '#fromRaw\(\) expects literal-string#'
@@ -17,12 +26,87 @@ parameters:
     # ClickHouse binding slots don't match L12+'s literal-string $type enum.
     -
       message: '#Parameter \#2 \$type of method Illuminate\\Database\\Query\\Builder::(addBinding|setBindings)\(\) expects#'
-      path: src/Laravel/Query/Builder.php
+      path: src/Core/Query/BuildsClickHouseQueries.php
       reportUnmatched: false
     # Dynamic SQL vs L13's literal-string typing on whereRaw.
     -
       message: '#Parameter \#1 \$sql of method Illuminate\\Database\\Query\\Builder::whereRaw\(\) expects .+, mixed given\.#'
-      path: src/Laravel/Query/Builder.php
+      path: src/Core/Query/BuildsClickHouseQueries.php
+      reportUnmatched: false
+    # The shared trait widens native parameter types to `mixed` so the same
+    # code satisfies both Laravel's and Hypervel's builder signatures; the
+    # framework methods it delegates to keep their narrower expectations.
+    -
+      message: '#Parameter \#\d+ \$\w+ of method Illuminate\\Database\\Query\\Builder::\w+\(\) expects .+, mixed given\.#'
+      path: src/Core/Query/BuildsClickHouseQueries.php
+      reportUnmatched: false
+    -
+      message: '#Cannot call method getBindings\(\) on mixed\.#'
+      path: src/Core/Query/BuildsClickHouseQueries.php
+      reportUnmatched: false
+    # newExpression() returns mixed (the EXPRESSION class-string is opaque
+    # to PHPStan); the frameworks' $from property accepts the result.
+    -
+      message: '#Property .+::\$from .+ does not accept mixed\.#'
+      path: src/Core/Query/BuildsClickHouseQueries.php
+      reportUnmatched: false
+    # The ClickHouse binding slots are registered at construction; the
+    # parent's @var array shape (which PHPStan reads now that the property
+    # is no longer redeclared) doesn't know them.
+    -
+      message: "#Offset '(prewhere|arrayJoin|partition|settings|withQuery)' does not exist on array#"
+      path: src/Core/Query/BuildsClickHouseQueries.php
+      reportUnmatched: false
+    # Same widening in the shared grammar trait: $query parameters drop their
+    # native builder type so both frameworks' grammars can use the trait.
+    -
+      message: '#Parameter \#\d+ \$\w+ of (method|function) .+ expects .+, (mixed|array|object) given\.#'
+      path: src/Core/Query/CompilesClickHouseQueries.php
+      reportUnmatched: false
+    -
+      message: '#Cannot (access property|call method) .+ on mixed\.#'
+      path: src/Core/Query/CompilesClickHouseQueries.php
+      reportUnmatched: false
+    -
+      message: '#Access to an undefined property .+#'
+      path: src/Core/Query/CompilesClickHouseQueries.php
+      reportUnmatched: false
+    # Same widening in the shared schema trait: Blueprint/Fluent parameters
+    # drop their native types so both frameworks' schema grammars fit.
+    -
+      message: '#Parameter \#\d+ \$\w+ of (method|function) .+ expects .+ given\.#'
+      path: src/Core/Schema/CompilesClickHouseSchema.php
+      reportUnmatched: false
+    -
+      message: '#Cannot (access property|call method) .+ on mixed\.#'
+      path: src/Core/Schema/CompilesClickHouseSchema.php
+      reportUnmatched: false
+    -
+      message: '#Access to an undefined property .+#'
+      path: src/Core/Schema/CompilesClickHouseSchema.php
+      reportUnmatched: false
+    -
+      message: '#should return .+ but returns mixed\.#'
+      path: src/Core/Schema/CompilesClickHouseSchema.php
+      reportUnmatched: false
+    # sync() is a magic Fluent setter on the drop/dropIfExists command.
+    -
+      message: '#Call to an undefined method Illuminate\\Support\\Fluent(<string, mixed>)?::sync\(\)\.#'
+      path: src/Core/Schema/BuildsClickHouseSchema.php
+      reportUnmatched: false
+    # The shared parallel runner types queries as `object` and the
+    # connection as the marker interface; the class-string constants and
+    # the InteractsWithClickHouseClient trait supply the real API at
+    # runtime, which PHPStan cannot follow.
+    -
+      message: '#(Call to an undefined method (object|ClickHouse\\Core\\Contracts\\ClickHouseConnection)::\w+\(\)|Cannot call method \w+\(\) on mixed)\.#'
+      path: src/Core/RunsParallelQueries.php
+      reportUnmatched: false
+    # $onDelete is PHPDoc non-nullable on the framework builder but starts
+    # unset at runtime.
+    -
+      message: '#\$onDelete \(Closure\) in isset\(\) is not nullable#'
+      path: src/Core/Eloquent/DeletesClickHouseModels.php
       reportUnmatched: false
     # Dead branch of the conditional trait (see BlueprintLaravelCompatibility.php).
     -
@@ -31,39 +115,12 @@ parameters:
       reportUnmatched: false
     # $resolver is PHPDoc non-nullable but starts unset at runtime.
     - '#Property Illuminate\\Database\\Schema\\Builder::\$resolver \(Closure\) in isset\(\) is not nullable#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$column\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$to\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$from\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$shouldBeSkipped\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$algorithm\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$index\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$columns\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$granularity\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$autoIncrement\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$first\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$after\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$virtualAsJson\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$virtualAs\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$storedAsJson\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$storedAs\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$invisible\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$default\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$comment\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$unsigned\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$nullable\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$places\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$total\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$allowed\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$precision\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$useCurrent\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$useCurrentOnUpdate\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$length\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$fixed\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$subtype\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$srid\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$innerType\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$expression\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$lowCardinality\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$name\.#'
-    - '#Call to an undefined method Illuminate\\Support\\Fluent<string, mixed>::default\(\)\.#'
-    - '#Access to an undefined property Illuminate\\Database\\Schema\\ColumnDefinition::\$name\.#'
+    -
+      message: '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$\w+\.#'
+      reportUnmatched: false
+    -
+      message: '#Call to an undefined method Illuminate\\Support\\Fluent<string, mixed>::default\(\)\.#'
+      reportUnmatched: false
+    -
+      message: '#Access to an undefined property Illuminate\\Database\\Schema\\ColumnDefinition::\$name\.#'
+      reportUnmatched: false

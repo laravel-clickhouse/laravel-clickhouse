@@ -2,9 +2,7 @@
 
 namespace ClickHouse\Laravel\Schema;
 
+use ClickHouse\Core\Schema\ClickHouseColumnDefinition;
 use Illuminate\Database\Schema\ColumnDefinition as BaseColumnDefinition;
 
-/**
- * @method $this lowCardinality() Specify that the column has low cardinality
- */
-class ColumnDefinition extends BaseColumnDefinition {}
+class ColumnDefinition extends BaseColumnDefinition implements ClickHouseColumnDefinition {}

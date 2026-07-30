@@ -116,6 +116,51 @@ All classes use `ClickHouse\` as root namespace:
 - All code (`src/`, `tests/`) — comments and docblocks MUST be in English.
 - Public docs (`docs/`, `README.md`) — follow the existing language of the file.
 
+## Class Member Ordering
+
+Within a class (or trait/interface), declare members in this order:
+
+1. By kind: constants → properties → methods (constructor first among methods)
+2. Within each kind, by visibility: public → protected → private
+
+## Zero Duplication Between Bridges
+
+The Laravel and Hypervel bridges must never duplicate logic — a single spot
+of duplication is a future edit that silently misses one side. All shared
+behaviour lives in `ClickHouse\Core\*`; a bridge class should contain only
+what is genuinely framework-bound. Before adding anything to a bridge class,
+try these techniques in order:
+
+1. **Core trait with the full implementation** — the default. Method bodies,
+   schema definitions, SQL compilation all belong in a trait
+   (`BuildsClickHouseQueries`, `CompilesClickHouseSchema`, ...).
+2. **Signature rule for trait methods overriding framework methods**: declare
+   the *narrower* of the two parents' signatures. `: bool` / `: void` over an
+   untyped Laravel parent is legal narrowing; an untyped trait method over a
+   typed Hypervel parent is a fatal. Cast inside when the untyped parent may
+   return a looser value (`(bool) parent::insert(...)`).
+3. **Constructor injection for state** — a trait property cannot redeclare a
+   parent property whose type differs between frameworks (untyped vs
+   `array`). Assign in the trait's constructor instead (`$bindings`,
+   `$selectComponents`, `$modifiers`), guarded with
+   `method_exists(parent::class, '__construct')` when one framework's parent
+   has no constructor.
+4. **Class-string constants for framework classes** — when shared code must
+   instantiate or `instanceof` a framework class, bind it via a bridge
+   constant (`EXPRESSION`, `QUERY_EXCEPTION`, `ELOQUENT_BUILDER`, ...). Read
+   the constant into a local before `instanceof` (PHP 8.2 compatibility).
+5. **Marker interfaces in core** — for cross-framework type detection
+   (`ClickHouseConnection`, `ClickHouseBuilder`) and for shared `@method`
+   phpdoc (`ClickHouseColumnDefinition`); PHPStan resolves `@method` from
+   implemented interfaces.
+
+Acceptable per-bridge remainder (declarations, not logic): one-line
+delegating overrides whose parent signatures differ irreconcilably, hook
+implementations that `new` a framework class with framework-specific
+mechanics, `@method`/`@extends` phpdoc referencing bridge classes, and
+genuinely divergent mechanics (service-provider registration, PDO-vs-HTTP
+connection plumbing).
+
 ## Release Checklist
 
 Before tagging a new release, run through every item below. Do not skip any step.
