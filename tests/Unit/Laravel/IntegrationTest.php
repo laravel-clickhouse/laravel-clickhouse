@@ -1,12 +1,12 @@
 <?php
 
-namespace ClickHouse\Tests\Laravel;
+namespace ClickHouse\Tests\Unit\Laravel;
 
 use ClickHouse\Laravel\Connection;
 use ClickHouse\Laravel\Eloquent\Model as BaseClickHouseModel;
 use ClickHouse\Laravel\Parallel;
 use ClickHouse\Laravel\Schema\Blueprint as ClickHouseBlueprint;
-use ClickHouse\Tests\TestCase;
+use ClickHouse\Tests\Unit\TestCase;
 use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model as BaseSQLiteModel;
