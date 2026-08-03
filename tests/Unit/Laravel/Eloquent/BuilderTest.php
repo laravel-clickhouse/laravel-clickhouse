@@ -1,12 +1,12 @@
 <?php
 
-namespace ClickHouse\Tests\Laravel\Eloquent;
+namespace ClickHouse\Tests\Unit\Laravel\Eloquent;
 
 use ClickHouse\Laravel\Eloquent\Builder;
 use ClickHouse\Laravel\Eloquent\Model;
 use ClickHouse\Laravel\Query\Builder as BaseBuilder;
 use ClickHouse\Laravel\Query\Grammar;
-use ClickHouse\Tests\TestCase;
+use ClickHouse\Tests\Unit\TestCase;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Database\Query\Grammars\Grammar as QueryGrammar;

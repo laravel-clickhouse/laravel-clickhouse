@@ -35,6 +35,7 @@ export default defineConfig({
           { text: 'Eloquent', link: '/docs/eloquent' },
           { text: 'Schema', link: '/docs/schema' },
           { text: 'Parallel Queries', link: '/docs/parallel-queries' },
+          { text: 'Testing', link: '/docs/testing' },
         ],
       },
       {

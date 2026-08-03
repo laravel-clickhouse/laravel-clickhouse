@@ -17,6 +17,7 @@ This is a Laravel ClickHouse integration package that provides:
 - `composer test` - Run PHPUnit tests
 - `vendor/bin/phpunit --filter TestName` - Run specific test
 - Tests require ClickHouse server running on localhost:8123 (see phpunit.xml.dist)
+- **Local runs use `phpunit.xml`** (gitignored, copied from `phpunit.xml.dist`) to override env vars like `CLICKHOUSE_HOST` for the local environment. PHPUnit auto-loads `phpunit.xml` when present, so existing commands (`composer test`, `vendor/bin/phpunit ...`) just work — no extra `--configuration` flag needed.
 
 ### Code Quality
 - `composer phpstan` - Run static analysis with PHPStan (level 9)
@@ -103,6 +104,11 @@ All classes use `ClickHouse\` as root namespace:
 - `ClickHouse\Laravel\` - Laravel framework integration
 - `ClickHouse\Support\` - Utility classes
 - `ClickHouse\Exceptions\` - Custom exceptions
+
+## Code Comments Language
+
+- All code (`src/`, `tests/`) — comments and docblocks MUST be in English.
+- Public docs (`docs/`, `README.md`) — follow the existing language of the file.
 
 ## Release Checklist
 

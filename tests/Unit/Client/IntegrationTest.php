@@ -1,9 +1,9 @@
 <?php
 
-namespace ClickHouse\Tests\Client;
+namespace ClickHouse\Tests\Unit\Client;
 
 use ClickHouse\Client\Client;
-use ClickHouse\Tests\TestCase;
+use ClickHouse\Tests\Unit\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 class IntegrationTest extends TestCase
