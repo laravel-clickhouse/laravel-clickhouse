@@ -4,6 +4,8 @@ namespace ClickHouse\Tests\Unit\Support;
 
 use ClickHouse\Support\Escaper;
 use ClickHouse\Tests\Unit\TestCase;
+use DateTime;
+use DateTimeImmutable;
 use RuntimeException;
 
 class EscaperTest extends TestCase
@@ -44,6 +46,27 @@ class EscaperTest extends TestCase
                 return 'stringable';
             }
         }));
+    }
+
+    public function testDateTimeWithoutMicroseconds()
+    {
+        $date = DateTime::createFromFormat('Y-m-d H:i:s', '2024-01-02 03:04:05');
+
+        $this->assertEquals("'2024-01-02 03:04:05'", (new Escaper)->escape($date));
+    }
+
+    public function testDateTimePreservesMicroseconds()
+    {
+        $date = DateTime::createFromFormat('Y-m-d H:i:s.u', '2024-01-02 03:04:05.123456');
+
+        $this->assertEquals("'2024-01-02 03:04:05.123456'", (new Escaper)->escape($date));
+    }
+
+    public function testDateTimeImmutablePreservesMicroseconds()
+    {
+        $date = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', '2024-01-02 03:04:05.000001');
+
+        $this->assertEquals("'2024-01-02 03:04:05.000001'", (new Escaper)->escape($date));
     }
 
     public function testArray()
