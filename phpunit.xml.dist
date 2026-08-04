@@ -11,14 +11,23 @@
   failOnWarning="true"
 >
   <testsuites>
-    <testsuite name="Unit">
-      <directory>tests/Unit</directory>
+    <testsuite name="Core-Unit">
+      <directory>tests/Core/Unit</directory>
     </testsuite>
-    <testsuite name="Feature">
-      <directory>tests/Feature</directory>
+    <testsuite name="Core-Feature">
+      <directory>tests/Core/Feature</directory>
     </testsuite>
-    <testsuite name="Hypervel">
-      <directory>tests/Hypervel</directory>
+    <testsuite name="Laravel-Unit">
+      <directory>tests/Laravel/Unit</directory>
+    </testsuite>
+    <testsuite name="Laravel-Feature">
+      <directory>tests/Laravel/Feature</directory>
+    </testsuite>
+    <testsuite name="Hypervel-Unit">
+      <directory>tests/Hypervel/Unit</directory>
+    </testsuite>
+    <testsuite name="Hypervel-Feature">
+      <directory>tests/Hypervel/Feature</directory>
     </testsuite>
   </testsuites>
   <php>
