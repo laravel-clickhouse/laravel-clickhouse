@@ -11,3 +11,4 @@ phpunit.xml
 /docs/.vitepress/dist
 /docs/.vitepress/cache
 /CLAUDE.local.md
+/node_modules
