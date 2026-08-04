@@ -3,7 +3,7 @@
 namespace ClickHouse\Laravel\Query;
 
 use Carbon\Carbon;
-use ClickHouse\Support\Format;
+use ClickHouse\Enums\Format;
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder as BaseBuilder;

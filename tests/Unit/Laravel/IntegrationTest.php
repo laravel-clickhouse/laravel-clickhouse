@@ -2,11 +2,11 @@
 
 namespace ClickHouse\Tests\Unit\Laravel;
 
+use ClickHouse\Enums\Format;
 use ClickHouse\Laravel\Connection;
 use ClickHouse\Laravel\Eloquent\Model as BaseClickHouseModel;
 use ClickHouse\Laravel\Parallel;
 use ClickHouse\Laravel\Schema\Blueprint as ClickHouseBlueprint;
-use ClickHouse\Support\Format;
 use ClickHouse\Tests\Unit\TestCase;
 use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -123,16 +123,18 @@ class IntegrationTest extends TestCase
     {
         $connection = $this->db->getConnection('clickhouse');
 
-        $connection->statement('create table test_format_types (id UInt64, created_at DateTime, tags Array(String)) engine = Memory');
+        $connection->statement('create table test_format_types (tags Array(String), created_at DateTime64(6), id UInt64) engine = Memory');
 
         try {
             $inserted = $connection->table('test_format_types')->insert([
-                ['id' => 1, 'created_at' => new \DateTimeImmutable('2026-07-29 12:34:56'), 'tags' => ['a', 'b']],
+                'tags' => ['a', 'b'],
+                'created_at' => new \DateTimeImmutable('2026-07-29 12:34:56.123456'),
+                'id' => 1,
             ], format: Format::JSONEachRow);
 
             $this->assertTrue($inserted);
             $this->assertEquals(
-                [['id' => 1, 'created_at' => '2026-07-29 12:34:56', 'tags' => ['a', 'b']]],
+                [['tags' => ['a', 'b'], 'created_at' => '2026-07-29 12:34:56.123456', 'id' => 1]],
                 $connection->table('test_format_types')->get()->map(fn ($row) => (array) $row)->all()
             );
         } finally {

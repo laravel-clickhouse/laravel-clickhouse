@@ -43,7 +43,7 @@ class JsonEachRowEncoder
         }
 
         if ($value instanceof DateTimeInterface) {
-            return $value->format('Y-m-d H:i:s');
+            return DateTimeFormatter::format($value);
         }
 
         if ($value instanceof BackedEnum) {

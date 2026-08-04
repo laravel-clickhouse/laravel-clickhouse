@@ -1,10 +1,10 @@
 <?php
 
-namespace ClickHouse\Tests\Support;
+namespace ClickHouse\Tests\Unit\Support;
 
 use Carbon\Carbon;
 use ClickHouse\Support\JsonEachRowEncoder;
-use ClickHouse\Tests\TestCase;
+use ClickHouse\Tests\Unit\TestCase;
 use JsonException;
 use RuntimeException;
 
@@ -39,6 +39,14 @@ class JsonEachRowEncoderTest extends TestCase
         $this->assertEquals(
             '{"created_at":"2026-07-29 12:34:56"}',
             (new JsonEachRowEncoder)->encode([['created_at' => Carbon::parse('2026-07-29 12:34:56')]])
+        );
+    }
+
+    public function testDateTimePreservesMicroseconds()
+    {
+        $this->assertEquals(
+            '{"created_at":"2026-07-29 12:34:56.123456"}',
+            (new JsonEachRowEncoder)->encode([['created_at' => Carbon::parse('2026-07-29 12:34:56.123456')]])
         );
     }
 

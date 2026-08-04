@@ -1,6 +1,6 @@
 <?php
 
-namespace ClickHouse\Support;
+namespace ClickHouse\Enums;
 
 /**
  * ClickHouse input formats that rows can be encoded and sent in.
@@ -9,5 +9,7 @@ namespace ClickHouse\Support;
  */
 enum Format: string
 {
+    case Values = 'Values';
+
     case JSONEachRow = 'JSONEachRow';
 }

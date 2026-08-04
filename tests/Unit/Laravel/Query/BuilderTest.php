@@ -2,9 +2,9 @@
 
 namespace ClickHouse\Tests\Unit\Laravel\Query;
 
+use ClickHouse\Enums\Format;
 use ClickHouse\Laravel\Query\Builder;
 use ClickHouse\Laravel\Query\Grammar;
-use ClickHouse\Support\Format;
 use ClickHouse\Tests\Unit\TestCase;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Processors\Processor;
@@ -1090,7 +1090,28 @@ class BuilderTest extends TestCase
         $this->getBuilder(insert: $expectedSql, bindings: $bindings)->from('table')->insert([['column' => 'value_1'], ['column' => 'value_2']]);
     }
 
-    public function testInsertWithFormat()
+    public function testInsertWithValuesFormat()
+    {
+        $expectedSql = 'insert into `table` (`column`) values (?)';
+        $bindings = ['value'];
+        $this->getBuilder(insert: $expectedSql, bindings: $bindings)
+            ->from('table')
+            ->insert(['column' => 'value'], format: Format::Values);
+    }
+
+    public function testInsertMultipleWithValuesFormat()
+    {
+        $expectedSql = 'insert into `table` (`column`) values (?), (?)';
+        $bindings = ['value_1', 'value_2'];
+        $this->getBuilder(insert: $expectedSql, bindings: $bindings)
+            ->from('table')
+            ->insert([
+                ['column' => 'value_1'],
+                ['column' => 'value_2'],
+            ], format: Format::Values);
+    }
+
+    public function testInsertMultipleWithJsonEachRowFormat()
     {
         $builder = $this->getBuilder()->from('table');
 
@@ -1108,7 +1129,38 @@ class BuilderTest extends TestCase
         ], format: Format::JSONEachRow));
     }
 
-    public function testInsertWithFormatAndSingleRow()
+    public function testInsertMultipleWithJsonEachRowFormatAndNonSequentialKeys()
+    {
+        $builder = $this->getBuilder()->from('table');
+
+        $builder->getConnection()->shouldReceive('insertUsingFormat')
+            ->with(
+                'insert into `table` (`id`, `column`) format JSONEachRow',
+                '{"id":1,"column":"value_1"}'."\n".'{"id":2,"column":"value_2"}'
+            )
+            ->once()
+            ->andReturn(true);
+
+        $this->assertTrue($builder->insert([
+            5 => ['id' => 1, 'column' => 'value_1'],
+            9 => ['id' => 2, 'column' => 'value_2'],
+        ], format: Format::JSONEachRow));
+    }
+
+    public function testInsertMultipleWithJsonEachRowFormatAndStringKeysIsRejected()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(
+            'Formatted insert rows are ambiguous. Use array_values() for multiple rows or wrap a single row in another array.'
+        );
+
+        $this->getBuilder()->from('table')->insert([
+            'first' => ['id' => 1, 'column' => 'value_1'],
+            'second' => ['id' => 2, 'column' => 'value_2'],
+        ], format: Format::JSONEachRow);
+    }
+
+    public function testInsertWithJsonEachRowFormatAndSingleRow()
     {
         $builder = $this->getBuilder()->from('table');
 
@@ -1120,12 +1172,66 @@ class BuilderTest extends TestCase
         $this->assertTrue($builder->insert(['column' => 'value'], format: Format::JSONEachRow));
     }
 
-    public function testInsertWithFormatAndEmptyRows()
+    public function testInsertWithJsonEachRowFormatAndSingleRowStartingWithArray()
+    {
+        $builder = $this->getBuilder()->from('table');
+
+        $builder->getConnection()->shouldReceive('insertUsingFormat')
+            ->with(
+                'insert into `table` (`tags`, `name`) format JSONEachRow',
+                '{"tags":["php","clickhouse"],"name":"example"}'
+            )
+            ->once()
+            ->andReturn(true);
+
+        $this->assertTrue($builder->insert([
+            'tags' => ['php', 'clickhouse'],
+            'name' => 'example',
+        ], format: Format::JSONEachRow));
+    }
+
+    public function testInsertWithJsonEachRowFormatAndSingleRowContainingOnlyArrayValues()
+    {
+        $builder = $this->getBuilder()->from('table');
+
+        $builder->getConnection()->shouldReceive('insertUsingFormat')
+            ->with(
+                'insert into `table` (`tags`, `categories`) format JSONEachRow',
+                '{"tags":["php","clickhouse"],"categories":["database","analytics"]}'
+            )
+            ->once()
+            ->andReturn(true);
+
+        $this->assertTrue($builder->insert([
+            'tags' => ['php', 'clickhouse'],
+            'categories' => ['database', 'analytics'],
+        ], format: Format::JSONEachRow));
+    }
+
+    public function testInsertWithJsonEachRowFormatAndWrappedSingleRowContainingOnlyAssociativeArrayValues()
+    {
+        $builder = $this->getBuilder()->from('table');
+
+        $builder->getConnection()->shouldReceive('insertUsingFormat')
+            ->with(
+                'insert into `table` (`metadata`, `options`) format JSONEachRow',
+                '{"metadata":{"source":"api"},"options":{"enabled":true}}'
+            )
+            ->once()
+            ->andReturn(true);
+
+        $this->assertTrue($builder->insert([[
+            'metadata' => ['source' => 'api'],
+            'options' => ['enabled' => true],
+        ]], format: Format::JSONEachRow));
+    }
+
+    public function testInsertWithJsonEachRowFormatAndEmptyRows()
     {
         $this->assertTrue($this->getBuilder()->from('table')->insert([], format: Format::JSONEachRow));
     }
 
-    public function testInsertWithFormatAndNonArrayRow()
+    public function testInsertWithJsonEachRowFormatAndNonArrayRow()
     {
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('All rows passed to a formatted insert must be arrays.');
@@ -1136,7 +1242,7 @@ class BuilderTest extends TestCase
         ], format: Format::JSONEachRow);
     }
 
-    public function testInsertWithFormatAndMismatchedKeys()
+    public function testInsertWithJsonEachRowFormatAndMismatchedKeys()
     {
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('All rows passed to a formatted insert must have the same keys.');

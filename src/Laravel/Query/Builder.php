@@ -2,10 +2,10 @@
 
 namespace ClickHouse\Laravel\Query;
 
+use ClickHouse\Enums\Format;
 use ClickHouse\Laravel\Connection;
 use ClickHouse\Laravel\Eloquent\Builder as EloquentBuilder;
 use ClickHouse\Laravel\Eloquent\Model;
-use ClickHouse\Support\Format;
 use ClickHouse\Support\JsonEachRowEncoder;
 use Closure;
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
@@ -340,53 +340,15 @@ class Builder extends BaseBuilder
     /**
      * {@inheritDoc}
      *
-     * @param  array<string, mixed>|array<array<string, mixed>>  $values
-     * @param  Format|null  $format  When given, the rows are encoded in this
-     *                               ClickHouse input format and streamed after the query instead of
-     *                               being escaped into an inline VALUES list, which is significantly
-     *                               faster for large batches.
+     * @param  array<string, mixed>|array<int, array<string, mixed>>  $values
+     * @param  Format  $format  The ClickHouse input format used to encode the rows.
      */
-    public function insert(array $values, ?Format $format = null)
+    public function insert(array $values, Format $format = Format::Values)
     {
-        if ($format === null) {
-            return parent::insert($values);
-        }
-
-        if ($values === []) {
-            return true;
-        }
-
-        $first = reset($values);
-
-        if (! is_array($first)) {
-            $first = $values;
-            $values = [$values];
-        }
-
-        /** @var array<string, mixed>[] $values */
-        foreach ($values as $row) {
-            if (! is_array($row)) {
-                throw new LogicException('All rows passed to a formatted insert must be arrays.');
-            }
-
-            // ClickHouse silently drops unknown keys and defaults missing ones
-            // in JSONEachRow input, so a key mismatch must fail loudly here.
-            if (array_diff_key($row, $first) !== [] || array_diff_key($first, $row) !== []) {
-                throw new LogicException('All rows passed to a formatted insert must have the same keys.');
-            }
-        }
-
-        $this->applyBeforeQueryCallbacks();
-
-        /** @var Connection $connection */
-        $connection = $this->connection;
-
-        return $connection->insertUsingFormat(
-            $this->grammar->compileInsertUsingFormat($this, array_keys($first), $format),
-            match ($format) {
-                Format::JSONEachRow => (new JsonEachRowEncoder)->encode($values),
-            }
-        );
+        return match ($format) {
+            Format::Values => parent::insert($values),
+            Format::JSONEachRow => $this->insertJsonEachRow($values),
+        };
     }
 
     /**
@@ -471,25 +433,6 @@ class Builder extends BaseBuilder
     public function ignoreIndex($index): static
     {
         throw new LogicException('ClickHouse does not support specify indexes.');
-    }
-
-    /**
-     * Temporarily swap wheres/bindings to the preWhere arrays and run the callback.
-     */
-    private function redirectToPrewheres(callable $callback): static
-    {
-        [$this->wheres, $this->prewheres] = [$this->prewheres, $this->wheres];
-        [$this->bindings['where'], $this->bindings['prewhere']] = [$this->bindings['prewhere'], $this->bindings['where']];
-
-        try {
-            $callback();
-        } finally {
-            // Swap back after the callback so the builder is in a consistent state for the next call.
-            [$this->wheres, $this->prewheres] = [$this->prewheres, $this->wheres];
-            [$this->bindings['where'], $this->bindings['prewhere']] = [$this->bindings['prewhere'], $this->bindings['where']];
-        }
-
-        return $this;
     }
 
     /**
@@ -1198,5 +1141,87 @@ class Builder extends BaseBuilder
     public function setBindings(array $bindings, $type = 'where')
     {
         return parent::setBindings($bindings, $type);
+    }
+
+    /**
+     * @param  array<string, mixed>|array<int, array<string, mixed>>  $values
+     */
+    private function insertJsonEachRow(array $values): bool
+    {
+        if ($values === []) {
+            return true;
+        }
+
+        $firstKey = array_key_first($values);
+
+        if (is_string($firstKey) && $this->containsOnlyAssociativeArrays($values)) {
+            throw new LogicException(
+                'Formatted insert rows are ambiguous. Use array_values() for multiple rows or wrap a single row in another array.'
+            );
+        }
+
+        if (is_string($firstKey)) {
+            $values = [$values];
+        }
+
+        if (is_int($firstKey)) {
+            $values = array_values($values);
+        }
+
+        /** @var array<string, mixed> $first */
+        $first = reset($values);
+
+        /** @var list<array<string, mixed>> $values */
+        foreach ($values as $row) {
+            if (! is_array($row)) {
+                throw new LogicException('All rows passed to a formatted insert must be arrays.');
+            }
+
+            // ClickHouse silently drops unknown keys and defaults missing ones
+            // in JSONEachRow input, so a key mismatch must fail loudly here.
+            if (array_diff_key($row, $first) !== [] || array_diff_key($first, $row) !== []) {
+                throw new LogicException('All rows passed to a formatted insert must have the same keys.');
+            }
+        }
+
+        $this->applyBeforeQueryCallbacks();
+
+        /** @var Connection $connection */
+        $connection = $this->connection;
+
+        return $connection->insertUsingFormat(
+            $this->grammar->compileInsertUsingFormat($this, array_keys($first), Format::JSONEachRow),
+            (new JsonEachRowEncoder)->encode($values)
+        );
+    }
+
+    /**
+     * Temporarily swap wheres/bindings to the preWhere arrays and run the callback.
+     */
+    private function redirectToPrewheres(callable $callback): static
+    {
+        [$this->wheres, $this->prewheres] = [$this->prewheres, $this->wheres];
+        [$this->bindings['where'], $this->bindings['prewhere']] = [$this->bindings['prewhere'], $this->bindings['where']];
+
+        try {
+            $callback();
+        } finally {
+            // Swap back after the callback so the builder is in a consistent state for the next call.
+            [$this->wheres, $this->prewheres] = [$this->prewheres, $this->wheres];
+            [$this->bindings['where'], $this->bindings['prewhere']] = [$this->bindings['prewhere'], $this->bindings['where']];
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param  array<mixed>  $values
+     */
+    private function containsOnlyAssociativeArrays(array $values): bool
+    {
+        return array_filter(
+            $values,
+            fn (mixed $value): bool => ! is_array($value) || array_is_list($value)
+        ) === [];
     }
 }
