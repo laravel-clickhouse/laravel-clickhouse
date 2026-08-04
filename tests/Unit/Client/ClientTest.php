@@ -1,6 +1,6 @@
 <?php
 
-namespace ClickHouse\Tests\Client;
+namespace ClickHouse\Tests\Unit\Client;
 
 use ClickHouse\Client\Client;
 use ClickHouse\Client\Contracts\Transport;
@@ -8,7 +8,7 @@ use ClickHouse\Client\Response;
 use ClickHouse\Client\Statement;
 use ClickHouse\Client\TransportFactory;
 use ClickHouse\Exceptions\ParallelQueryException;
-use ClickHouse\Tests\TestCase;
+use ClickHouse\Tests\Unit\TestCase;
 use Exception;
 
 class ClientTest extends TestCase

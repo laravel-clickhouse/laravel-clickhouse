@@ -10,7 +10,7 @@ class Escaper
     public function escape(mixed $value, bool $binary = false): string
     {
         if (is_array($value)) {
-            return $this->escapeArray($value);
+            return $this->escapeArray($value, $binary);
         }
 
         if (is_null($value)) {
@@ -30,7 +30,9 @@ class Escaper
         }
 
         if ($value instanceof DateTimeInterface) {
-            $value = $value->format('Y-m-d H:i:s');
+            $value = $value->format('u') === '000000'
+                ? $value->format('Y-m-d H:i:s')
+                : $value->format('Y-m-d H:i:s.u');
         }
 
         if (is_object($value) && is_callable([$value, '__toString'])) {
@@ -55,9 +57,9 @@ class Escaper
     /**
      * @param  mixed[]  $values
      */
-    public function escapeArray(array $values): string
+    public function escapeArray(array $values, bool $binary = false): string
     {
-        return '['.implode(', ', array_map(fn ($value) => $this->escape($value), $values)).']';
+        return '['.implode(', ', array_map(fn ($value) => $this->escape($value, $binary), $values)).']';
     }
 
     public function escapeBinary(mixed $value): string

@@ -1,6 +1,6 @@
 <?php
 
-namespace ClickHouse\Tests\Laravel;
+namespace ClickHouse\Tests\Unit\Laravel;
 
 use ClickHouse\Client\Client;
 use ClickHouse\Client\Contracts\Transport;
@@ -8,9 +8,10 @@ use ClickHouse\Client\Response;
 use ClickHouse\Client\Statement;
 use ClickHouse\Exceptions\ParallelQueryException;
 use ClickHouse\Laravel\Connection;
-use ClickHouse\Tests\TestCase;
+use ClickHouse\Tests\Unit\TestCase;
 use Exception;
 use Illuminate\Database\QueryException;
+use LogicException;
 use PDO;
 
 class ConnectionTest extends TestCase
@@ -126,6 +127,23 @@ class ConnectionTest extends TestCase
         $this->assertEquals($rowCount, $actual);
     }
 
+    public function testDeleteWithoutAffectedRowsSummary()
+    {
+        $client = $this->mock(Client::class);
+        $statement = $this->mock(Statement::class);
+        $connection = new Connection(client: $client);
+
+        $query = 'delete from `table` where `column` = ?';
+        $bindings = ['value'];
+
+        $client->shouldReceive('prepare')->with($query)->once()->andReturn($statement);
+        $statement->shouldReceive('bindValue')->with(1, $bindings[0], PDO::PARAM_STR)->once();
+        $statement->shouldReceive('execute')->withNoArgs()->once()->andReturnTrue();
+        $statement->shouldReceive('rowCount')->withNoArgs()->once()->andReturnNull();
+
+        $this->assertSame(0, $connection->delete($query, $bindings));
+    }
+
     public function testSelectParallelly()
     {
         $expectedA = [['column' => 'value_a']];
@@ -180,5 +198,37 @@ class ConnectionTest extends TestCase
             $this->assertEquals(['a' => $expectedA], $e->getResponses());
             $this->assertInstanceOf(QueryException::class, $e->getErrors()['b']);
         }
+    }
+
+    public function testBeginTransactionThrowsLogicException()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Transactions are not supported when using ClickHouse.');
+
+        (new Connection(client: $this->mock(Client::class)))->beginTransaction();
+    }
+
+    public function testCommitThrowsLogicException()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Transactions are not supported when using ClickHouse.');
+
+        (new Connection(client: $this->mock(Client::class)))->commit();
+    }
+
+    public function testRollBackThrowsLogicException()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Transactions are not supported when using ClickHouse.');
+
+        (new Connection(client: $this->mock(Client::class)))->rollBack();
+    }
+
+    public function testTransactionClosureThrowsLogicException()
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Transactions are not supported when using ClickHouse.');
+
+        (new Connection(client: $this->mock(Client::class)))->transaction(fn () => null);
     }
 }

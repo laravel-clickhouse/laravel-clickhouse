@@ -49,6 +49,15 @@ jobs:
           tools: composer
           coverage: pcov
 
+      # Laravel 11 reached end of life in March 2026, so its known advisories
+      # (e.g. PKSA-mdq4-51ck-6kdq, fixed only in 12.60/13.10) will never get a
+      # patch, and Composer >= 2.10 refuses to resolve the ^11.21 matrix leg
+      # because every 11.x release is affected. Ignoring advisories for
+      # laravel/framework on this leg only keeps the newer legs protected.
+      - name: Allow known-unfixable advisories on EOL Laravel 11
+        if: matrix.laravel == '^11.21'
+        run: composer config policy.advisories.ignore --json '["laravel/framework"]'
+
       - name: Install dependencies
         run: |
           composer require "illuminate/database:${{ matrix.laravel }}" --dev --no-update
@@ -58,4 +67,5 @@ jobs:
         run: |
           vendor/bin/pint src tests --test
           vendor/bin/phpstan analyse
-          vendor/bin/phpunit --coverage-text
+          vendor/bin/phpunit --testsuite=Unit --coverage-text
+          vendor/bin/phpunit --testsuite=Feature --coverage-text

@@ -10,9 +10,11 @@ use ClickHouse\Laravel\Query\Grammar as QueryGrammar;
 use ClickHouse\Laravel\Schema\Builder as SchemaBuilder;
 use ClickHouse\Laravel\Schema\Grammar as SchemaGrammar;
 use ClickHouse\Support\Escaper;
+use Closure;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
+use LogicException;
 use RuntimeException;
 
 class Connection extends BaseConnection
@@ -161,7 +163,10 @@ class Connection extends BaseConnection
 
             $statement->execute();
 
-            return $statement->rowCount();
+            // ClickHouse reports no written_rows in X-ClickHouse-Summary for
+            // DELETE / ALTER TABLE mutations (verified on 24.x and 25.x), so
+            // rowCount() is null there; Laravel's contract requires an int.
+            return $statement->rowCount() ?? 0;
         });
     }
 
@@ -193,6 +198,53 @@ class Connection extends BaseConnection
 
     /** {@inheritDoc} */
     public function disconnect() {}
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param  Closure(static): mixed  $callback
+     *
+     * @throws LogicException
+     */
+    public function transaction(Closure $callback, $attempts = 1): never
+    {
+        $this->throwUnsupportedTransaction();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws LogicException
+     */
+    public function beginTransaction(): never
+    {
+        $this->throwUnsupportedTransaction();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws LogicException
+     */
+    public function commit(): never
+    {
+        $this->throwUnsupportedTransaction();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws LogicException
+     */
+    public function rollBack($toLevel = null): never
+    {
+        $this->throwUnsupportedTransaction();
+    }
+
+    private function throwUnsupportedTransaction(): never
+    {
+        throw new LogicException('Transactions are not supported when using ClickHouse.');
+    }
 
     /** {@inheritDoc} */
     public function getSchemaBuilder()

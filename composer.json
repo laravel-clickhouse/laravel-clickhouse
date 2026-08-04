@@ -25,7 +25,8 @@
         "mockery/mockery": "^1.6",
         "phpstan/phpstan": "^1.12",
         "laravel/pint": "^1.17",
-        "laravel/serializable-closure": "^1.3 || ^2.0"
+        "laravel/serializable-closure": "^1.3 || ^2.0",
+        "orchestra/testbench": "^9.0 || ^10.0 || ^11.0"
     },
     "autoload": {
         "psr-4": {
@@ -34,7 +35,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "ClickHouse\\Tests\\": "tests/"
+            "ClickHouse\\Tests\\Unit\\": "tests/Unit/",
+            "ClickHouse\\Tests\\Feature\\": "tests/Feature/"
         }
     },
     "extra": {
@@ -46,6 +48,8 @@
     },
     "scripts": {
       "test": "phpunit --colors",
+      "test:unit": "phpunit --colors --testsuite=Unit",
+      "test:feature": "phpunit --colors --testsuite=Feature",
       "phpstan": "phpstan analyse --memory-limit=-1",
       "cs": "pint src tests --test",
       "cs:fix": "pint src tests"
