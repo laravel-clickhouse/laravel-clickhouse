@@ -65,8 +65,13 @@ This is a Laravel ClickHouse integration package that provides:
 **Migrations** (`src/Laravel/Migrations/`)
 - `DatabaseMigrationRepository.php` - ClickHouse-compatible migration repository
 
+**Enums** (`src/Enums/`)
+- `Format.php` - ClickHouse input format options
+
 **Support** (`src/Support/`)
+- `DateTimeFormatter.php` - Shared DateTime formatting
 - `Escaper.php` - Value escaping and SQL injection prevention
+- `JsonEachRowEncoder.php` - JSONEachRow payload encoding
 
 **Exceptions** (`src/Exceptions/`)
 - `QueryException.php` - Query execution exception
@@ -101,6 +106,7 @@ Tests expect ClickHouse server running with:
 
 All classes use `ClickHouse\` as root namespace:
 - `ClickHouse\Client\` - Core client functionality
+- `ClickHouse\Enums\` - Enumerations
 - `ClickHouse\Laravel\` - Laravel framework integration
 - `ClickHouse\Support\` - Utility classes
 - `ClickHouse\Exceptions\` - Custom exceptions
