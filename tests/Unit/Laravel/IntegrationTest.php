@@ -6,6 +6,7 @@ use ClickHouse\Laravel\Connection;
 use ClickHouse\Laravel\Eloquent\Model as BaseClickHouseModel;
 use ClickHouse\Laravel\Parallel;
 use ClickHouse\Laravel\Schema\Blueprint as ClickHouseBlueprint;
+use ClickHouse\Support\Format;
 use ClickHouse\Tests\Unit\TestCase;
 use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -101,14 +102,14 @@ class IntegrationTest extends TestCase
         $this->dropSQLiteTestTable();
     }
 
-    public function testInsertBulk()
+    public function testInsertWithFormat()
     {
-        $written = $this->db->getConnection('clickhouse')->table('test')->insertBulk([
+        $inserted = $this->db->getConnection('clickhouse')->table('test')->insert([
             ['id' => 1, 'column' => 'value_1'],
             ['id' => 2, 'column' => 'héllo 👋'],
-        ]);
+        ], format: Format::JSONEachRow);
 
-        $this->assertEquals(2, $written);
+        $this->assertTrue($inserted);
         $this->assertEquals(
             [
                 ['id' => 1, 'column' => 'value_1'],
@@ -118,34 +119,34 @@ class IntegrationTest extends TestCase
         );
     }
 
-    public function testInsertBulkWithTypedColumns()
+    public function testInsertWithFormatAndTypedColumns()
     {
         $connection = $this->db->getConnection('clickhouse');
 
-        $connection->statement('create table test_bulk_types (id UInt64, created_at DateTime, tags Array(String)) engine = Memory');
+        $connection->statement('create table test_format_types (id UInt64, created_at DateTime, tags Array(String)) engine = Memory');
 
         try {
-            $written = $connection->table('test_bulk_types')->insertBulk([
+            $inserted = $connection->table('test_format_types')->insert([
                 ['id' => 1, 'created_at' => new \DateTimeImmutable('2026-07-29 12:34:56'), 'tags' => ['a', 'b']],
-            ]);
+            ], format: Format::JSONEachRow);
 
-            $this->assertEquals(1, $written);
+            $this->assertTrue($inserted);
             $this->assertEquals(
                 [['id' => 1, 'created_at' => '2026-07-29 12:34:56', 'tags' => ['a', 'b']]],
-                $connection->table('test_bulk_types')->get()->map(fn ($row) => (array) $row)->all()
+                $connection->table('test_format_types')->get()->map(fn ($row) => (array) $row)->all()
             );
         } finally {
-            $connection->statement('drop table test_bulk_types');
+            $connection->statement('drop table test_format_types');
         }
     }
 
-    public function testInsertBulkThroughModel()
+    public function testInsertWithFormatThroughModel()
     {
-        $written = ClickHouseModel::insertBulk([
+        $inserted = ClickHouseModel::insert([
             ['id' => 1, 'column' => 'value'],
-        ]);
+        ], format: Format::JSONEachRow);
 
-        $this->assertEquals(1, $written);
+        $this->assertTrue($inserted);
         $this->assertEquals(
             [['id' => 1, 'column' => 'value']],
             ClickHouseModel::all()->toArray()

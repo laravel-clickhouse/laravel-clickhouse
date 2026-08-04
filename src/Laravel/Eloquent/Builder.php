@@ -36,21 +36,4 @@ class Builder extends BaseBuilder
     {
         return $this->query->delete(null, $lightweight, $partition);
     }
-
-    /**
-     * Insert rows using the JSONEachRow input format.
-     *
-     * Defined explicitly (instead of relying on __call forwarding) so the
-     * written-rows count is returned rather than the builder instance.
-     *
-     * @param  iterable<array<string, mixed>>|array<string, mixed>  $rows
-     * @return int The number of written rows reported by ClickHouse.
-     */
-    public function insertBulk(iterable $rows): int
-    {
-        /** @var QueryBuilder $builder */
-        $builder = $this->toBase();
-
-        return $builder->insertBulk($rows);
-    }
 }

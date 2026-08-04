@@ -5,6 +5,7 @@ namespace ClickHouse\Laravel\Query;
 use ClickHouse\Laravel\Connection;
 use ClickHouse\Laravel\Eloquent\Builder as EloquentBuilder;
 use ClickHouse\Laravel\Eloquent\Model;
+use ClickHouse\Support\Format;
 use ClickHouse\Support\JsonEachRowEncoder;
 use Closure;
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
@@ -12,7 +13,6 @@ use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Arr;
 use LogicException;
-use Traversable;
 
 class Builder extends BaseBuilder
 {
@@ -338,46 +338,43 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * Insert rows using the JSONEachRow input format.
+     * {@inheritDoc}
      *
-     * Rows are streamed to ClickHouse as newline-delimited JSON after the
-     * query instead of being escaped into an inline VALUES list, which is
-     * significantly faster for large batches.
-     *
-     * @param  iterable<array<string, mixed>>|array<string, mixed>  $rows
-     * @return int The number of written rows reported by ClickHouse.
+     * @param  array<string, mixed>|array<array<string, mixed>>  $values
+     * @param  Format|null  $format  When given, the rows are encoded in this
+     *                               ClickHouse input format and streamed after the query instead of
+     *                               being escaped into an inline VALUES list, which is significantly
+     *                               faster for large batches.
      */
-    public function insertBulk(iterable $rows): int
+    public function insert(array $values, ?Format $format = null)
     {
-        if ($rows instanceof Traversable) {
-            $rows = iterator_to_array($rows, false);
+        if ($format === null) {
+            return parent::insert($values);
         }
 
-        if ($rows === []) {
-            return 0;
+        if ($values === []) {
+            return true;
         }
 
-        $first = reset($rows);
+        $first = reset($values);
 
         if (! is_array($first)) {
-            $first = $rows;
-            $rows = [$rows];
+            $first = $values;
+            $values = [$values];
         }
 
-        /** @var array<string, mixed>[] $rows */
-        foreach ($rows as $row) {
+        /** @var array<string, mixed>[] $values */
+        foreach ($values as $row) {
             if (! is_array($row)) {
-                throw new LogicException('All rows passed to insertBulk must be arrays.');
+                throw new LogicException('All rows passed to a formatted insert must be arrays.');
             }
 
             // ClickHouse silently drops unknown keys and defaults missing ones
             // in JSONEachRow input, so a key mismatch must fail loudly here.
             if (array_diff_key($row, $first) !== [] || array_diff_key($first, $row) !== []) {
-                throw new LogicException('All rows passed to insertBulk must have the same keys.');
+                throw new LogicException('All rows passed to a formatted insert must have the same keys.');
             }
         }
-
-        $columns = array_keys($first);
 
         $this->applyBeforeQueryCallbacks();
 
@@ -385,8 +382,10 @@ class Builder extends BaseBuilder
         $connection = $this->connection;
 
         return $connection->insertUsingFormat(
-            $this->grammar->compileInsertUsingFormat($this, $columns, 'JSONEachRow'),
-            (new JsonEachRowEncoder)->encode($rows)
+            $this->grammar->compileInsertUsingFormat($this, array_keys($first), $format),
+            match ($format) {
+                Format::JSONEachRow => (new JsonEachRowEncoder)->encode($values),
+            }
         );
     }
 

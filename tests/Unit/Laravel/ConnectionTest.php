@@ -70,22 +70,7 @@ class ConnectionTest extends TestCase
             ->once()
             ->andReturn(new Response($query, affectedRows: 2));
 
-        $this->assertEquals(2, $connection->insertUsingFormat($query, $data));
-    }
-
-    public function testInsertUsingFormatWithoutSummary()
-    {
-        $client = $this->mock(Client::class);
-        $transport = $this->mock(Transport::class);
-        $connection = new Connection(client: $client);
-
-        $query = 'insert into `table` (`id`) format JSONEachRow';
-        $data = '{"id":1}';
-
-        $client->shouldReceive('getTransport')->withNoArgs()->once()->andReturn($transport);
-        $transport->shouldReceive('execute')->once()->andReturn(new Response($query));
-
-        $this->assertEquals(0, $connection->insertUsingFormat($query, $data));
+        $this->assertTrue($connection->insertUsingFormat($query, $data));
     }
 
     public function testUpdate()

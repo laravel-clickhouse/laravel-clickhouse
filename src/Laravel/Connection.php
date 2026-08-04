@@ -174,16 +174,14 @@ class Connection extends BaseConnection
      * Run an insert statement whose rows are streamed in a ClickHouse input
      * format appended after the query, bypassing SQL value escaping. Only
      * the query head is logged, never the data payload.
-     *
-     * @return int The number of written rows reported by ClickHouse.
      */
-    public function insertUsingFormat(string $query, string $data): int
+    public function insertUsingFormat(string $query, string $data): bool
     {
         // @phpstan-ignore-next-line
         return $this->run($query, [], function (string $query) use ($data) {
-            $response = $this->client->getTransport()->execute($query."\n".$data);
+            $this->client->getTransport()->execute($query."\n".$data);
 
-            return $response->getAffectedRows() ?? 0;
+            return true;
         });
     }
 

@@ -4,6 +4,7 @@ namespace ClickHouse\Tests\Unit\Laravel\Query;
 
 use ClickHouse\Laravel\Query\Builder;
 use ClickHouse\Laravel\Query\Grammar;
+use ClickHouse\Support\Format;
 use ClickHouse\Tests\Unit\TestCase;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Processors\Processor;
@@ -1089,7 +1090,7 @@ class BuilderTest extends TestCase
         $this->getBuilder(insert: $expectedSql, bindings: $bindings)->from('table')->insert([['column' => 'value_1'], ['column' => 'value_2']]);
     }
 
-    public function testInsertBulk()
+    public function testInsertWithFormat()
     {
         $builder = $this->getBuilder()->from('table');
 
@@ -1099,71 +1100,51 @@ class BuilderTest extends TestCase
                 '{"id":1,"column":"value_1"}'."\n".'{"id":2,"column":"value_2"}'
             )
             ->once()
-            ->andReturn(2);
+            ->andReturn(true);
 
-        $this->assertEquals(2, $builder->insertBulk([
+        $this->assertTrue($builder->insert([
             ['id' => 1, 'column' => 'value_1'],
             ['id' => 2, 'column' => 'value_2'],
-        ]));
+        ], format: Format::JSONEachRow));
     }
 
-    public function testInsertBulkWithSingleRow()
+    public function testInsertWithFormatAndSingleRow()
     {
         $builder = $this->getBuilder()->from('table');
 
         $builder->getConnection()->shouldReceive('insertUsingFormat')
             ->with('insert into `table` (`column`) format JSONEachRow', '{"column":"value"}')
             ->once()
-            ->andReturn(1);
+            ->andReturn(true);
 
-        $this->assertEquals(1, $builder->insertBulk(['column' => 'value']));
+        $this->assertTrue($builder->insert(['column' => 'value'], format: Format::JSONEachRow));
     }
 
-    public function testInsertBulkWithGenerator()
+    public function testInsertWithFormatAndEmptyRows()
     {
-        $builder = $this->getBuilder()->from('table');
-
-        $builder->getConnection()->shouldReceive('insertUsingFormat')
-            ->with(
-                'insert into `table` (`id`) format JSONEachRow',
-                '{"id":1}'."\n".'{"id":2}'
-            )
-            ->once()
-            ->andReturn(2);
-
-        $rows = (function () {
-            yield ['id' => 1];
-            yield ['id' => 2];
-        })();
-
-        $this->assertEquals(2, $builder->insertBulk($rows));
+        $this->assertTrue($this->getBuilder()->from('table')->insert([], format: Format::JSONEachRow));
     }
 
-    public function testInsertBulkWithEmptyRows()
-    {
-        $this->assertEquals(0, $this->getBuilder()->from('table')->insertBulk([]));
-    }
-
-    public function testInsertBulkWithNonArrayRow()
+    public function testInsertWithFormatAndNonArrayRow()
     {
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('All rows passed to insertBulk must be arrays.');
+        $this->expectExceptionMessage('All rows passed to a formatted insert must be arrays.');
 
-        $this->getBuilder()->from('table')->insertBulk([
+        $this->getBuilder()->from('table')->insert([
             ['id' => 1],
             'not_a_row',
-        ]);
+        ], format: Format::JSONEachRow);
     }
 
-    public function testInsertBulkWithMismatchedKeys()
+    public function testInsertWithFormatAndMismatchedKeys()
     {
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('All rows passed to insertBulk must have the same keys.');
+        $this->expectExceptionMessage('All rows passed to a formatted insert must have the same keys.');
 
-        $this->getBuilder()->from('table')->insertBulk([
+        $this->getBuilder()->from('table')->insert([
             ['id' => 1, 'column' => 'value'],
             ['id' => 2, 'extra' => 'value'],
-        ]);
+        ], format: Format::JSONEachRow);
     }
 
     public function testInsertGetId()

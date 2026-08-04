@@ -3,6 +3,7 @@
 namespace ClickHouse\Laravel\Query;
 
 use Carbon\Carbon;
+use ClickHouse\Support\Format;
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder as BaseBuilder;
@@ -48,18 +49,15 @@ class Grammar extends BaseGrammar
      * Compile an insert statement whose rows are sent in a ClickHouse
      * input format (e.g. JSONEachRow) instead of inline VALUES.
      *
-     * The format name is interpolated into the SQL as-is; callers must pass
-     * a literal ClickHouse format name, never user input.
-     *
      * @param  string[]  $columns
      */
-    public function compileInsertUsingFormat(BaseBuilder $query, array $columns, string $format): string
+    public function compileInsertUsingFormat(BaseBuilder $query, array $columns, Format $format): string
     {
         return sprintf(
             'insert into %s (%s) format %s',
             $this->wrapTable($query->from),
             $this->columnize($columns),
-            $format
+            $format->value
         );
     }
 
