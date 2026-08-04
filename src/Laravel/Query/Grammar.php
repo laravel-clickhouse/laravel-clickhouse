@@ -3,6 +3,7 @@
 namespace ClickHouse\Laravel\Query;
 
 use Carbon\Carbon;
+use ClickHouse\Enums\Format;
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder as BaseBuilder;
@@ -42,6 +43,22 @@ class Grammar extends BaseGrammar
     public function compileRandom($seed): string
     {
         return 'randCanonical()';
+    }
+
+    /**
+     * Compile an insert statement whose rows are sent in a ClickHouse
+     * input format (e.g. JSONEachRow) instead of inline VALUES.
+     *
+     * @param  string[]  $columns
+     */
+    public function compileInsertUsingFormat(BaseBuilder $query, array $columns, Format $format): string
+    {
+        return sprintf(
+            'insert into %s (%s) format %s',
+            $this->wrapTable($query->from),
+            $this->columnize($columns),
+            $format->value
+        );
     }
 
     /**

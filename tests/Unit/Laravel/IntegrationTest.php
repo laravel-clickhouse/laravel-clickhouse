@@ -2,6 +2,7 @@
 
 namespace ClickHouse\Tests\Unit\Laravel;
 
+use ClickHouse\Enums\Format;
 use ClickHouse\Laravel\Connection;
 use ClickHouse\Laravel\Eloquent\Model as BaseClickHouseModel;
 use ClickHouse\Laravel\Parallel;
@@ -99,6 +100,59 @@ class IntegrationTest extends TestCase
         $this->assertTrue($clickhouseModel->sqliteRelated->is($sqliteModel));
 
         $this->dropSQLiteTestTable();
+    }
+
+    public function testInsertWithFormat()
+    {
+        $inserted = $this->db->getConnection('clickhouse')->table('test')->insert([
+            ['id' => 1, 'column' => 'value_1'],
+            ['id' => 2, 'column' => 'héllo 👋'],
+        ], format: Format::JSONEachRow);
+
+        $this->assertTrue($inserted);
+        $this->assertEquals(
+            [
+                ['id' => 1, 'column' => 'value_1'],
+                ['id' => 2, 'column' => 'héllo 👋'],
+            ],
+            ClickHouseModel::orderBy('id')->get()->toArray()
+        );
+    }
+
+    public function testInsertWithFormatAndTypedColumns()
+    {
+        $connection = $this->db->getConnection('clickhouse');
+
+        $connection->statement('create table test_format_types (tags Array(String), created_at DateTime64(6), id UInt64) engine = Memory');
+
+        try {
+            $inserted = $connection->table('test_format_types')->insert([
+                'tags' => ['a', 'b'],
+                'created_at' => new \DateTimeImmutable('2026-07-29 12:34:56.123456'),
+                'id' => 1,
+            ], format: Format::JSONEachRow);
+
+            $this->assertTrue($inserted);
+            $this->assertEquals(
+                [['tags' => ['a', 'b'], 'created_at' => '2026-07-29 12:34:56.123456', 'id' => 1]],
+                $connection->table('test_format_types')->get()->map(fn ($row) => (array) $row)->all()
+            );
+        } finally {
+            $connection->statement('drop table test_format_types');
+        }
+    }
+
+    public function testInsertWithFormatThroughModel()
+    {
+        $inserted = ClickHouseModel::insert([
+            ['id' => 1, 'column' => 'value'],
+        ], format: Format::JSONEachRow);
+
+        $this->assertTrue($inserted);
+        $this->assertEquals(
+            [['id' => 1, 'column' => 'value']],
+            ClickHouseModel::all()->toArray()
+        );
     }
 
     public function testGetParallelly()

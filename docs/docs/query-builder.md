@@ -723,6 +723,55 @@ DB::connection('clickhouse')->table('events')->insert([
 // insert into `events` (`id`, `name`) values (1, 'page_view'), (2, 'click')
 ```
 
+### Insert Using an Input Format
+
+`Format::Values` is the default input format. For large batches, pass
+`Format::JSONEachRow` to `insert()` to send the rows to ClickHouse as a single
+[JSONEachRow](https://clickhouse.com/docs/interfaces/formats/JSONEachRow)
+request body instead of compiling them into an inline `VALUES` list. This
+avoids SQL value escaping and server-side SQL parsing of the row data, which is
+significantly faster for high row counts:
+
+```php
+use ClickHouse\Enums\Format;
+
+DB::connection('clickhouse')->table('events')->insert([
+    ['id' => 1, 'name' => 'page_view'],
+    ['id' => 2, 'name' => 'click'],
+], format: Format::JSONEachRow);
+// insert into `events` (`id`, `name`) format JSONEachRow
+// {"id":1,"name":"page_view"}
+// {"id":2,"name":"click"}
+```
+
+It is also available on Eloquent models:
+
+```php
+Event::insert($rows, format: Format::JSONEachRow);
+```
+
+Both code paths behave like a regular `insert()` and return a `bool`.
+
+`DateTimeInterface` values preserve sub-second precision when present, enums are
+converted to their value (or name for pure enums), and nested PHP arrays map to
+ClickHouse `Array` columns.
+
+Things to keep in mind:
+
+- A single row uses column names as string keys. For multiple rows, the outer
+  array uses integer keys; they do not need to be sequential.
+- A string-keyed array whose values are all associative arrays is ambiguous and
+  rejected. Use `array_values()` for multiple rows, or wrap a single row in an
+  outer array.
+- The column list is taken from the first row, and every row must have the same
+  keys — a mismatch throws a `LogicException`, because ClickHouse would otherwise
+  silently drop unknown keys and default missing ones.
+- JSONEachRow parses numbers more strictly than `VALUES`: a fractional float
+  (e.g. `3.5`) sent to an integer column throws, where the `VALUES` path would
+  let ClickHouse coerce it.
+- The rows are buffered into a single request body; for very large batches,
+  chunk the rows and insert per chunk.
+
 ### Update
 
 Updates use ClickHouse's `ALTER TABLE ... UPDATE` syntax:

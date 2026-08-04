@@ -3,6 +3,8 @@
 namespace ClickHouse\Tests\Unit\Laravel;
 
 use ClickHouse\Client\Client;
+use ClickHouse\Client\Contracts\Transport;
+use ClickHouse\Client\Response;
 use ClickHouse\Client\Statement;
 use ClickHouse\Exceptions\ParallelQueryException;
 use ClickHouse\Laravel\Connection;
@@ -51,6 +53,24 @@ class ConnectionTest extends TestCase
         $actual = $connection->insert($query, $bindings);
 
         $this->assertTrue($actual);
+    }
+
+    public function testInsertUsingFormat()
+    {
+        $client = $this->mock(Client::class);
+        $transport = $this->mock(Transport::class);
+        $connection = new Connection(client: $client);
+
+        $query = 'insert into `table` (`id`) format JSONEachRow';
+        $data = '{"id":1}'."\n".'{"id":2}';
+
+        $client->shouldReceive('getTransport')->withNoArgs()->once()->andReturn($transport);
+        $transport->shouldReceive('execute')
+            ->with($query."\n".$data)
+            ->once()
+            ->andReturn(new Response($query, affectedRows: 2));
+
+        $this->assertTrue($connection->insertUsingFormat($query, $data));
     }
 
     public function testUpdate()

@@ -170,6 +170,21 @@ class Connection extends BaseConnection
         });
     }
 
+    /**
+     * Run an insert statement whose rows are streamed in a ClickHouse input
+     * format appended after the query, bypassing SQL value escaping. Only
+     * the query head is logged, never the data payload.
+     */
+    public function insertUsingFormat(string $query, string $data): bool
+    {
+        // @phpstan-ignore-next-line
+        return $this->run($query, [], function (string $query) use ($data) {
+            $this->client->getTransport()->execute($query."\n".$data);
+
+            return true;
+        });
+    }
+
     /** {@inheritDoc} */
     public function escape($value, $binary = false): string
     {

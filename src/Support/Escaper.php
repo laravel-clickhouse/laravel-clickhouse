@@ -30,9 +30,7 @@ class Escaper
         }
 
         if ($value instanceof DateTimeInterface) {
-            $value = $value->format('u') === '000000'
-                ? $value->format('Y-m-d H:i:s')
-                : $value->format('Y-m-d H:i:s.u');
+            $value = DateTimeFormatter::format($value);
         }
 
         if (is_object($value) && is_callable([$value, '__toString'])) {
