@@ -41,8 +41,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "ClickHouse\\Tests\\Unit\\": "tests/Unit/",
-            "ClickHouse\\Tests\\Feature\\": "tests/Feature/",
+            "ClickHouse\\Tests\\Core\\": "tests/Core/",
+            "ClickHouse\\Tests\\Laravel\\": "tests/Laravel/",
             "ClickHouse\\Tests\\Hypervel\\": "tests/Hypervel/"
         }
     },
@@ -59,10 +59,10 @@
         }
     },
     "scripts": {
-      "test": "phpunit --colors --testsuite=Unit,Feature",
-      "test:unit": "phpunit --colors --testsuite=Unit",
-      "test:feature": "phpunit --colors --testsuite=Feature",
-      "test:hypervel": "phpunit --colors --testsuite=Hypervel",
+      "test": "phpunit --colors --testsuite=Core-Unit,Core-Feature,Laravel-Unit,Laravel-Feature",
+      "test:core": "phpunit --colors --testsuite=Core-Unit,Core-Feature",
+      "test:laravel": "phpunit --colors --testsuite=Laravel-Unit,Laravel-Feature",
+      "test:hypervel": "phpunit --colors --testsuite=Hypervel-Unit,Hypervel-Feature",
       "phpstan": [
         "@phpstan:core",
         "@phpstan:laravel"

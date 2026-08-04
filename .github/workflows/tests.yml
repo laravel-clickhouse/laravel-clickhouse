@@ -103,8 +103,9 @@ jobs:
         run: |
           vendor/bin/phpstan analyse -c phpstan.core.neon
           vendor/bin/phpstan analyse -c phpstan.laravel.neon
-          vendor/bin/phpunit --testsuite=Unit --coverage-text
-          vendor/bin/phpunit --testsuite=Feature --coverage-text
+          vendor/bin/phpunit --testsuite=Core-Unit,Core-Feature --coverage-text
+          vendor/bin/phpunit --testsuite=Laravel-Unit --coverage-text
+          vendor/bin/phpunit --testsuite=Laravel-Feature --coverage-text
 
   hypervel:
     runs-on: ubuntu-latest
@@ -179,4 +180,6 @@ jobs:
         run: |
           vendor/bin/phpstan analyse -c phpstan.core.neon --memory-limit=-1
           vendor/bin/phpstan analyse -c phpstan.hypervel.neon --memory-limit=-1
-          vendor/bin/phpunit --testsuite=Hypervel
+          vendor/bin/phpunit --testsuite=Core-Unit,Core-Feature
+          vendor/bin/phpunit --testsuite=Hypervel-Unit
+          vendor/bin/phpunit --testsuite=Hypervel-Feature
