@@ -2,24 +2,24 @@
 
 namespace ClickHouse\Laravel;
 
-use ClickHouse\Client\Client;
+use ClickHouse\Core\Client\Client;
 use ClickHouse\Core\Connection\InteractsWithClickHouseClient;
+use ClickHouse\Core\Connection\RejectsTransactions;
 use ClickHouse\Core\Contracts\ClickHouseConnection;
+use ClickHouse\Core\Support\Escaper;
 use ClickHouse\Laravel\Query\Builder as QueryBuilder;
 use ClickHouse\Laravel\Query\Grammar as QueryGrammar;
 use ClickHouse\Laravel\Schema\Builder as SchemaBuilder;
 use ClickHouse\Laravel\Schema\Grammar as SchemaGrammar;
-use ClickHouse\Support\Escaper;
-use Closure;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
-use LogicException;
 use RuntimeException;
 
 class Connection extends BaseConnection implements ClickHouseConnection
 {
     use InteractsWithClickHouseClient;
+    use RejectsTransactions;
 
     protected const QUERY_EXCEPTION = QueryException::class;
 
@@ -91,48 +91,6 @@ class Connection extends BaseConnection implements ClickHouseConnection
     /** {@inheritDoc} */
     public function disconnect() {}
 
-    /**
-     * {@inheritDoc}
-     *
-     * @param  Closure(static): mixed  $callback
-     *
-     * @throws LogicException
-     */
-    public function transaction(Closure $callback, $attempts = 1): never
-    {
-        $this->throwUnsupportedTransaction();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @throws LogicException
-     */
-    public function beginTransaction(): never
-    {
-        $this->throwUnsupportedTransaction();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @throws LogicException
-     */
-    public function commit(): never
-    {
-        $this->throwUnsupportedTransaction();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @throws LogicException
-     */
-    public function rollBack($toLevel = null): never
-    {
-        $this->throwUnsupportedTransaction();
-    }
-
     /** {@inheritDoc} */
     public function getSchemaBuilder()
     {
@@ -170,11 +128,6 @@ class Connection extends BaseConnection implements ClickHouseConnection
         }
 
         return $grammar;
-    }
-
-    private function throwUnsupportedTransaction(): never
-    {
-        throw new LogicException('Transactions are not supported when using ClickHouse.');
     }
 
     /**

@@ -2,8 +2,8 @@
 
 namespace ClickHouse\Core\Query;
 
-use ClickHouse\Enums\Format;
-use ClickHouse\Support\JsonEachRowEncoder;
+use ClickHouse\Core\Enums\Format;
+use ClickHouse\Core\Support\JsonEachRowEncoder;
 use Closure;
 use LogicException;
 
@@ -1269,7 +1269,7 @@ trait BuildsClickHouseQueries
         $this->applyBeforeQueryCallbacks();
 
         // @phpstan-ignore-next-line
-        return $this->connection->insertUsingFormat(
+        return $this->connection->insertRawPayload(
             $this->grammar->compileInsertUsingFormat($this, array_keys($first), Format::JSONEachRow),
             (new JsonEachRowEncoder)->encode($values)
         );

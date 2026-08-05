@@ -1,6 +1,6 @@
 <?php
 
-namespace ClickHouse\Client;
+namespace ClickHouse\Core\Client;
 
 class Statement
 {

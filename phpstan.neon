@@ -1,0 +1,14 @@
+parameters:
+  level: 9
+  paths:
+    # Framework-free classes only — not `src/Core` wholesale. PHPStan
+    # analyses a trait solely in the context of a class using it; with no
+    # bridge class in scope here, the core traits (Query, Schema,
+    # Connection, ...) would be silently skipped and report a false "no
+    # errors". They are genuinely analysed by phpstan.laravel.neon and
+    # phpstan.hypervel.neon, once per bridge, with real framework types.
+    - src/Core/Client
+    - src/Core/Enums
+    - src/Core/Exceptions
+    - src/Core/Support
+  reportUnmatchedIgnoredErrors: true

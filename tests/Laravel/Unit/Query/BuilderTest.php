@@ -2,7 +2,7 @@
 
 namespace ClickHouse\Tests\Laravel\Unit\Query;
 
-use ClickHouse\Enums\Format;
+use ClickHouse\Core\Enums\Format;
 use ClickHouse\Laravel\Query\Builder;
 use ClickHouse\Laravel\Query\Grammar;
 use ClickHouse\Tests\Laravel\Unit\TestCase;
@@ -1115,7 +1115,7 @@ class BuilderTest extends TestCase
     {
         $builder = $this->getBuilder()->from('table');
 
-        $builder->getConnection()->shouldReceive('insertUsingFormat')
+        $builder->getConnection()->shouldReceive('insertRawPayload')
             ->with(
                 'insert into `table` (`id`, `column`) format JSONEachRow',
                 '{"id":1,"column":"value_1"}'."\n".'{"id":2,"column":"value_2"}'
@@ -1133,7 +1133,7 @@ class BuilderTest extends TestCase
     {
         $builder = $this->getBuilder()->from('table');
 
-        $builder->getConnection()->shouldReceive('insertUsingFormat')
+        $builder->getConnection()->shouldReceive('insertRawPayload')
             ->with(
                 'insert into `table` (`id`, `column`) format JSONEachRow',
                 '{"id":1,"column":"value_1"}'."\n".'{"id":2,"column":"value_2"}'
@@ -1164,7 +1164,7 @@ class BuilderTest extends TestCase
     {
         $builder = $this->getBuilder()->from('table');
 
-        $builder->getConnection()->shouldReceive('insertUsingFormat')
+        $builder->getConnection()->shouldReceive('insertRawPayload')
             ->with('insert into `table` (`column`) format JSONEachRow', '{"column":"value"}')
             ->once()
             ->andReturn(true);
@@ -1176,7 +1176,7 @@ class BuilderTest extends TestCase
     {
         $builder = $this->getBuilder()->from('table');
 
-        $builder->getConnection()->shouldReceive('insertUsingFormat')
+        $builder->getConnection()->shouldReceive('insertRawPayload')
             ->with(
                 'insert into `table` (`tags`, `name`) format JSONEachRow',
                 '{"tags":["php","clickhouse"],"name":"example"}'
@@ -1194,7 +1194,7 @@ class BuilderTest extends TestCase
     {
         $builder = $this->getBuilder()->from('table');
 
-        $builder->getConnection()->shouldReceive('insertUsingFormat')
+        $builder->getConnection()->shouldReceive('insertRawPayload')
             ->with(
                 'insert into `table` (`tags`, `categories`) format JSONEachRow',
                 '{"tags":["php","clickhouse"],"categories":["database","analytics"]}'
@@ -1212,7 +1212,7 @@ class BuilderTest extends TestCase
     {
         $builder = $this->getBuilder()->from('table');
 
-        $builder->getConnection()->shouldReceive('insertUsingFormat')
+        $builder->getConnection()->shouldReceive('insertRawPayload')
             ->with(
                 'insert into `table` (`metadata`, `options`) format JSONEachRow',
                 '{"metadata":{"source":"api"},"options":{"enabled":true}}'

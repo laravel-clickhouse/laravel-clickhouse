@@ -733,7 +733,7 @@ avoids SQL value escaping and server-side SQL parsing of the row data, which is
 significantly faster for high row counts:
 
 ```php
-use ClickHouse\Enums\Format;
+use ClickHouse\Core\Enums\Format;
 
 DB::connection('clickhouse')->table('events')->insert([
     ['id' => 1, 'name' => 'page_view'],

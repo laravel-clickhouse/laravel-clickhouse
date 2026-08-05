@@ -3,7 +3,7 @@
 namespace ClickHouse\Tests\Core\Unit\Support;
 
 use Carbon\Carbon;
-use ClickHouse\Support\JsonEachRowEncoder;
+use ClickHouse\Core\Support\JsonEachRowEncoder;
 use ClickHouse\Tests\Core\Unit\TestCase;
 use JsonException;
 use RuntimeException;

@@ -2,11 +2,11 @@
 
 namespace ClickHouse\Tests\Core\Unit\Client;
 
-use ClickHouse\Client\Client;
-use ClickHouse\Client\Contracts\Transport;
-use ClickHouse\Client\Response;
-use ClickHouse\Client\Statement;
-use ClickHouse\Support\Escaper;
+use ClickHouse\Core\Client\Client;
+use ClickHouse\Core\Client\Contracts\Transport;
+use ClickHouse\Core\Client\Response;
+use ClickHouse\Core\Client\Statement;
+use ClickHouse\Core\Support\Escaper;
 use ClickHouse\Tests\Core\Unit\TestCase;
 
 class StatementTest extends TestCase

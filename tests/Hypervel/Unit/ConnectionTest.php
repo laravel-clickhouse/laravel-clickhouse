@@ -2,7 +2,7 @@
 
 namespace ClickHouse\Tests\Hypervel\Unit;
 
-use ClickHouse\Client\Client;
+use ClickHouse\Core\Client\Client;
 use ClickHouse\Hypervel\Connection;
 use ClickHouse\Hypervel\Query\Builder as QueryBuilder;
 use ClickHouse\Hypervel\Query\Grammar as QueryGrammar;

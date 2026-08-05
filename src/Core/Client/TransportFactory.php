@@ -1,10 +1,10 @@
 <?php
 
-namespace ClickHouse\Client;
+namespace ClickHouse\Core\Client;
 
-use ClickHouse\Client\Contracts\Transport;
-use ClickHouse\Client\Transports\Curl;
-use ClickHouse\Client\Transports\Guzzle;
+use ClickHouse\Core\Client\Contracts\Transport;
+use ClickHouse\Core\Client\Transports\Curl;
+use ClickHouse\Core\Client\Transports\Guzzle;
 use InvalidArgumentException;
 
 class TransportFactory

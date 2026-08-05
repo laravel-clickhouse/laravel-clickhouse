@@ -2,7 +2,7 @@
 
 namespace ClickHouse\Tests\Laravel\Feature;
 
-use ClickHouse\Enums\Format;
+use ClickHouse\Core\Enums\Format;
 use ClickHouse\Laravel\Connection;
 use ClickHouse\Laravel\Eloquent\Model as BaseClickHouseModel;
 use ClickHouse\Laravel\Parallel;

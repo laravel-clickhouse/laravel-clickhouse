@@ -2,10 +2,10 @@
 
 namespace ClickHouse\Core\Connection;
 
-use ClickHouse\Client\Client;
-use ClickHouse\Client\Statement;
-use ClickHouse\Exceptions\ParallelQueryException;
-use ClickHouse\Support\Escaper;
+use ClickHouse\Core\Client\Client;
+use ClickHouse\Core\Client\Statement;
+use ClickHouse\Core\Exceptions\ParallelQueryException;
+use ClickHouse\Core\Support\Escaper;
 
 /**
  * ClickHouse HTTP client integration shared by every framework bridge.
@@ -80,12 +80,16 @@ trait InteractsWithClickHouseClient
     /**
      * Run an insert statement whose rows are streamed in a ClickHouse input
      * format appended after the query, bypassing SQL value escaping. Only
-     * the query head is logged, never the data payload.
+     * the query head is logged, never the payload.
+     *
+     * @internal Plumbing between the query builder's formatted insert and
+     *           the transport — not part of the public API. Use the query
+     *           builder's insert(..., format:) instead.
      */
-    public function insertUsingFormat(string $query, string $data): bool
+    public function insertRawPayload(string $query, string $payload): bool
     {
         // @phpstan-ignore-next-line
-        return $this->run($query, [], fn (string $query) => $this->runFormattedInsert($query, $data));
+        return $this->run($query, [], fn (string $query) => $this->runFormattedInsert($query, $payload));
     }
 
     /**
@@ -210,9 +214,9 @@ trait InteractsWithClickHouseClient
      * Run an insert whose rows are streamed in a ClickHouse input format
      * appended after the query, bypassing SQL value escaping.
      */
-    protected function runFormattedInsert(string $query, string $data): bool
+    protected function runFormattedInsert(string $query, string $payload): bool
     {
-        $this->client->getTransport()->execute($query."\n".$data);
+        $this->client->getTransport()->execute($query."\n".$payload);
 
         return true;
     }

@@ -2,9 +2,9 @@
 
 namespace ClickHouse\Tests\Core\Feature;
 
-use ClickHouse\Client\Client;
-use ClickHouse\Exceptions\ParallelQueryException;
-use ClickHouse\Exceptions\QueryException;
+use ClickHouse\Core\Client\Client;
+use ClickHouse\Core\Exceptions\ParallelQueryException;
+use ClickHouse\Core\Exceptions\QueryException;
 use ClickHouse\Tests\Core\Unit\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
