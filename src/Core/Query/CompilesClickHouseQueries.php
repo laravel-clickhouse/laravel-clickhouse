@@ -3,7 +3,7 @@
 namespace ClickHouse\Core\Query;
 
 use Carbon\Carbon;
-use ClickHouse\Enums\Format;
+use ClickHouse\Core\Enums\Format;
 use LogicException;
 
 /**

@@ -67,7 +67,7 @@
         "@phpstan:core",
         "@phpstan:laravel"
       ],
-      "phpstan:core": "phpstan analyse -c phpstan.core.neon --memory-limit=-1",
+      "phpstan:core": "phpstan analyse --memory-limit=-1",
       "phpstan:laravel": "phpstan analyse -c phpstan.laravel.neon --memory-limit=-1",
       "phpstan:hypervel": "phpstan analyse -c phpstan.hypervel.neon --memory-limit=-1",
       "cs": "pint src tests --test",

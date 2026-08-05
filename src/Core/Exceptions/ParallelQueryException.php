@@ -1,8 +1,8 @@
 <?php
 
-namespace ClickHouse\Exceptions;
+namespace ClickHouse\Core\Exceptions;
 
-use ClickHouse\Client\Response;
+use ClickHouse\Core\Client\Response;
 use RuntimeException;
 use Throwable;
 

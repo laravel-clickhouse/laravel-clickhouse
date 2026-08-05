@@ -136,6 +136,7 @@ $results = Parallel::get([
 | [Parallel Queries](docs/docs/parallel-queries.md) | Concurrent query execution |
 | [Advanced Topics](docs/docs/advanced.md) | Transports, raw queries, limitations |
 | [Hypervel Support](docs/docs/hypervel.md) | Coroutine-native bridge for Hypervel 0.4 |
+| [Upgrade Guide](docs/docs/upgrade.md) | Breaking changes when upgrading to v2.0.0 |
 
 ## Testing
 

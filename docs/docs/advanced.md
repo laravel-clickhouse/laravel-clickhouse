@@ -93,7 +93,7 @@ $rows = $statement->fetchAll();
 
 ## Value Escaping
 
-The `Escaper` class (`ClickHouse\Support\Escaper`) handles value escaping for safe SQL construction. The connection's `escape` method delegates to this class:
+The `Escaper` class (`ClickHouse\Core\Support\Escaper`) handles value escaping for safe SQL construction. The connection's `escape` method delegates to this class:
 
 ```php
 DB::connection('clickhouse')->escape('O\'Brien');  // 'O\'Brien'

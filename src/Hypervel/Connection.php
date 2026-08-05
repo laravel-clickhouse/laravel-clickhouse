@@ -2,15 +2,15 @@
 
 namespace ClickHouse\Hypervel;
 
-use ClickHouse\Client\Client;
+use ClickHouse\Core\Client\Client;
 use ClickHouse\Core\Connection\InteractsWithClickHouseClient;
 use ClickHouse\Core\Connection\RejectsTransactions;
 use ClickHouse\Core\Contracts\ClickHouseConnection;
+use ClickHouse\Core\Support\Escaper;
 use ClickHouse\Hypervel\Query\Builder as QueryBuilder;
 use ClickHouse\Hypervel\Query\Grammar as QueryGrammar;
 use ClickHouse\Hypervel\Schema\Builder as SchemaBuilder;
 use ClickHouse\Hypervel\Schema\Grammar as SchemaGrammar;
-use ClickHouse\Support\Escaper;
 use Generator;
 use Hypervel\Database\Connection as BaseConnection;
 use Hypervel\Database\QueryException;

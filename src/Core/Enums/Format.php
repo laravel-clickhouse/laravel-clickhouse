@@ -1,6 +1,6 @@
 <?php
 
-namespace ClickHouse\Enums;
+namespace ClickHouse\Core\Enums;
 
 /**
  * ClickHouse input formats that rows can be encoded and sent in.

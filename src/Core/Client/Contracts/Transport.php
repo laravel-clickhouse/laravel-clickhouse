@@ -1,9 +1,9 @@
 <?php
 
-namespace ClickHouse\Client\Contracts;
+namespace ClickHouse\Core\Client\Contracts;
 
-use ClickHouse\Client\Response;
-use ClickHouse\Exceptions\ParallelQueryException;
+use ClickHouse\Core\Client\Response;
+use ClickHouse\Core\Exceptions\ParallelQueryException;
 
 interface Transport
 {

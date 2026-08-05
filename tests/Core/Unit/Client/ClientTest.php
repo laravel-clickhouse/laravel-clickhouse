@@ -2,12 +2,12 @@
 
 namespace ClickHouse\Tests\Core\Unit\Client;
 
-use ClickHouse\Client\Client;
-use ClickHouse\Client\Contracts\Transport;
-use ClickHouse\Client\Response;
-use ClickHouse\Client\Statement;
-use ClickHouse\Client\TransportFactory;
-use ClickHouse\Exceptions\ParallelQueryException;
+use ClickHouse\Core\Client\Client;
+use ClickHouse\Core\Client\Contracts\Transport;
+use ClickHouse\Core\Client\Response;
+use ClickHouse\Core\Client\Statement;
+use ClickHouse\Core\Client\TransportFactory;
+use ClickHouse\Core\Exceptions\ParallelQueryException;
 use ClickHouse\Tests\Core\Unit\TestCase;
 use Exception;
 

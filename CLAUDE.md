@@ -21,7 +21,7 @@ This is a Laravel ClickHouse integration package that provides:
 
 ### Code Quality
 - `composer phpstan` - Run static analysis with PHPStan (level 9): core + laravel configs
-- `composer phpstan:core` / `phpstan:laravel` / `phpstan:hypervel` - Run one config (`phpstan.core.neon` covers framework-free code; the laravel/hypervel configs analyse the core traits in each bridge's context; `phpstan:hypervel` needs hypervel/components installed)
+- `composer phpstan:core` / `phpstan:laravel` / `phpstan:hypervel` - Run one config (`phpstan.neon` covers framework-free code only — the core traits are analysed per-bridge; the laravel/hypervel configs analyse the core traits in each bridge's context; `phpstan:hypervel` needs hypervel/components installed)
 - `composer cs` - Check code style with Laravel Pint
 - `composer cs:fix` - Fix code style issues with Laravel Pint
 
@@ -33,7 +33,7 @@ This is a Laravel ClickHouse integration package that provides:
 
 ### Core Components
 
-**Client Layer** (`src/Client/`)
+**Client Layer** (`src/Core/Client/`)
 - `Client.php` - Main ClickHouse client with connection management
 - `Statement.php` - Prepared statement handling
 - `Response.php` - Response parsing and data handling
@@ -69,15 +69,15 @@ This is a Laravel ClickHouse integration package that provides:
 **Testing Traits** (`src/Laravel/Testing/`, `src/Hypervel/Testing/`)
 - `RefreshDatabase.php` / `DatabaseMigrations.php` / `DatabaseTruncation.php` - ClickHouse-aware wrappers over each framework's testing traits; shared `db:wipe` pre-pass logic lives in `src/Core/Testing/WipesClickHouseConnections.php`
 
-**Enums** (`src/Enums/`)
+**Enums** (`src/Core/Enums/`)
 - `Format.php` - ClickHouse input format options
 
-**Support** (`src/Support/`)
+**Support** (`src/Core/Support/`)
 - `DateTimeFormatter.php` - Shared DateTime formatting
 - `Escaper.php` - Value escaping and SQL injection prevention
 - `JsonEachRowEncoder.php` - JSONEachRow payload encoding
 
-**Exceptions** (`src/Exceptions/`)
+**Exceptions** (`src/Core/Exceptions/`)
 - `QueryException.php` - Query execution exception
 - `ParallelQueryException.php` - Parallel query exception with partial results
 
@@ -109,11 +109,30 @@ Tests expect ClickHouse server running with:
 ## Namespace Structure
 
 All classes use `ClickHouse\` as root namespace:
-- `ClickHouse\Client\` - Core client functionality
-- `ClickHouse\Enums\` - Enumerations
-- `ClickHouse\Laravel\` - Laravel framework integration
-- `ClickHouse\Support\` - Utility classes
-- `ClickHouse\Exceptions\` - Custom exceptions
+- `ClickHouse\Core\` - Framework-agnostic core: HTTP client (`Core\Client`), enums (`Core\Enums`), exceptions (`Core\Exceptions`), utilities (`Core\Support`), and the shared bridge traits/contracts (`Core\Query`, `Core\Schema`, `Core\Connection`, ...)
+- `ClickHouse\Laravel\` - Laravel framework bridge
+- `ClickHouse\Hypervel\` - Hypervel framework bridge
+
+### Framework-Free Constraint Inside `src/Core`
+
+`src/Core` splits into two tiers with different rules:
+
+- **Standalone classes** (`Core/Client`, `Core/Enums`, `Core/Exceptions`,
+  `Core/Support`): MUST be fully framework-free — no `Illuminate\*` /
+  `Hypervel\*` imports, no framework helpers (`collect()`, `tap()`,
+  `Arr::*`), analysable without any framework installed. These directories
+  are listed in `phpstan.neon`'s `paths`; **when adding a new standalone
+  directory under `src/Core`, add it to `phpstan.neon` too** — PHPStan skips
+  traits with no in-scope using class, so a forgotten path means the code is
+  silently unanalysed in the default config.
+- **Bridge traits/contracts** (`Core/Query`, `Core/Schema`,
+  `Core/Connection`, `Core/Eloquent`, `Core/Migrations`,
+  `RunsParallelQueries`, ...): framework-free in the sense that they never
+  `use` a framework class directly (framework types arrive via the using
+  class's parent, class-string constants, or duck typing), but they only
+  make sense mounted on a bridge class. Do NOT add them to `phpstan.neon` —
+  they are analysed per-bridge by `phpstan.laravel.neon` and
+  `phpstan.hypervel.neon`.
 
 ## Code Comments Language
 
@@ -164,6 +183,34 @@ implementations that `new` a framework class with framework-specific
 mechanics, `@method`/`@extends` phpdoc referencing bridge classes, and
 genuinely divergent mechanics (service-provider registration, PDO-vs-HTTP
 connection plumbing).
+
+## Testing Strategy for Bridges
+
+Zero duplication applies to `src/`, NOT to `tests/`. Bridge test suites are
+deliberately duplicated and must stay that way — they exist in two layers:
+
+1. **Parity tests (mirrored per bridge)** — the same scenarios written once
+   per bridge (`tests/Laravel/...` and `tests/Hypervel/...` mirror each
+   other). A core trait mounted on an Illuminate parent and on a Hypervel
+   parent is two different execution paths (different parent helpers,
+   native types, constructors), so the mirror is exactly what verifies the
+   zero-duplication architecture's risk. Never extract shared test code
+   across bridges: a shared test would change both sides' expectations in
+   one edit and let behavioural drift between frameworks go unnoticed.
+   When adding a scenario to one bridge, add its mirror to the other in
+   the same change — a missing mirror is a coverage gap, not a
+   simplification.
+2. **Framework-specific tests (no mirror, by design)** — scenarios that
+   only exist on one framework get their own directories with no
+   counterpart: for Hypervel, coroutine concurrency, pool
+   lifecycle/reconnect, heartbeat and `Parallel`-under-Swoole (e.g.
+   `tests/Hypervel/Feature/Coroutine/`); for Laravel, Orchestra-specific
+   machinery (e.g. the in-memory PDO preservation workaround). Every
+   behavioural claim in `docs/` about a framework-specific feature must be
+   backed by a test in this layer.
+
+Asymmetry between the suites is therefore only acceptable in layer 2, and
+only when the scenario genuinely cannot occur on the other framework.
 
 ## Release Checklist
 

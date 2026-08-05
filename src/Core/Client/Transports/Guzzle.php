@@ -1,11 +1,11 @@
 <?php
 
-namespace ClickHouse\Client\Transports;
+namespace ClickHouse\Core\Client\Transports;
 
-use ClickHouse\Client\Contracts\Transport;
-use ClickHouse\Client\Response;
-use ClickHouse\Exceptions\ParallelQueryException;
-use ClickHouse\Exceptions\QueryException;
+use ClickHouse\Core\Client\Contracts\Transport;
+use ClickHouse\Core\Client\Response;
+use ClickHouse\Core\Exceptions\ParallelQueryException;
+use ClickHouse\Core\Exceptions\QueryException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;

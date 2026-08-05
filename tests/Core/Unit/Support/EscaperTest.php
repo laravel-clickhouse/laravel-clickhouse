@@ -2,7 +2,7 @@
 
 namespace ClickHouse\Tests\Core\Unit\Support;
 
-use ClickHouse\Support\Escaper;
+use ClickHouse\Core\Support\Escaper;
 use ClickHouse\Tests\Core\Unit\TestCase;
 use DateTime;
 use DateTimeImmutable;

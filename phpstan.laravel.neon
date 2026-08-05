@@ -2,7 +2,7 @@ parameters:
   level: 9
   paths:
     # The core traits are analysed here in the context of the Laravel
-    # bridge classes; framework-free code lives in phpstan.core.neon and
+    # bridge classes; framework-free code lives in phpstan.neon and
     # the Hypervel bridge in phpstan.hypervel.neon.
     - src/Core
     - src/Laravel

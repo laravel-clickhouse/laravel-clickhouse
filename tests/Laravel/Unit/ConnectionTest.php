@@ -2,11 +2,11 @@
 
 namespace ClickHouse\Tests\Laravel\Unit;
 
-use ClickHouse\Client\Client;
-use ClickHouse\Client\Contracts\Transport;
-use ClickHouse\Client\Response;
-use ClickHouse\Client\Statement;
-use ClickHouse\Exceptions\ParallelQueryException;
+use ClickHouse\Core\Client\Client;
+use ClickHouse\Core\Client\Contracts\Transport;
+use ClickHouse\Core\Client\Response;
+use ClickHouse\Core\Client\Statement;
+use ClickHouse\Core\Exceptions\ParallelQueryException;
 use ClickHouse\Laravel\Connection;
 use Exception;
 use Illuminate\Database\QueryException;
@@ -69,7 +69,7 @@ class ConnectionTest extends TestCase
             ->once()
             ->andReturn(new Response($query, affectedRows: 2));
 
-        $this->assertTrue($connection->insertUsingFormat($query, $data));
+        $this->assertTrue($connection->insertRawPayload($query, $data));
     }
 
     public function testUpdate()

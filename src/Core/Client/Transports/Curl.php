@@ -1,10 +1,10 @@
 <?php
 
-namespace ClickHouse\Client\Transports;
+namespace ClickHouse\Core\Client\Transports;
 
-use ClickHouse\Client\Contracts\Transport;
-use ClickHouse\Client\Response;
-use ClickHouse\Exceptions\ParallelQueryException;
+use ClickHouse\Core\Client\Contracts\Transport;
+use ClickHouse\Core\Client\Response;
+use ClickHouse\Core\Exceptions\ParallelQueryException;
 use ClickHouseDB\Client;
 use ClickHouseDB\Statement as ClickHouseDBStatement;
 use Exception;

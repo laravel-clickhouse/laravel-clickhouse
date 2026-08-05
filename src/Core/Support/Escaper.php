@@ -1,6 +1,6 @@
 <?php
 
-namespace ClickHouse\Support;
+namespace ClickHouse\Core\Support;
 
 use DateTimeInterface;
 use RuntimeException;
