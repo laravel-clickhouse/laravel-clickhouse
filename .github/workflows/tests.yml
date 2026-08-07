@@ -12,6 +12,14 @@ jobs:
 
     strategy:
       fail-fast: false
+      # Two one-dimensional sweeps instead of a full cross product: the
+      # PHP x Laravel legs pin ClickHouse to the current LTS, and a single
+      # pinned PHP + Laravel leg sweeps every supported ClickHouse major
+      # (majors differ in observable ways — e.g. 23.x returns plain-text
+      # error bodies where 24+ returns JSON — but that variance lives in
+      # the transport, which PHP/Laravel versions do not affect).
+      # 25-alpine/26-alpine bare-major tags do not exist on Docker Hub,
+      # hence the explicit LTS minors.
       matrix:
         php:
           - "8.2"
@@ -22,19 +30,15 @@ jobs:
           - "^11.21"
           - "^12.0"
           - "^13.0"
-        # The last LTS of every supported major. Majors differ in
-        # observable ways (e.g. 23.x returns plain-text error bodies where
-        # 24+ returns JSON), so transport parsing must be exercised against
-        # each family. 25-alpine/26-alpine bare-major tags do not exist on
-        # Docker Hub, hence the explicit LTS minors.
         clickhouse:
-          - "23.8-alpine"
-          - "24.8-alpine"
-          - "25.8-alpine"
           - "26.3-alpine"
         exclude:
           - php: "8.2"
             laravel: "^13.0"
+        include:
+          - { php: "8.4", laravel: "^13.0", clickhouse: "23.8-alpine" }
+          - { php: "8.4", laravel: "^13.0", clickhouse: "24.8-alpine" }
+          - { php: "8.4", laravel: "^13.0", clickhouse: "25.8-alpine" }
 
     name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }} / ClickHouse ${{ matrix.clickhouse }}
 
