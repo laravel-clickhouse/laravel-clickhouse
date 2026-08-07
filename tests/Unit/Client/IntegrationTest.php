@@ -4,6 +4,7 @@ namespace ClickHouse\Tests\Unit\Client;
 
 use ClickHouse\Client\Client;
 use ClickHouse\Exceptions\ParallelQueryException;
+use ClickHouse\Exceptions\QueryException;
 use ClickHouse\Tests\Unit\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -80,6 +81,27 @@ class IntegrationTest extends TestCase
             $this->assertArrayHasKey('alsoGood', $exception->getResponses());
             $this->assertEquals([['first' => 1]], $exception->getResponses()['good']->getRecords());
             $this->assertEquals([['third' => 3]], $exception->getResponses()['alsoGood']->getRecords());
+        }
+    }
+
+    public function testGuzzleQueryErrorCarriesTheFullClickHouseMessage(): void
+    {
+        // Guzzle-only: the Curl transport surfaces smi2's own
+        // DatabaseException, which already carries the full message.
+        $statement = self::createClient('guzzle')->prepare('SELECT broken FROM missing_table');
+
+        try {
+            $statement->execute();
+
+            $this->fail('QueryException was not thrown.');
+        } catch (QueryException $exception) {
+            // The full DB::Exception text must survive regardless of the
+            // server's error-body style — plain text on 23.x, JSON with an
+            // `exception` field on 24+ (where Guzzle's 120-character body
+            // summary would otherwise truncate the message before it
+            // begins).
+            $this->assertStringContainsString('DB::Exception', $exception->getMessage());
+            $this->assertStringContainsString('missing_table', $exception->getMessage());
         }
     }
 
