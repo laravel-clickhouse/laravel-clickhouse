@@ -46,6 +46,16 @@ class Guzzle implements Transport
 
             return $this->parseResponse($sql, $response);
         } catch (RequestException $e) {
+            // Prefer the full error message from the response body over
+            // Guzzle's 120-character summary in $e->getMessage().
+            $exception = $e->getResponse()
+                ? $this->extractErrorMessage((string) $e->getResponse()->getBody())
+                : null;
+
+            if ($exception !== null) {
+                throw new QueryException('ClickHouse query error: '.$exception, previous: $e);
+            }
+
             throw new QueryException('ClickHouse request failed: '.$e->getMessage(), previous: $e);
         } catch (GuzzleException $e) {
             throw new QueryException('ClickHouse connection failed: '.$e->getMessage(), previous: $e);
@@ -147,6 +157,17 @@ class Guzzle implements Transport
             throw new QueryException('ClickHouse query error: '.$body);
         }
 
+        // ClickHouse 24+ reports errors as a JSON body whose `exception`
+        // field carries the full message. Without this branch the error
+        // would surface truncated: the JSON boilerplate exhausts Guzzle's
+        // 120-character body summary before the message begins, and
+        // parseRecords() would discard the field by reading `data` only.
+        $exception = $this->parseJsonExceptionMessage($body);
+
+        if ($exception !== null) {
+            throw new QueryException('ClickHouse query error: '.$exception);
+        }
+
         $records = $this->parseRecords($body);
         $affectedRows = $records === null ? $this->parseAffectedRows($response) : null;
 
@@ -178,6 +199,36 @@ class Guzzle implements Transport
         $writtenRows = $summary['written_rows'];
 
         return is_numeric($writtenRows) ? (int) $writtenRows : null;
+    }
+
+    /**
+     * Extract the full ClickHouse error message from an error response
+     * body of either style: the JSON `exception` field (ClickHouse 24+)
+     * or the plain-text `DB::Exception` body (23.x).
+     */
+    protected function extractErrorMessage(string $body): ?string
+    {
+        $exception = $this->parseJsonExceptionMessage($body);
+
+        if ($exception !== null) {
+            return $exception;
+        }
+
+        return preg_match(static::CLICKHOUSE_ERROR_REGEX, $body) ? trim($body) : null;
+    }
+
+    /**
+     * Extract the full error message from a ClickHouse JSON error body.
+     */
+    protected function parseJsonExceptionMessage(string $body): ?string
+    {
+        $data = json_decode($body, true);
+
+        if (! is_array($data) || ! isset($data['exception']) || ! is_string($data['exception'])) {
+            return null;
+        }
+
+        return $data['exception'];
     }
 
     /**
