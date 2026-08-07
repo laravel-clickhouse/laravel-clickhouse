@@ -3,6 +3,7 @@
 namespace ClickHouse\Tests\Unit\Client;
 
 use ClickHouse\Client\Client;
+use ClickHouse\Exceptions\ParallelQueryException;
 use ClickHouse\Tests\Unit\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -50,6 +51,36 @@ class IntegrationTest extends TestCase
         $this->assertEquals([['first' => 1]], $statements['query1']->fetchAll());
         $this->assertEquals([['second' => 2]], $statements['query2']->fetchAll());
         $this->assertEquals([['third' => 3]], $statements['query3']->fetchAll());
+    }
+
+    #[DataProvider('clientProvider')]
+    public function testParallelFailureKeepsPartialResults(Client $client): void
+    {
+        $statements = [
+            'good' => $client->prepare('SELECT 1 as first'),
+            'bad' => $client->prepare('SELECT broken FROM missing_table'),
+            'alsoGood' => $client->prepare('SELECT 3 as third'),
+        ];
+
+        try {
+            $client->parallel($statements);
+
+            $this->fail('ParallelQueryException was not thrown.');
+        } catch (ParallelQueryException $exception) {
+            // The failing query is reported without aborting the others —
+            // regression guard for the rejected handler letting a
+            // parse-time QueryException (plain-text error bodies on
+            // ClickHouse <= 23) escape and discard the whole collection.
+            // Whether the failing key also carries a salvaged partial
+            // response is version-dependent (24+ JSON error bodies parse,
+            // 23.x plain-text ones throw), so only the good keys and the
+            // error key are asserted.
+            $this->assertArrayHasKey('bad', $exception->getErrors());
+            $this->assertArrayHasKey('good', $exception->getResponses());
+            $this->assertArrayHasKey('alsoGood', $exception->getResponses());
+            $this->assertEquals([['first' => 1]], $exception->getResponses()['good']->getRecords());
+            $this->assertEquals([['third' => 3]], $exception->getResponses()['alsoGood']->getRecords());
+        }
     }
 
     public static function clientProvider(): array
