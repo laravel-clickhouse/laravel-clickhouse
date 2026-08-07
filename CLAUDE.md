@@ -109,7 +109,7 @@ Tests expect ClickHouse server running with:
 ## Namespace Structure
 
 All classes use `ClickHouse\` as root namespace:
-- `ClickHouse\Core\` - Framework-agnostic core: HTTP client (`Core\Client`), enums (`Core\Enums`), exceptions (`Core\Exceptions`), utilities (`Core\Support`), and the shared bridge traits/contracts (`Core\Query`, `Core\Schema`, `Core\Connection`, ...)
+- `ClickHouse\Core\` - Framework-agnostic core: HTTP client (`Core\Client`), enums (`Core\Enums`), exceptions (`Core\Exceptions`), utilities (`Core\Support`), and the core traits/contracts carrying the shared implementation (`Core\Query`, `Core\Schema`, `Core\Connection`, ...)
 - `ClickHouse\Laravel\` - Laravel framework bridge
 - `ClickHouse\Hypervel\` - Hypervel framework bridge
 
@@ -125,7 +125,7 @@ All classes use `ClickHouse\` as root namespace:
   directory under `src/Core`, add it to `phpstan.neon` too** — PHPStan skips
   traits with no in-scope using class, so a forgotten path means the code is
   silently unanalysed in the default config.
-- **Bridge traits/contracts** (`Core/Query`, `Core/Schema`,
+- **Core traits/contracts** (`Core/Query`, `Core/Schema`,
   `Core/Connection`, `Core/Eloquent`, `Core/Migrations`,
   `RunsParallelQueries`, ...): framework-free in the sense that they never
   `use` a framework class directly (framework types arrive via the using
@@ -183,6 +183,18 @@ implementations that `new` a framework class with framework-specific
 mechanics, `@method`/`@extends` phpdoc referencing bridge classes, and
 genuinely divergent mechanics (service-provider registration, PDO-vs-HTTP
 connection plumbing).
+
+## Behavioural Parity Between Bridges
+
+Observable behaviour must be identical across bridges: the same violation
+throws the same exception type with the same message (`RejectsTransactions`
+is the model — one core trait, one `LogicException`), the same builder
+calls compile the same SQL, and the same operations return the same result
+shapes. Framework-specific divergence is only allowed where the framework
+itself imposes it, and must be documented in `docs/`. The parity test
+layer (below) exists to catch exactly this kind of drift — when adding an
+observable behaviour to one bridge, its mirror test on the other bridge is
+what proves parity.
 
 ## Testing Strategy for Bridges
 
