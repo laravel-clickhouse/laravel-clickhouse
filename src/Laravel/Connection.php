@@ -2,32 +2,26 @@
 
 namespace ClickHouse\Laravel;
 
-use ClickHouse\Client\Client;
-use ClickHouse\Client\Statement;
-use ClickHouse\Exceptions\ParallelQueryException;
+use ClickHouse\Core\Client\Client;
+use ClickHouse\Core\Connection\InteractsWithClickHouseClient;
+use ClickHouse\Core\Connection\RejectsTransactions;
+use ClickHouse\Core\Contracts\ClickHouseConnection;
+use ClickHouse\Core\Support\Escaper;
 use ClickHouse\Laravel\Query\Builder as QueryBuilder;
 use ClickHouse\Laravel\Query\Grammar as QueryGrammar;
 use ClickHouse\Laravel\Schema\Builder as SchemaBuilder;
 use ClickHouse\Laravel\Schema\Grammar as SchemaGrammar;
-use ClickHouse\Support\Escaper;
-use Closure;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
-use LogicException;
 use RuntimeException;
 
-class Connection extends BaseConnection
+class Connection extends BaseConnection implements ClickHouseConnection
 {
-    /**
-     * The ClickHouse client.
-     */
-    protected Client $client;
+    use InteractsWithClickHouseClient;
+    use RejectsTransactions;
 
-    /**
-     * The value escaper.
-     */
-    protected Escaper $escaper;
+    protected const QUERY_EXCEPTION = QueryException::class;
 
     /**
      * Create a new database connection instance.
@@ -68,65 +62,7 @@ class Connection extends BaseConnection
      */
     public function select($query, $bindings = [], $useReadPdo = true, array $fetchUsing = []): array
     {
-        // @phpstan-ignore-next-line
-        return $this->run($query, $bindings, function (string $query, array $bindings) {
-            $statement = $this->client->prepare($query);
-
-            // @phpstan-ignore-next-line
-            $this->bindValues($statement, $this->prepareBindings($bindings));
-
-            $statement->execute();
-
-            return $statement->fetchAll();
-        });
-    }
-
-    /**
-     * Run select statements parallelly against the database.
-     *
-     * @param array<int|string, array{
-     *     sql: string,
-     *     bindings: mixed[],
-     * }> $queries
-     * @return array<int|string, array<string, mixed>[]>
-     *
-     * @throws ParallelQueryException<Statement>
-     */
-    public function selectParallelly(array $queries): array
-    {
-        $statements = array_map(function ($query) {
-            foreach ($this->beforeExecutingCallbacks as $beforeExecutingCallback) {
-                $beforeExecutingCallback($query['sql'], $query['bindings'], $this);
-            }
-
-            $statement = $this->client->prepare($query['sql']);
-
-            // @phpstan-ignore-next-line
-            $this->bindValues($statement, $this->prepareBindings($query['bindings']));
-
-            return $statement;
-        }, $queries);
-
-        try {
-            $this->client->parallel($statements);
-        } catch (ParallelQueryException $e) {
-            $errors = collect($e->getErrors())->map(function ($error, $key) use ($queries) {
-                return new QueryException(
-                    $this->getName() ?: '',
-                    $queries[$key]['sql'],
-                    $queries[$key]['bindings'],
-                    $error
-                );
-            })->all();
-
-            throw new ParallelQueryException($e->getResponses(), $errors);
-        }
-
-        return collect($statements)->map(function ($statement, $key) use ($queries) {
-            $this->logQuery($queries[$key]['sql'], $queries[$key]['bindings']);
-
-            return $statement->fetchAll() ?: [];
-        })->all();
+        return $this->executeSelect($query, $bindings);
     }
 
     /**
@@ -136,15 +72,7 @@ class Connection extends BaseConnection
      */
     public function statement($query, $bindings = []): bool
     {
-        // @phpstan-ignore-next-line
-        return $this->run($query, $bindings, function ($query, $bindings) {
-            $statement = $this->client->prepare($query);
-
-            // @phpstan-ignore-next-line
-            $this->bindValues($statement, $this->prepareBindings($bindings));
-
-            return $statement->execute();
-        });
+        return $this->executeStatement($query, $bindings);
     }
 
     /**
@@ -154,41 +82,7 @@ class Connection extends BaseConnection
      */
     public function affectingStatement($query, $bindings = []): int
     {
-        // @phpstan-ignore-next-line
-        return $this->run($query, $bindings, function ($query, $bindings) {
-            $statement = $this->client->prepare($query);
-
-            // @phpstan-ignore-next-line
-            $this->bindValues($statement, $this->prepareBindings($bindings));
-
-            $statement->execute();
-
-            // ClickHouse reports no written_rows in X-ClickHouse-Summary for
-            // DELETE / ALTER TABLE mutations (verified on 24.x and 25.x), so
-            // rowCount() is null there; Laravel's contract requires an int.
-            return $statement->rowCount() ?? 0;
-        });
-    }
-
-    /**
-     * Run an insert statement whose rows are streamed in a ClickHouse input
-     * format appended after the query, bypassing SQL value escaping. Only
-     * the query head is logged, never the data payload.
-     */
-    public function insertUsingFormat(string $query, string $data): bool
-    {
-        // @phpstan-ignore-next-line
-        return $this->run($query, [], function (string $query) use ($data) {
-            $this->client->getTransport()->execute($query."\n".$data);
-
-            return true;
-        });
-    }
-
-    /** {@inheritDoc} */
-    public function escape($value, $binary = false): string
-    {
-        return $this->escaper->escape($value, $binary);
+        return $this->executeAffectingStatement($query, $bindings);
     }
 
     /** {@inheritDoc} */
@@ -196,53 +90,6 @@ class Connection extends BaseConnection
 
     /** {@inheritDoc} */
     public function disconnect() {}
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param  Closure(static): mixed  $callback
-     *
-     * @throws LogicException
-     */
-    public function transaction(Closure $callback, $attempts = 1): never
-    {
-        $this->throwUnsupportedTransaction();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @throws LogicException
-     */
-    public function beginTransaction(): never
-    {
-        $this->throwUnsupportedTransaction();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @throws LogicException
-     */
-    public function commit(): never
-    {
-        $this->throwUnsupportedTransaction();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @throws LogicException
-     */
-    public function rollBack($toLevel = null): never
-    {
-        $this->throwUnsupportedTransaction();
-    }
-
-    private function throwUnsupportedTransaction(): never
-    {
-        throw new LogicException('Transactions are not supported when using ClickHouse.');
-    }
 
     /** {@inheritDoc} */
     public function getSchemaBuilder()
@@ -261,14 +108,6 @@ class Connection extends BaseConnection
     public function getSchemaState(?Filesystem $files = null, ?callable $processFactory = null): never
     {
         throw new RuntimeException('Schema dumping is not supported when using ClickHouse.');
-    }
-
-    /**
-     * Get the ClickHouse client
-     */
-    public function getClient(): Client
-    {
-        return $this->client;
     }
 
     /** {@inheritDoc} */
@@ -311,30 +150,5 @@ class Connection extends BaseConnection
         }
 
         return $grammar;
-    }
-
-    /**
-     * Get the default ClickHouse client.
-     *
-     * @param  array{
-     *     host?: string,
-     *     port?: int,
-     *     username?: string,
-     *     password?: string,
-     *     transport?: string,
-     *     https?: bool,
-     * }  $config
-     */
-    protected function getDefaultClient(string $database, array $config): Client
-    {
-        return new Client(
-            host: $config['host'] ?? '127.0.0.1',
-            port: $config['port'] ?? 8123,
-            database: $database,
-            username: $config['username'] ?? 'default',
-            password: $config['password'] ?? 'default',
-            transport: $config['transport'] ?? 'guzzle',
-            https: $config['https'] ?? false,
-        );
     }
 }

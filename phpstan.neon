@@ -1,69 +1,14 @@
 parameters:
   level: 9
   paths:
-    - src
+    # Framework-free classes only — not `src/Core` wholesale. PHPStan
+    # analyses a trait solely in the context of a class using it; with no
+    # bridge class in scope here, the core traits (Query, Schema,
+    # Connection, ...) would be silently skipped and report a false "no
+    # errors". They are genuinely analysed by phpstan.laravel.neon and
+    # phpstan.hypervel.neon, once per bridge, with real framework types.
+    - src/Core/Client
+    - src/Core/Enums
+    - src/Core/Exceptions
+    - src/Core/Support
   reportUnmatchedIgnoredErrors: true
-  ignoreErrors:
-    # Dynamic SQL vs L13's literal-string typing on Expression / fromRaw / Arr::wrap.
-    -
-      message: '#Expression constructor expects TValue#'
-      reportUnmatched: false
-    -
-      message: '#fromRaw\(\) expects literal-string#'
-      reportUnmatched: false
-    -
-      message: '#Parameter \#1 \$value of static method Illuminate\\Support\\Arr::wrap\(\) expects#'
-      reportUnmatched: false
-    # ClickHouse binding slots don't match L12+'s literal-string $type enum.
-    -
-      message: '#Parameter \#2 \$type of method Illuminate\\Database\\Query\\Builder::(addBinding|setBindings)\(\) expects#'
-      path: src/Laravel/Query/Builder.php
-      reportUnmatched: false
-    # Dynamic SQL vs L13's literal-string typing on whereRaw.
-    -
-      message: '#Parameter \#1 \$sql of method Illuminate\\Database\\Query\\Builder::whereRaw\(\) expects .+, mixed given\.#'
-      path: src/Laravel/Query/Builder.php
-      reportUnmatched: false
-    # Dead branch of the conditional trait (see BlueprintLaravelCompatibility.php).
-    -
-      message: '#Parameter \#\d+ \$\w+ of method Illuminate\\Database\\Schema\\Blueprint::__construct\(\) expects#'
-      path: src/Laravel/Schema/BlueprintLaravelCompatibility.php
-      reportUnmatched: false
-    # $resolver is PHPDoc non-nullable but starts unset at runtime.
-    - '#Property Illuminate\\Database\\Schema\\Builder::\$resolver \(Closure\) in isset\(\) is not nullable#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$column\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$to\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$from\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$shouldBeSkipped\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$algorithm\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$index\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$columns\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$granularity\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$autoIncrement\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$first\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$after\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$virtualAsJson\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$virtualAs\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$storedAsJson\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$storedAs\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$invisible\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$default\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$comment\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$unsigned\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$nullable\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$places\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$total\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$allowed\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$precision\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$useCurrent\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$useCurrentOnUpdate\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$length\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$fixed\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$subtype\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$srid\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$innerType\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$expression\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$lowCardinality\.#'
-    - '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$name\.#'
-    - '#Call to an undefined method Illuminate\\Support\\Fluent<string, mixed>::default\(\)\.#'
-    - '#Access to an undefined property Illuminate\\Database\\Schema\\ColumnDefinition::\$name\.#'

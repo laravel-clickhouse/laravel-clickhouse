@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/packagist/l/laravel-clickhouse/laravel-clickhouse.svg?style=flat-square)](https://packagist.org/packages/laravel-clickhouse/laravel-clickhouse)
 [![PHP Version](https://img.shields.io/packagist/php-v/laravel-clickhouse/laravel-clickhouse.svg?style=flat-square)](https://packagist.org/packages/laravel-clickhouse/laravel-clickhouse)
 
-A ClickHouse database driver for Laravel. Provides a familiar Eloquent Model, Query Builder, and Schema Builder with full support for ClickHouse-specific features.
+A ClickHouse database driver for Laravel and Hypervel. Provides a familiar Eloquent Model, Query Builder, and Schema Builder with full support for ClickHouse-specific features.
 
 ## Features
 
@@ -15,7 +15,12 @@ A ClickHouse database driver for Laravel. Provides a familiar Eloquent Model, Qu
 - **Parallel query execution** via Guzzle async HTTP pool
 - **Two HTTP transports** — Guzzle (default) and Curl (phpclickhouse)
 - **Laravel migrations** with ClickHouse-compatible migration repository
-- PHP 8.2+, Laravel 11+
+- **Framework bridges** sharing one framework-agnostic core:
+
+| Framework | Namespace | Requirements |
+|-----------|-----------|--------------|
+| Laravel 11+ | `ClickHouse\Laravel` | PHP 8.2+, `illuminate/database` |
+| Hypervel 0.4 | `ClickHouse\Hypervel` | PHP 8.4+, ext-swoole, `hypervel/components ~0.4` |
 
 ## Installation
 
@@ -23,7 +28,7 @@ A ClickHouse database driver for Laravel. Provides a familiar Eloquent Model, Qu
 composer require laravel-clickhouse/laravel-clickhouse
 ```
 
-The package uses Laravel's auto-discovery — no manual service provider registration needed.
+The package uses Laravel's auto-discovery — no manual service provider registration needed. `illuminate/database` is not a hard dependency of the package (it also supports Hypervel), but every Laravel application already provides it. For Hypervel setup, see [Hypervel Support](docs/docs/hypervel.md).
 
 Add a ClickHouse connection to your `config/database.php`:
 
@@ -130,6 +135,8 @@ $results = Parallel::get([
 | [Schema Builder & Migrations](docs/docs/schema.md) | Table creation, column types, indexes |
 | [Parallel Queries](docs/docs/parallel-queries.md) | Concurrent query execution |
 | [Advanced Topics](docs/docs/advanced.md) | Transports, raw queries, limitations |
+| [Hypervel Support](docs/docs/hypervel.md) | Coroutine-native bridge for Hypervel 0.4 |
+| [Upgrade Guide](docs/docs/upgrade.md) | Breaking changes when upgrading to v2.0.0 |
 
 ## Testing
 

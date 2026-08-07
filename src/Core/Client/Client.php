@@ -1,0 +1,78 @@
+<?php
+
+namespace ClickHouse\Core\Client;
+
+use ClickHouse\Core\Client\Contracts\Transport;
+use ClickHouse\Core\Exceptions\ParallelQueryException;
+use ClickHouse\Core\Support\Escaper;
+
+class Client
+{
+    protected TransportFactory $transportFactory;
+
+    protected Escaper $escaper;
+
+    public function __construct(
+        protected string $host,
+        protected int $port,
+        protected string $database,
+        protected string $username,
+        protected string $password,
+        protected string $transport,
+        protected bool $https = false,
+        ?TransportFactory $transportFactory = null,
+        ?Escaper $escaper = null,
+    ) {
+        $this->transportFactory = $transportFactory ?? new TransportFactory($host, $port, $database, $username, $password, $https);
+        $this->escaper = $escaper ?? new Escaper;
+    }
+
+    public function exec(string $query): int
+    {
+        $response = $this->getTransport()->execute($query);
+
+        return $response->getAffectedRows() ?: 0;
+    }
+
+    public function prepare(string $query): Statement
+    {
+        return new Statement($this, $query);
+    }
+
+    /**
+     * @param  Statement[]  $statements
+     *
+     * @throws ParallelQueryException<Statement>
+     */
+    public function parallel(array $statements): void
+    {
+        $sqls = array_map(function ($statement) {
+            return $statement->toRawSql();
+        }, $statements);
+
+        try {
+            $responses = $this->getTransport()->executeParallelly($sqls);
+        } catch (ParallelQueryException $e) {
+            $responses = $e->getResponses();
+            $errors = $e->getErrors();
+        }
+
+        foreach ($responses as $key => $response) {
+            $statements[$key]->setResponse($response);
+        }
+
+        if (isset($errors)) {
+            throw new ParallelQueryException($responses, $errors);
+        }
+    }
+
+    public function getTransport(): Transport
+    {
+        return $this->transportFactory->make($this->transport);
+    }
+
+    public function getEscaper(): Escaper
+    {
+        return $this->escaper;
+    }
+}

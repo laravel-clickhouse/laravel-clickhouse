@@ -6,7 +6,29 @@ on:
   workflow_call:
 
 jobs:
-  tests:
+  lint:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]')"
+
+    name: Code style
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Installing php
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: composer
+
+      - name: Install dependencies
+        run: composer update --prefer-dist -n -o
+
+      - name: Check code style
+        run: vendor/bin/pint src tests --test
+
+  laravel:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]')"
 
@@ -79,7 +101,85 @@ jobs:
 
       - name: Execute tests
         run: |
-          vendor/bin/pint src tests --test
           vendor/bin/phpstan analyse
-          vendor/bin/phpunit --testsuite=Unit --coverage-text
-          vendor/bin/phpunit --testsuite=Feature --coverage-text
+          vendor/bin/phpstan analyse -c phpstan.laravel.neon
+          vendor/bin/phpunit --testsuite=Core-Unit,Core-Feature --coverage-text
+          vendor/bin/phpunit --testsuite=Laravel-Unit --coverage-text
+          vendor/bin/phpunit --testsuite=Laravel-Feature --coverage-text
+
+  hypervel:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]')"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php:
+          - "8.4"
+          - "8.5"
+        swoole:
+          - "6.2"
+        hypervel:
+          - "0.4.x-dev"
+        # Same shape as the laravel job: PHP legs pin the current LTS, one
+        # pinned PHP leg sweeps the remaining ClickHouse majors.
+        clickhouse:
+          - "26.3-alpine"
+        include:
+          - { php: "8.4", swoole: "6.2", hypervel: "0.4.x-dev", clickhouse: "23.8-alpine" }
+          - { php: "8.4", swoole: "6.2", hypervel: "0.4.x-dev", clickhouse: "24.8-alpine" }
+          - { php: "8.4", swoole: "6.2", hypervel: "0.4.x-dev", clickhouse: "25.8-alpine" }
+
+    name: PHP ${{ matrix.php }} (swoole-${{ matrix.swoole }}) / Hypervel ${{ matrix.hypervel }} / ClickHouse ${{ matrix.clickhouse }}
+
+    container:
+      image: phpswoole/swoole:${{ matrix.swoole }}-php${{ matrix.php }}
+
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:${{ matrix.clickhouse }}
+        env:
+          CLICKHOUSE_DB: default
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: default
+        ports:
+          - 8123:8123
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # The phpswoole image ships swoole, redis, sockets and pdo_mysql but
+      # not intl, which hypervel/components declares as a platform
+      # requirement (hypervel's own CI installs it the same way). Swoole
+      # short names must be off — Hypervel's Application refuses to boot
+      # with them enabled (they shadow its coroutine helpers).
+      - name: Install PHP extensions
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq libicu-dev > /dev/null
+          docker-php-ext-install -j"$(nproc)" intl pcntl > /dev/null
+          echo "swoole.use_shortname=Off" > /usr/local/etc/php/conf.d/99-swoole-shortname.ini
+
+      # symfony/yaml and fakerphp/faker are soft dependencies of Hypervel's
+      # testbench (config loading and the WithFaker trait) that
+      # hypervel/components does not require itself. PHPUnit must be 13+:
+      # RunTestsInCoroutine overrides invokeTestMethod(), which only exists
+      # since PHPUnit 13 — on 11 the per-test coroutine wrapper silently
+      # never runs and RefreshDatabase transactions are skipped.
+      - name: Install dependencies
+        run: |
+          composer config minimum-stability dev
+          composer remove illuminate/database orchestra/testbench --dev --no-update
+          composer require "hypervel/components:${{ matrix.hypervel }}" "symfony/yaml:^8.1" "fakerphp/faker:^1.23" "phpunit/phpunit:^13.0.3" --dev --no-update
+          COMPOSER_MEMORY_LIMIT=-1 composer update --prefer-dist -n -o
+
+      - name: Execute tests
+        env:
+          CLICKHOUSE_HOST: clickhouse
+        run: |
+          vendor/bin/phpstan analyse --memory-limit=-1
+          vendor/bin/phpstan analyse -c phpstan.hypervel.neon --memory-limit=-1
+          vendor/bin/phpunit --testsuite=Core-Unit,Core-Feature
+          vendor/bin/phpunit --testsuite=Hypervel-Unit
+          vendor/bin/phpunit --testsuite=Hypervel-Feature

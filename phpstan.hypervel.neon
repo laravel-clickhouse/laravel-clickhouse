@@ -1,0 +1,45 @@
+parameters:
+  level: 9
+  paths:
+    # The core traits are analysed here in the context of the Hypervel
+    # bridge classes; framework-free code lives in phpstan.neon and
+    # the Laravel bridge in phpstan.laravel.neon.
+    - src/Core
+    - src/Hypervel
+  reportUnmatchedIgnoredErrors: false
+  ignoreErrors:
+    # The shared traits widen native parameter types to `mixed` so the same
+    # code satisfies both Laravel's and Hypervel's signatures; the framework
+    # methods they delegate to keep their narrower expectations.
+    -
+      message: '#Parameter \#\d+ \$\w+ of (method|function|static method) .+ expects .+ given\.#'
+      paths:
+        - src/Core
+        - src/Hypervel
+    -
+      message: '#Cannot (access property|call method) .+ on mixed\.#'
+      paths:
+        - src/Core
+        - src/Hypervel
+    - '#Access to an undefined property .+#'
+    - '#Call to an undefined method .+#'
+    -
+      message: '#should return .+ but returns mixed\.#'
+      paths:
+        - src/Core
+        - src/Hypervel
+    # The ClickHouse binding slots are registered at construction; the
+    # parent's @var array shape doesn't know them.
+    -
+      message: "#Offset '(prewhere|arrayJoin|partition|settings|withQuery)' does not exist on array#"
+      path: src/Core/Query/BuildsClickHouseQueries.php
+    # newExpression() returns mixed (the EXPRESSION class-string is opaque
+    # to PHPStan); the frameworks' $from property accepts the result.
+    -
+      message: '#Property .+::\$from .+ does not accept mixed\.#'
+      path: src/Core/Query/BuildsClickHouseQueries.php
+    # The parent's cursor() PHPDoc promises stdClass rows, but ClickHouse
+    # over HTTP yields associative arrays — same shape as select().
+    -
+      message: '#Return type \(Generator<int, array<string, mixed>.+cursor\(\)#'
+      path: src/Hypervel/Connection.php
