@@ -73,7 +73,18 @@ class Guzzle implements Transport
                 $response = null;
 
                 if ($e instanceof RequestException && $e->getResponse()) {
-                    $responses[$key] = $response = $this->parseResponse($sqls[$key], $e->getResponse());
+                    // parseResponse() throws QueryException when the error
+                    // body is plain text (ClickHouse <= 23 style). Capture
+                    // it as this key's error instead of letting it escape
+                    // the pool callback — an escape would abort the whole
+                    // collection and discard every other query's result.
+                    try {
+                        $responses[$key] = $response = $this->parseResponse($sqls[$key], $e->getResponse());
+                    } catch (QueryException $parseException) {
+                        $errors[$key] = $parseException;
+
+                        return;
+                    }
                 }
 
                 $errors[$key] = match (true) {

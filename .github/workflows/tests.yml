@@ -22,15 +22,25 @@ jobs:
           - "^11.21"
           - "^12.0"
           - "^13.0"
+        # The last LTS of every supported major. Majors differ in
+        # observable ways (e.g. 23.x returns plain-text error bodies where
+        # 24+ returns JSON), so transport parsing must be exercised against
+        # each family. 25-alpine/26-alpine bare-major tags do not exist on
+        # Docker Hub, hence the explicit LTS minors.
+        clickhouse:
+          - "23.8-alpine"
+          - "24.8-alpine"
+          - "25.8-alpine"
+          - "26.3-alpine"
         exclude:
           - php: "8.2"
             laravel: "^13.0"
 
-    name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }}
+    name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }} / ClickHouse ${{ matrix.clickhouse }}
 
     services:
       clickhouse:
-        image: clickhouse/clickhouse-server:24-alpine
+        image: clickhouse/clickhouse-server:${{ matrix.clickhouse }}
         env:
           CLICKHOUSE_DB: default
           CLICKHOUSE_USER: default
