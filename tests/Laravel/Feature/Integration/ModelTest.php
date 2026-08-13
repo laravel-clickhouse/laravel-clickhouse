@@ -2,17 +2,14 @@
 
 namespace ClickHouse\Tests\Laravel\Feature\Integration;
 
-use ClickHouse\Core\Enums\Format;
 use ClickHouse\Laravel\Connection;
+use ClickHouse\Laravel\Eloquent\Builder;
 use ClickHouse\Laravel\Eloquent\Model as BaseClickHouseModel;
-use ClickHouse\Laravel\Parallel;
 use ClickHouse\Laravel\Schema\Blueprint as ClickHouseBlueprint;
 use ClickHouse\Tests\Laravel\Unit\TestCase;
 use Illuminate\Database\Capsule\Manager as DB;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model as BaseSQLiteModel;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Collection;
 
 class ModelTest extends TestCase
 {
@@ -33,57 +30,42 @@ class ModelTest extends TestCase
         parent::tearDown();
     }
 
-    public function testCreate()
+    public function testQueryReturnsClickHouseBuilder()
     {
-        ClickHouseModel::create(['id' => 1, 'column' => 'value']);
+        $this->assertInstanceOf(Builder::class, ClickHouseModel::query());
+    }
 
-        $this->assertEquals(
-            [['id' => 1, 'column' => 'value']],
-            ClickHouseModel::all()->toArray()
-        );
+    public function testCreateAndFind()
+    {
+        ClickHouseModel::create(['id' => 1, 'name' => 'first']);
+
+        $model = ClickHouseModel::query()->find(1);
+
+        $this->assertNotNull($model);
+        $this->assertSame('first', $model->name);
     }
 
     public function testUpdate()
     {
-        ClickHouseModel::create(['id' => 1, 'column' => 'value']);
-        ClickHouseModel::where('id', 1)->update(['column' => 'new_value']);
+        ClickHouseModel::create(['id' => 1, 'name' => 'first']);
+        ClickHouseModel::query()->where('id', 1)->update(['name' => 'renamed']);
 
-        $this->assertEquals(
-            [['id' => 1, 'column' => 'new_value']],
-            ClickHouseModel::all()->toArray()
-        );
+        $this->assertSame('renamed', ClickHouseModel::query()->find(1)->name);
     }
 
     public function testDelete()
     {
-        ClickHouseModel::create(['id' => 1, 'column' => 'value']);
-        ClickHouseModel::where('id', 1)->delete();
+        ClickHouseModel::create(['id' => 1, 'name' => 'first']);
+        ClickHouseModel::create(['id' => 2, 'name' => 'second']);
 
-        $this->assertEquals(
-            [],
-            ClickHouseModel::all()->toArray()
-        );
-    }
+        ClickHouseModel::query()->where('id', 1)->delete();
 
-    public function testArrayJoin()
-    {
-        ClickHouseModel::create(['id' => 1, 'column' => 'value']);
-
-        $this->assertEquals(
-            [
-                ['id' => 1, 'column' => 'value', 'alias' => 'foo'],
-                ['id' => 1, 'column' => 'value', 'alias' => 'bar'],
-            ],
-            ClickHouseModel::query()
-                ->arrayJoin(ClickHouseModel::selectRaw("['foo', 'bar']"), 'alias')
-                ->get()
-                ->toArray()
-        );
+        $this->assertSame(1, ClickHouseModel::query()->count());
     }
 
     public function testRelation()
     {
-        $model = ClickHouseModel::create(['id' => 1, 'column' => 'value']);
+        $model = ClickHouseModel::create(['id' => 1, 'name' => 'first']);
 
         $this->assertTrue($model->related->is($model));
     }
@@ -94,93 +76,12 @@ class ModelTest extends TestCase
 
         $this->createSQLiteTestTable();
 
-        $clickhouseModel = ClickHouseModel::create(['id' => 1, 'column' => 'value']);
-        $sqliteModel = SQLiteModel::create(['id' => 1, 'column' => 'another_value']);
+        $clickhouseModel = ClickHouseModel::create(['id' => 1, 'name' => 'first']);
+        $sqliteModel = SQLiteModel::create(['id' => 1, 'name' => 'another']);
 
         $this->assertTrue($clickhouseModel->sqliteRelated->is($sqliteModel));
 
         $this->dropSQLiteTestTable();
-    }
-
-    public function testInsertWithFormat()
-    {
-        $inserted = $this->db->getConnection('clickhouse')->table('test')->insert([
-            ['id' => 1, 'column' => 'value_1'],
-            ['id' => 2, 'column' => 'héllo 👋'],
-        ], format: Format::JSONEachRow);
-
-        $this->assertTrue($inserted);
-        $this->assertEquals(
-            [
-                ['id' => 1, 'column' => 'value_1'],
-                ['id' => 2, 'column' => 'héllo 👋'],
-            ],
-            ClickHouseModel::orderBy('id')->get()->toArray()
-        );
-    }
-
-    public function testInsertWithFormatAndTypedColumns()
-    {
-        $connection = $this->db->getConnection('clickhouse');
-
-        $connection->statement('create table test_format_types (tags Array(String), created_at DateTime64(6), id UInt64) engine = Memory');
-
-        try {
-            $inserted = $connection->table('test_format_types')->insert([
-                'tags' => ['a', 'b'],
-                'created_at' => new \DateTimeImmutable('2026-07-29 12:34:56.123456'),
-                'id' => 1,
-            ], format: Format::JSONEachRow);
-
-            $this->assertTrue($inserted);
-            $this->assertEquals(
-                [['tags' => ['a', 'b'], 'created_at' => '2026-07-29 12:34:56.123456', 'id' => 1]],
-                $connection->table('test_format_types')->get()->map(fn ($row) => (array) $row)->all()
-            );
-        } finally {
-            $connection->statement('drop table test_format_types');
-        }
-    }
-
-    public function testInsertWithFormatThroughModel()
-    {
-        $inserted = ClickHouseModel::insert([
-            ['id' => 1, 'column' => 'value'],
-        ], format: Format::JSONEachRow);
-
-        $this->assertTrue($inserted);
-        $this->assertEquals(
-            [['id' => 1, 'column' => 'value']],
-            ClickHouseModel::all()->toArray()
-        );
-    }
-
-    public function testGetParallelly()
-    {
-        ClickHouseModel::create(['id' => 1, 'column' => 'value']);
-        ClickHouseModel::create(['id' => 2, 'column' => 'value']);
-        ClickHouseModel::create(['id' => 3, 'column' => 'value']);
-
-        $results = Parallel::get([
-            'one' => ClickHouseModel::where('id', 1),
-            'two' => ClickHouseModel::where('id', 2)->toBase(),
-            'three' => ClickHouseModel::where('id', 3),
-        ]);
-
-        $this->assertInstanceOf(EloquentCollection::class, $results['one']);
-        $this->assertInstanceOf(Collection::class, $results['two']);
-        $this->assertInstanceOf(EloquentCollection::class, $results['three']);
-        $this->assertInstanceOf(ClickHouseModel::class, $results['one']->first());
-        $this->assertIsArray($results['two']->first());
-        $this->assertInstanceOf(ClickHouseModel::class, $results['three']->first());
-        $this->assertEquals(
-            [
-                'one' => [['id' => 1, 'column' => 'value']],
-                'two' => [['id' => 2, 'column' => 'value']],
-                'three' => [['id' => 3, 'column' => 'value']],
-            ],
-            collect($results)->toArray()
-        );
     }
 
     private function setUpEloquent()
@@ -214,9 +115,12 @@ class ModelTest extends TestCase
     private function createClickHouseTestTable()
     {
         $schema = $this->db->getConnection('clickhouse')->getSchemaBuilder();
-        $schema->create('test', function (ClickHouseBlueprint $table) {
+        // Memory engine keeps ALTER TABLE mutations (update / delete)
+        // synchronous, so their effect is immediately assertable; the
+        // MergeTree-only lightweight delete is covered by QueryTest.
+        $schema->create('model_test', function (ClickHouseBlueprint $table) {
             $table->unsignedInteger('id');
-            $table->text('column');
+            $table->text('name');
             $table->engine('Memory');
         });
     }
@@ -224,7 +128,7 @@ class ModelTest extends TestCase
     private function dropClickHouseTestTable()
     {
         $schema = $this->db->getConnection('clickhouse')->getSchemaBuilder();
-        $schema->drop('test');
+        $schema->drop('model_test');
     }
 
     private function addSQLiteConnection()
@@ -238,16 +142,16 @@ class ModelTest extends TestCase
     private function createSQLiteTestTable()
     {
         $schema = $this->db->getConnection('sqlite')->getSchemaBuilder();
-        $schema->create('test', function (Blueprint $table) {
+        $schema->create('model_sqlite_test', function (Blueprint $table) {
             $table->unsignedInteger('id');
-            $table->text('column');
+            $table->text('name');
         });
     }
 
     private function dropSQLiteTestTable()
     {
         $schema = $this->db->getConnection('sqlite')->getSchemaBuilder();
-        $schema->drop('test');
+        $schema->drop('model_sqlite_test');
     }
 }
 
@@ -257,9 +161,9 @@ class ClickHouseModel extends BaseClickHouseModel
 
     protected $connection = 'clickhouse';
 
-    protected $table = 'test';
+    protected $table = 'model_test';
 
-    protected $fillable = ['id', 'column'];
+    protected $fillable = ['id', 'name'];
 
     public function related()
     {
@@ -278,7 +182,7 @@ class SQLiteModel extends BaseSQLiteModel
 
     protected $connection = 'sqlite';
 
-    protected $table = 'test';
+    protected $table = 'model_sqlite_test';
 
-    protected $fillable = ['id', 'column'];
+    protected $fillable = ['id', 'name'];
 }

@@ -2,6 +2,7 @@
 
 namespace ClickHouse\Tests\Laravel\Feature\Integration;
 
+use ClickHouse\Core\Enums\Format;
 use ClickHouse\Laravel\Facades\Schema;
 use ClickHouse\Laravel\Query\Builder;
 use ClickHouse\Tests\Laravel\Feature\TestCase;
@@ -12,8 +13,8 @@ class QueryTest extends TestCase
     {
         parent::setUp();
 
-        Schema::dropIfExistsSync('laravel_query_test');
-        Schema::create('laravel_query_test', function ($table) {
+        Schema::dropIfExistsSync('query_test');
+        Schema::create('query_test', function ($table) {
             $table->integer('id');
             $table->text('name');
             $table->array('tags', 'String');
@@ -23,7 +24,7 @@ class QueryTest extends TestCase
 
     protected function tearDown(): void
     {
-        Schema::dropIfExistsSync('laravel_query_test');
+        Schema::dropIfExistsSync('query_test');
 
         parent::tearDown();
     }
@@ -88,6 +89,31 @@ class QueryTest extends TestCase
         $this->assertSame(1, $this->table()->count());
     }
 
+    public function testInsertWithFormat()
+    {
+        $connection = $this->app['db']->connection('clickhouse');
+
+        $connection->statement('create table query_format_test (id UInt64, name String, tags Array(String), created_at DateTime64(6)) engine = Memory');
+
+        try {
+            $inserted = $connection->table('query_format_test')->insert([
+                ['id' => 1, 'name' => 'héllo 👋', 'tags' => ['a', 'b'], 'created_at' => new \DateTimeImmutable('2026-07-29 12:34:56.123456')],
+                ['id' => 2, 'name' => 'second', 'tags' => [], 'created_at' => new \DateTimeImmutable('2026-07-29 12:34:56.654321')],
+            ], format: Format::JSONEachRow);
+
+            $this->assertTrue($inserted);
+            $this->assertEquals(
+                [
+                    ['id' => 1, 'name' => 'héllo 👋', 'tags' => ['a', 'b'], 'created_at' => '2026-07-29 12:34:56.123456'],
+                    ['id' => 2, 'name' => 'second', 'tags' => [], 'created_at' => '2026-07-29 12:34:56.654321'],
+                ],
+                $connection->table('query_format_test')->orderBy('id')->get()->map(fn ($row) => (array) $row)->all()
+            );
+        } finally {
+            $connection->statement('drop table query_format_test');
+        }
+    }
+
     protected function defaultConnection(): string
     {
         return 'clickhouse';
@@ -95,6 +121,6 @@ class QueryTest extends TestCase
 
     protected function table(): Builder
     {
-        return $this->app['db']->connection('clickhouse')->table('laravel_query_test');
+        return $this->app['db']->connection('clickhouse')->table('query_test');
     }
 }
