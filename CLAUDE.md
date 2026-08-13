@@ -212,14 +212,28 @@ deliberately duplicated and must stay that way — they exist in two layers:
    When adding a scenario to one bridge, add its mirror to the other in
    the same change — a missing mirror is a coverage gap, not a
    simplification.
+
+   Whether a **unit** scenario needs a mirror is decided by its assertion
+   target (ADR 0002): asserting behaviour (exception type/message, return
+   value/type, execution dispatch) → mirror required; asserting compiled
+   SQL output (string in, string out) → Laravel unit suite only, since
+   the compilation body is one core trait and output drift would surface
+   in the mirrored feature suites against a real server. Feature
+   scenarios always mirror. A mirrored test must match its counterpart
+   scenario-for-scenario: same test method names, same fixture shape
+   (model properties, table naming, values) — only framework-imposed
+   differences (typed vs untyped properties, boot mechanics) may differ.
 2. **Framework-specific tests (no mirror, by design)** — scenarios that
    only exist on one framework get their own directories with no
-   counterpart: for Hypervel, coroutine concurrency, pool
-   lifecycle/reconnect, heartbeat and `Parallel`-under-Swoole (e.g.
-   `tests/Hypervel/Feature/Coroutine/`); for Laravel, Orchestra-specific
-   machinery (e.g. the in-memory PDO preservation workaround). Every
+   counterpart: for Hypervel, coroutine concurrency and pool
+   lifecycle/reconnect/heartbeat (e.g. `tests/Hypervel/Feature/Coroutine/`);
+   for Laravel, Orchestra-specific machinery (e.g. the in-memory PDO
+   preservation workaround) and the Capsule standalone boot path. Every
    behavioural claim in `docs/` about a framework-specific feature must be
-   backed by a test in this layer.
+   backed by a test in this layer. `Parallel`-under-Swoole needs no
+   dedicated tests: every Hypervel feature test runs inside a coroutine
+   via RunTestsInCoroutine, so the mirrored `Integration/ParallelTest`
+   already exercises that environment.
 
 Asymmetry between the suites is therefore only acceptable in layer 2, and
 only when the scenario genuinely cannot occur on the other framework.

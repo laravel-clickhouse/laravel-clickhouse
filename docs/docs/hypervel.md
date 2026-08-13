@@ -72,7 +72,7 @@ ClickHouse speaks HTTP, not PDO. The bridge integrates with Hypervel's pool with
 
 ## Parallel queries under Swoole
 
-`selectParallelly()` and `ClickHouse\Hypervel\Parallel` use Guzzle's curl multi handle. Under Swoole's native curl hook this runs inside the coroutine scheduler — covered by the coroutine test suite (`tests/Hypervel/Feature/Coroutine/`). In most cases, prefer launching multiple coroutines with regular queries — the connection pool already gives you concurrency — and reserve `Parallel` for porting code from the Laravel bridge.
+`selectParallelly()` and `ClickHouse\Hypervel\Parallel` use Guzzle's curl multi handle. Under Swoole's native curl hook this runs inside the coroutine scheduler — covered by `tests/Hypervel/Feature/Integration/ParallelTest.php`, which runs inside a coroutine like every feature test. In most cases, prefer launching multiple coroutines with regular queries — the connection pool already gives you concurrency — and reserve `Parallel` for porting code from the Laravel bridge.
 
 ## Testing
 
