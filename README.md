@@ -141,16 +141,24 @@ $results = Parallel::get([
 ## Testing
 
 ```bash
-composer test
+make up      # start ClickHouse in Docker (or point phpunit.xml at your own server)
+make test    # Core + Laravel suites
 ```
 
-Tests require a ClickHouse server running on `127.0.0.1:8123`. See [phpunit.xml.dist](phpunit.xml.dist) for configuration.
+`make test-all` additionally runs the Hypervel bridge suite in a Swoole
+container. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development
+workflow.
 
 ```bash
 composer phpstan   # Static analysis
 composer cs        # Code style check
 composer cs:fix    # Fix code style
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) — including how the Laravel and
+Hypervel bridges share one core, and what that means for tests.
 
 ## License
 
