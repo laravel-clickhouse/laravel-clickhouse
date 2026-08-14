@@ -161,18 +161,18 @@ jobs:
           docker-php-ext-install -j"$(nproc)" intl pcntl > /dev/null
           echo "swoole.use_shortname=Off" > /usr/local/etc/php/conf.d/99-swoole-shortname.ini
 
-      # symfony/yaml and fakerphp/faker are soft dependencies of Hypervel's
-      # testbench (config loading and the WithFaker trait) that
-      # hypervel/components does not require itself. PHPUnit must be 13+:
-      # RunTestsInCoroutine overrides invokeTestMethod(), which only exists
-      # since PHPUnit 13 — on 11 the per-test coroutine wrapper silently
-      # never runs and RefreshDatabase transactions are skipped.
+      # The Hypervel toolchain lives in environments/hypervel — the same
+      # manifest contributors use via `make test-hypervel` — because
+      # hypervel/components conflicts with orchestra/testbench and needs
+      # PHPUnit 13+ (RunTestsInCoroutine overrides invokeTestMethod(),
+      # which only exists since PHPUnit 13 — on 11 the per-test coroutine
+      # wrapper silently never runs). The root vendor still provides the
+      # phpstan/phpunit binaries for the framework-free core suites.
       - name: Install dependencies
         run: |
-          composer config minimum-stability dev
-          composer remove illuminate/database orchestra/testbench --dev --no-update
-          composer require "hypervel/components:${{ matrix.hypervel }}" "symfony/yaml:^8.1" "fakerphp/faker:^1.23" "phpunit/phpunit:^13.0.3" --dev --no-update
-          COMPOSER_MEMORY_LIMIT=-1 composer update --prefer-dist -n -o
+          composer update --prefer-dist -n -o
+          composer require "hypervel/components:${{ matrix.hypervel }}" --no-update --working-dir=environments/hypervel
+          COMPOSER_MEMORY_LIMIT=-1 composer update --prefer-dist -n -o --working-dir=environments/hypervel
 
       - name: Execute tests
         env:
@@ -181,5 +181,5 @@ jobs:
           vendor/bin/phpstan analyse --memory-limit=-1
           vendor/bin/phpstan analyse -c phpstan.hypervel.neon --memory-limit=-1
           vendor/bin/phpunit --testsuite=Core-Unit,Core-Feature
-          vendor/bin/phpunit --testsuite=Hypervel-Unit
-          vendor/bin/phpunit --testsuite=Hypervel-Feature
+          environments/hypervel/vendor/bin/phpunit --configuration phpunit.xml.dist --bootstrap environments/hypervel/vendor/autoload.php --testsuite=Hypervel-Unit
+          environments/hypervel/vendor/bin/phpunit --configuration phpunit.xml.dist --bootstrap environments/hypervel/vendor/autoload.php --testsuite=Hypervel-Feature
