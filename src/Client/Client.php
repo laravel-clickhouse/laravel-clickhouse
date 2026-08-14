@@ -12,6 +12,10 @@ class Client
 
     protected Escaper $escaper;
 
+    protected ?string $sessionId = null;
+
+    protected ?int $sessionTimeout = null;
+
     public function __construct(
         protected string $host,
         protected int $port,
@@ -68,7 +72,19 @@ class Client
 
     public function getTransport(): Transport
     {
-        return $this->transportFactory->make($this->transport);
+        return $this->transportFactory->make($this->transport, $this->sessionId, $this->sessionTimeout);
+    }
+
+    public function startSession(string $sessionId, int $sessionTimeout): void
+    {
+        $this->sessionId = $sessionId;
+        $this->sessionTimeout = $sessionTimeout;
+    }
+
+    public function endSession(): void
+    {
+        $this->sessionId = null;
+        $this->sessionTimeout = null;
     }
 
     public function getEscaper(): Escaper

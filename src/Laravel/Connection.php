@@ -14,6 +14,7 @@ use Closure;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Str;
 use LogicException;
 use RuntimeException;
 
@@ -28,6 +29,10 @@ class Connection extends BaseConnection
      * The value escaper.
      */
     protected Escaper $escaper;
+
+    protected ?string $sessionId = null;
+
+    protected ?int $sessionTimeout = null;
 
     /**
      * Create a new database connection instance.
@@ -269,6 +274,37 @@ class Connection extends BaseConnection
     public function getClient(): Client
     {
         return $this->client;
+    }
+
+    /**
+     * Execute the callback using a ClickHouse HTTP session.
+     *
+     * @param  Closure(static): mixed  $callback
+     */
+    public function session(Closure $callback, int $sessionTimeout = 60): mixed
+    {
+        if ($sessionTimeout < 1) {
+            throw new LogicException('The ClickHouse session timeout must be greater than zero.');
+        }
+
+        $previousSessionId = $this->sessionId;
+        $previousSessionTimeout = $this->sessionTimeout;
+        $this->sessionId = (string) Str::uuid();
+        $this->sessionTimeout = $sessionTimeout;
+        $this->client->startSession($this->sessionId, $sessionTimeout);
+
+        try {
+            return $callback($this);
+        } finally {
+            $this->sessionId = $previousSessionId;
+            $this->sessionTimeout = $previousSessionTimeout;
+
+            if ($previousSessionId === null) {
+                $this->client->endSession();
+            } else {
+                $this->client->startSession($previousSessionId, $previousSessionTimeout ?? 60);
+            }
+        }
     }
 
     /** {@inheritDoc} */

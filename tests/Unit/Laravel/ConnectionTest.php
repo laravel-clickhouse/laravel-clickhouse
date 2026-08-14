@@ -11,6 +11,7 @@ use ClickHouse\Laravel\Connection;
 use ClickHouse\Tests\Unit\TestCase;
 use Exception;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Str;
 use LogicException;
 use PDO;
 
@@ -35,6 +36,29 @@ class ConnectionTest extends TestCase
         $actual = $connection->select($query, $bindings);
 
         $this->assertEquals($expected, $actual);
+    }
+
+    public function testSessionRunsCallbackWithSessionAndRestoresClientState()
+    {
+        $client = $this->mock(Client::class);
+        $connection = new Connection(client: $client);
+
+        $client->shouldReceive('startSession')
+            ->withArgs(fn (string $sessionId, int $timeout) => Str::isUuid($sessionId) && $timeout === 120)
+            ->once();
+        $client->shouldReceive('endSession')->once();
+
+        $this->assertSame('result', $connection->session(
+            fn ($session) => $session === $connection ? 'result' : null,
+            120,
+        ));
+    }
+
+    public function testSessionRejectsNonPositiveTimeout()
+    {
+        $this->expectException(LogicException::class);
+
+        (new Connection(client: $this->mock(Client::class)))->session(fn () => null, 0);
     }
 
     public function testInsert()

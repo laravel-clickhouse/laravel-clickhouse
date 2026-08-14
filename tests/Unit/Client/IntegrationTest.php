@@ -38,6 +38,28 @@ class IntegrationTest extends TestCase
     }
 
     #[DataProvider('clientProvider')]
+    public function testTemporaryTableWorksWithinSession(Client $client): void
+    {
+        $client->startSession('integration-test-session', 120);
+
+        try {
+            $client->exec('DROP TEMPORARY TABLE IF EXISTS test_session_words');
+            $client->exec('CREATE TEMPORARY TABLE test_session_words (word String) ENGINE = Memory');
+            $client->exec("INSERT INTO test_session_words FORMAT TabSeparated\nhello\nworld");
+
+            $statement = $client->prepare('SELECT * FROM test_session_words ORDER BY word');
+            $statement->execute();
+
+            $this->assertSame([
+                ['word' => 'hello'],
+                ['word' => 'world'],
+            ], $statement->fetchAll());
+        } finally {
+            $client->endSession();
+        }
+    }
+
+    #[DataProvider('clientProvider')]
     public function testGuzzleParallelQueries(Client $client): void
     {
         $statements = [
