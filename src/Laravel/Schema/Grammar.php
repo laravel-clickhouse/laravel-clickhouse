@@ -61,20 +61,52 @@ class Grammar extends BaseGrammar
      * Compile the query to determine the columns.
      *
      * @param  string|null  $schema
-     * @param  string  $table
+     * @param  string|null  $table
      */
-    public function compileColumns($schema, $table): string
+    public function compileColumns($schema, $table = null): string
     {
+        [$schema, $table] = $this->splitSchemaAndTable($schema, $table);
+
         return sprintf(
             "SELECT name AS name, type AS type_name, type AS type, '' AS collation, "
             ."position(type, 'Nullable(') > 0 AS nullable, "
-            .'default_expression AS default, comment AS comment '
+            .'default_expression AS default, comment AS comment, '
+            .'0 AS auto_increment '
             .'FROM system.columns '
             .'WHERE database = %s AND table = %s '
             .'ORDER BY position ASC',
             $schema ? $this->quoteString($schema) : 'currentDatabase()',
             $this->quoteString($table)
         );
+    }
+
+    /**
+     * Compile the query to determine the indexes.
+     *
+     * ClickHouse has no conventional indexes: MergeTree's sparse primary key is
+     * not queryable through this contract, and data-skipping indices do not map
+     * onto Laravel's {name, columns, type, unique, primary} shape. The query
+     * therefore yields the expected columns but no rows, so consumers which
+     * introspect a connection get an empty result instead of an exception.
+     *
+     * @param  string|null  $schema
+     * @param  string|null  $table
+     */
+    public function compileIndexes($schema, $table = null): string
+    {
+        return "SELECT '' AS name, [] AS columns, '' AS type, 0 AS `unique`, 0 AS `primary` FROM system.one WHERE 1 = 0";
+    }
+
+    /**
+     * Normalize the arguments the Schema\Builder passes to compileColumns()
+     * and compileIndexes(). Laravel 11 passes the table alone; 12 and up pass
+     * the schema first, leaving the table in the second argument.
+     *
+     * @return array{0: string|null, 1: string}
+     */
+    private function splitSchemaAndTable(?string $schema, ?string $table): array
+    {
+        return $table === null ? [null, (string) $schema] : [$schema, $table];
     }
 
     /**
