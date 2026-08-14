@@ -1,5 +1,11 @@
 parameters:
   level: 9
+  # Hypervel lives in the isolated environment vendor (it conflicts with
+  # testbench in the root vendor) — bootstrap it so framework classes
+  # resolve. Install via: make test-hypervel (or composer update in that
+  # directory).
+  bootstrapFiles:
+    - environments/hypervel/vendor/autoload.php
   paths:
     # The core traits are analysed here in the context of the Hypervel
     # bridge classes; framework-free code lives in phpstan.neon and
