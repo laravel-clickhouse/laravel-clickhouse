@@ -18,22 +18,22 @@ class TransportFactory
         protected bool $https = false,
     ) {}
 
-    public function make(string $name): Transport
+    public function make(string $name, ?string $sessionId = null, ?int $sessionTimeout = null): Transport
     {
         return match ($name) {
-            'curl' => $this->createCurlTransport(),
-            'guzzle' => $this->createGuzzleTransport(),
+            'curl' => $this->createCurlTransport($sessionId, $sessionTimeout),
+            'guzzle' => $this->createGuzzleTransport($sessionId, $sessionTimeout),
             default => throw new InvalidArgumentException("Unsupported transport: [{$name}]"),
         };
     }
 
-    protected function createCurlTransport(): Transport
+    protected function createCurlTransport(?string $sessionId, ?int $sessionTimeout): Transport
     {
-        return new Curl($this->host, $this->port, $this->database, $this->username, $this->password, $this->https);
+        return new Curl($this->host, $this->port, $this->database, $this->username, $this->password, $this->https, sessionId: $sessionId, sessionTimeout: $sessionTimeout);
     }
 
-    protected function createGuzzleTransport(): Transport
+    protected function createGuzzleTransport(?string $sessionId, ?int $sessionTimeout): Transport
     {
-        return new Guzzle($this->host, $this->port, $this->database, $this->username, $this->password, $this->https);
+        return new Guzzle($this->host, $this->port, $this->database, $this->username, $this->password, $this->https, [], null, $sessionId, $sessionTimeout);
     }
 }

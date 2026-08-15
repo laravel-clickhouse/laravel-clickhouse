@@ -70,6 +70,29 @@ $results = DB::connection('clickhouse')
     ->get();
 ```
 
+### Temporary Tables
+
+ClickHouse temporary tables require all related HTTP requests to use the same
+session. Use `session()` to create a session for a group of queries:
+
+```php
+$results = DB::connection('clickhouse')->session(function ($connection) {
+    $connection->statement(
+        'CREATE TEMPORARY TABLE tmp_words (word String) ENGINE = Memory'
+    );
+
+    $connection->table('tmp_words')->insert([
+        'word' => 'clickhouse',
+    ]);
+
+    return $connection->table('tmp_words')->get();
+}, sessionTimeout: 120);
+```
+
+The package generates a UUID session ID and applies it to every query inside
+the callback. The session is cleared when the callback finishes, including
+when the callback throws an exception.
+
 ### Eloquent Model
 
 ```php

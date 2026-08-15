@@ -127,6 +127,31 @@ class ClientTest extends TestCase
         $this->assertEquals($transport, $client->getTransport());
     }
 
+    public function testSessionIsPassedToTransportFactory()
+    {
+        $factory = $this->mock(TransportFactory::class);
+        $transport = $this->mock(Transport::class);
+
+        $factory->shouldReceive('make')
+            ->with('curl', 'session-id', 120)
+            ->once()
+            ->andReturn($transport);
+
+        $client = new Client(
+            host: 'localhost',
+            port: 8123,
+            database: 'default',
+            username: 'default',
+            password: 'default',
+            transport: 'curl',
+            transportFactory: $factory,
+        );
+
+        $client->startSession('session-id', 120);
+
+        $this->assertSame($transport, $client->getTransport());
+    }
+
     private function getClient(?Transport $transport = null): Client
     {
         $factory = $this->mock(TransportFactory::class);
