@@ -1,10 +1,10 @@
 <?php
 
-namespace ClickHouse\Core\Testing;
+namespace ClickHouse\Laravel\Testing;
 
 /**
- * The `db:wipe` pre-pass shared by every framework bridge's testing traits,
- * and the single place documenting why that pre-pass exists.
+ * The `db:wipe` pre-pass used by the Laravel testing traits, and the single
+ * place documenting why that pre-pass exists.
  *
  * Each migration declares its target connection via `protected $connection`,
  * and `migrate:fresh` re-runs every registered migration on each invocation
@@ -12,8 +12,8 @@ namespace ClickHouse\Core\Testing;
  * `migrate:fresh --database=X` only drops tables on X (and even then only
  * when the migrations table already exists on X), so any other connection a
  * migration touches keeps its tables. Across test classes those leftover
- * tables stack up and the next `CREATE TABLE` collides. The bridge testing traits
- * therefore wipe every connection the class works with before the
+ * tables stack up and the next `CREATE TABLE` collides. The Laravel testing
+ * traits therefore wipe every connection the class works with before the
  * framework's `migrate:fresh`, each strategy picking its wipe targets and
  * cadence through the methods below:
  *
@@ -32,8 +32,8 @@ namespace ClickHouse\Core\Testing;
  *   {@see wipeConnectionsBeforeFirstMigration()}; between-test resets are
  *   handled by the truncation itself.
  *
- * The using trait must also use its framework's testing trait, whose
- * artisan() API this trait relies on, and bind the framework's
+ * The using trait must also use Laravel's testing trait, whose artisan() API
+ * this trait relies on, and bind Laravel's
  * RefreshDatabaseState via the REFRESH_DATABASE_STATE constant.
  */
 trait WipesClickHouseConnections

@@ -2,38 +2,24 @@
 
 namespace ClickHouse\Tests\Hypervel\Feature\Testing\Hybrid;
 
-use ClickHouse\Hypervel\Testing\DatabaseTruncation;
 use ClickHouse\Tests\Hypervel\Feature\Testing\Concerns\ResetsRefreshDatabaseState;
 use ClickHouse\Tests\Hypervel\Feature\Testing\Concerns\UsesSharedSqliteDatabase;
 use ClickHouse\Tests\Hypervel\Feature\Testing\SqliteWithClickHouseTestCase;
 use Hypervel\Foundation\Testing\DatabaseTransactions;
+use Hypervel\Foundation\Testing\DatabaseTruncation;
 use Hypervel\Support\Facades\DB;
 
 /**
- * Hybrid isolation: the framework's DatabaseTransactions rolls SQLite back
- * per test while the package's DatabaseTruncation truncates ClickHouse per
- * test — both connections reset with the same cadence, without the per-test
- * migrate:fresh cost of DatabaseMigrations.
+ * Use transactions for SQLite and truncation for ClickHouse so both
+ * connections reset after every test without rebuilding the schema.
  *
- * Where the SQLite schema comes from — since DatabaseTransactions never
- * runs migrations: DatabaseTruncation's first-run migrate:fresh does. The
- * two connection-list properties only pick each trait's per-test cleanup
- * targets; migrate:fresh ignores them and runs every registered migration
- * against whatever connection the migration declares. So sq_users lands on
- * sqlite even though sqlite is not in $connectionsToTruncate.
+ * DatabaseTransactions does not run migrations, so DatabaseTruncation owns
+ * the initial migrate:fresh for both connections. Each migration still runs
+ * against the connection it declares.
  *
- * The stacking is sound because the truncation setup (pre-wipe + one-time
- * migrate:fresh building both schemas) runs during setUp while the
- * transaction begin is deferred into the test coroutine, and
- * DatabaseTransactions never runs migrations itself, so the two traits'
- * lifecycles cannot collide.
- *
- * $connectionsToTruncate deliberately excludes sqlite: its per-test reset is
- * the rollback, and truncating it as well would only add redundant work. The
- * shared-database concern is still required — DatabaseTransactions preserves
- * no in-memory PDO (that machinery is RefreshDatabase-only), so the schema
- * built by the one-time migrate:fresh must survive the per-test pool flush
- * on its own.
+ * SQLite is not truncated because its transaction supplies isolation. The
+ * shared database concern keeps its in-memory schema alive across pool
+ * flushes because DatabaseTransactions does not preserve the PDO.
  */
 class SqliteTransactionsWithClickHouseTruncationTest extends SqliteWithClickHouseTestCase
 {

@@ -2,17 +2,14 @@
 
 namespace ClickHouse\Tests\Hypervel\Feature\Testing\RefreshDatabase;
 
-use ClickHouse\Hypervel\Testing\RefreshDatabase;
 use ClickHouse\Tests\Hypervel\Feature\Testing\Concerns\ResetsRefreshDatabaseState;
 use ClickHouse\Tests\Hypervel\Feature\Testing\SqliteOnlyTestCase;
+use Hypervel\Foundation\Testing\RefreshDatabase;
 use Hypervel\Support\Facades\DB;
 
 /**
- * Regression guard: the package's RefreshDatabase wrapper preserves the
- * framework behaviour on a pure-SQLite class — bare `:memory:` schema built
- * once, each test's writes rolled back. The wrapper's pre-wipe still runs
- * (its derived target here is just the sqlite default connection), so this
- * pins that the extension adds nothing destructive on top.
+ * RefreshDatabase preserves the in-memory SQLite schema and rolls back each
+ * test's writes.
  */
 class SqliteOnlyTest extends SqliteOnlyTestCase
 {

@@ -2,10 +2,9 @@
 
 namespace ClickHouse\Tests\Hypervel\Feature\Testing\DatabaseTruncation;
 
-use ClickHouse\Hypervel\Testing\DatabaseTruncation;
 use ClickHouse\Tests\Hypervel\Feature\Testing\Concerns\ResetsRefreshDatabaseState;
-use ClickHouse\Tests\Hypervel\Feature\Testing\Concerns\UsesSharedSqliteDatabase;
 use ClickHouse\Tests\Hypervel\Feature\Testing\SqliteWithClickHouseTestCase;
+use Hypervel\Foundation\Testing\DatabaseTruncation;
 use Hypervel\Support\Facades\DB;
 
 /**
@@ -16,7 +15,6 @@ class SqliteWithClickHouseTest extends SqliteWithClickHouseTestCase
 {
     use DatabaseTruncation;
     use ResetsRefreshDatabaseState;
-    use UsesSharedSqliteDatabase;
 
     public function testRound1InsertsIntoBothConnections(): void
     {
