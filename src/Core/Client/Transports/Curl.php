@@ -21,6 +21,7 @@ class Curl implements Transport
         protected string $password,
         protected bool $https = false,
         ?Client $client = null,
+        protected ?float $connectTimeout = null,
     ) {
         $this->client = $client ?? $this->getDefaultClient();
     }
@@ -69,6 +70,10 @@ class Curl implements Transport
         ]);
 
         $client->database($this->database);
+
+        if ($this->connectTimeout !== null) {
+            $client->setConnectTimeOut($this->connectTimeout);
+        }
 
         return $client;
     }
