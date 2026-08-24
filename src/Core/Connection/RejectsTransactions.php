@@ -62,6 +62,14 @@ trait RejectsTransactions
         $this->throwUnsupportedTransaction();
     }
 
+    /**
+     * Determine if a transaction is currently active.
+     */
+    public function inTransaction(): bool
+    {
+        return false;
+    }
+
     private function throwUnsupportedTransaction(): never
     {
         throw new LogicException('Transactions are not supported when using ClickHouse.');

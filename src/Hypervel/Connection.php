@@ -11,13 +11,12 @@ use ClickHouse\Hypervel\Query\Builder as QueryBuilder;
 use ClickHouse\Hypervel\Query\Grammar as QueryGrammar;
 use ClickHouse\Hypervel\Schema\Builder as SchemaBuilder;
 use ClickHouse\Hypervel\Schema\Grammar as SchemaGrammar;
-use Generator;
 use Hypervel\Database\Connection as BaseConnection;
 use Hypervel\Database\QueryException;
-use Hypervel\Database\Schema\SchemaState;
 use Hypervel\Filesystem\Filesystem;
-use PDO;
+use LogicException;
 use RuntimeException;
+use Swoole\Coroutine\CanceledException;
 use Throwable;
 
 class Connection extends BaseConnection implements ClickHouseConnection
@@ -37,21 +36,17 @@ class Connection extends BaseConnection implements ClickHouseConnection
      *     password?: string,
      *     transport?: string,
      *     https?: bool,
+     *     connect_timeout?: float|int|numeric-string|null,
      * }  $config
      */
     public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null, ?Escaper $escaper = null)
     {
-        $this->client = $client ?? $this->getDefaultClient($database ?: 'default', $config);
+        $database = $database ?: 'default';
+
+        $this->client = $client ?? $this->getDefaultClient($database, $config);
         $this->escaper = $escaper ?? new Escaper;
 
-        parent::__construct(
-            static function (): never {
-                throw new RuntimeException('ClickHouse connections do not use PDO; use getClient() instead.');
-            },
-            $database ?: 'default',
-            $tablePrefix,
-            $config
-        );
+        parent::__construct($database, $tablePrefix, $config);
     }
 
     /** {@inheritDoc} */
@@ -76,22 +71,6 @@ class Connection extends BaseConnection implements ClickHouseConnection
      * {@inheritDoc}
      *
      * @param  mixed[]  $bindings
-     * @param  array<mixed>  $fetchUsing
-     * @return Generator<int, array<string, mixed>>
-     */
-    public function cursor(string $query, array $bindings = [], bool $useReadPdo = true, array $fetchUsing = []): Generator
-    {
-        $records = $this->select($query, $bindings, $useReadPdo);
-
-        foreach ($records as $record) {
-            yield $record;
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param  mixed[]  $bindings
      */
     public function statement(string $query, array $bindings = []): bool
     {
@@ -109,61 +88,21 @@ class Connection extends BaseConnection implements ClickHouseConnection
     }
 
     /**
-     * {@inheritDoc}
-     *
-     * The parent natively type-hints PDOStatement; the ClickHouse bridge
-     * binds values onto the HTTP client's Statement instead, so the
-     * parameter is widened here.
-     *
-     * @param  mixed  $statement
-     * @param  mixed[]  $bindings
-     */
-    public function bindValues($statement, array $bindings): void
-    {
-        foreach ($bindings as $key => $value) {
-            $statement->bindValue(
-                is_string($key) ? $key : $key + 1,
-                $value
-            );
-        }
-    }
-
-    /** {@inheritDoc} */
-    public function getPdo(): PDO
-    {
-        throw new RuntimeException('ClickHouse connections do not use PDO; use getClient() instead.');
-    }
-
-    /** {@inheritDoc} */
-    public function getReadPdo(): PDO
-    {
-        throw new RuntimeException('ClickHouse connections do not use PDO; use getClient() instead.');
-    }
-
-    /** {@inheritDoc} */
-    public function reconnect(): mixed
-    {
-        $this->client = $this->getDefaultClient($this->database, $this->getClickHouseConfig());
-
-        return null;
-    }
-
-    /** {@inheritDoc} */
-    public function reconnectIfMissingConnection(): void {}
-
-    /** {@inheritDoc} */
-    public function disconnect(): void {}
-
-    /**
      * Determine whether the ClickHouse server is reachable.
      */
     public function ping(): bool
     {
+        if (! $this->client instanceof Client) {
+            return false;
+        }
+
         try {
             $statement = $this->client->prepare('SELECT 1');
             $statement->execute();
 
             return true;
+        } catch (CanceledException $exception) {
+            throw $exception;
         } catch (Throwable) {
             return false;
         }
@@ -182,7 +121,7 @@ class Connection extends BaseConnection implements ClickHouseConnection
     /**
      * Get the schema state for the connection.
      */
-    public function getSchemaState(?Filesystem $files = null, ?callable $processFactory = null): SchemaState
+    public function getSchemaState(?Filesystem $files = null, ?callable $processFactory = null): never
     {
         throw new RuntimeException('Schema dumping is not supported when using ClickHouse.');
     }
@@ -200,20 +139,70 @@ class Connection extends BaseConnection implements ClickHouseConnection
     }
 
     /**
-     * Narrow the untyped config array to the ClickHouse client options.
-     *
-     * @return array{
-     *     host?: string,
-     *     port?: int,
-     *     username?: string,
-     *     password?: string,
-     *     transport?: string,
-     *     https?: bool,
-     * }
+     * Get the default database driver name.
      */
-    protected function getClickHouseConfig(): array
+    protected function getDefaultDriverName(): string
     {
-        // @phpstan-ignore-next-line
-        return $this->config;
+        return 'clickhouse';
+    }
+
+    /**
+     * Determine whether the connection has driver resources.
+     */
+    protected function hasDriverResources(): bool
+    {
+        return $this->client instanceof Client;
+    }
+
+    /**
+     * Disconnect the driver resources.
+     */
+    protected function disconnectDriverResources(): void
+    {
+        // The logical client owns no persistent transport to close.
+        $this->forgetDriverResources();
+    }
+
+    /**
+     * Forget the driver resources without performing physical cleanup.
+     */
+    protected function forgetDriverResources(): void
+    {
+        $this->client = null;
+    }
+
+    /**
+     * Refresh the driver resources from a fresh connection.
+     */
+    protected function replaceDriverResources(BaseConnection $fresh): void
+    {
+        /** @var self $fresh */
+        if (! $fresh->client instanceof Client) {
+            throw new LogicException('The fresh ClickHouse connection has no client.');
+        }
+
+        $client = $fresh->client;
+        $database = $fresh->database;
+        $configuredDatabase = $fresh->configuredDatabase;
+        $tablePrefix = $fresh->tablePrefix;
+        $configuredTablePrefix = $fresh->configuredTablePrefix;
+        $config = $fresh->config;
+        $readConnectionConfig = $fresh->readConnectionConfig;
+        $readWriteType = $fresh->readWriteType;
+
+        try {
+            $this->disconnect();
+        } finally {
+            // A cleanup failure must not leave the old resource generation attached.
+            $this->client = $client;
+            $this->database = $database;
+            $this->configuredDatabase = $configuredDatabase;
+            $this->tablePrefix = $tablePrefix;
+            $this->configuredTablePrefix = $configuredTablePrefix;
+            $this->config = $config;
+            $this->readConnectionConfig = $readConnectionConfig;
+            $this->readWriteType = $readWriteType;
+            $this->latestReadWriteTypeRetrieved = null;
+        }
     }
 }

@@ -6,6 +6,10 @@ use ClickHouse\Core\Client\Client;
 use ClickHouse\Core\Client\Statement;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
 use ClickHouse\Core\Support\Escaper;
+use Generator;
+use InvalidArgumentException;
+use LogicException;
+use Throwable;
 
 /**
  * ClickHouse HTTP client integration shared by every framework bridge.
@@ -17,7 +21,7 @@ trait InteractsWithClickHouseClient
     /**
      * The ClickHouse client.
      */
-    protected Client $client;
+    protected ?Client $client = null;
 
     /**
      * The value escaper.
@@ -37,21 +41,35 @@ trait InteractsWithClickHouseClient
      */
     public function selectParallelly(array $queries): array
     {
-        $statements = array_map(function ($query) {
+        $client = $this->pretending() ? null : $this->getClient();
+        $statements = [];
+        $results = [];
+
+        foreach ($queries as $key => $query) {
             foreach ($this->beforeExecutingCallbacks as $beforeExecutingCallback) {
                 $beforeExecutingCallback($query['sql'], $query['bindings'], $this);
             }
 
-            $statement = $this->client->prepare($query['sql']);
+            if ($client === null) {
+                $this->logQuery($query['sql'], $query['bindings']);
+                $results[$key] = [];
 
-            // @phpstan-ignore-next-line
+                continue;
+            }
+
+            $statement = $client->prepare($query['sql']);
+
             $this->bindValues($statement, $this->prepareBindings($query['bindings']));
 
-            return $statement;
-        }, $queries);
+            $statements[$key] = $statement;
+        }
+
+        if ($client === null) {
+            return $results;
+        }
 
         try {
-            $this->client->parallel($statements);
+            $client->parallel($statements);
         } catch (ParallelQueryException $e) {
             $errors = [];
 
@@ -65,8 +83,6 @@ trait InteractsWithClickHouseClient
 
             throw new ParallelQueryException($e->getResponses(), $errors);
         }
-
-        $results = [];
 
         foreach ($statements as $key => $statement) {
             $this->logQuery($queries[$key]['sql'], $queries[$key]['bindings']);
@@ -93,6 +109,52 @@ trait InteractsWithClickHouseClient
     }
 
     /**
+     * Run a select statement and yield each result.
+     *
+     * @param  string  $query
+     * @param  mixed[]  $bindings
+     * @param  bool  $useReadPdo
+     * @param  array<mixed>  $fetchUsing
+     * @return Generator<int, array<string, mixed>>
+     */
+    // Laravel documents PDO cursor rows as stdClass, but ClickHouse returns associative arrays.
+    // @phpstan-ignore method.childReturnType
+    public function cursor($query, $bindings = [], $useReadPdo = true, array $fetchUsing = []): Generator
+    {
+        foreach ($this->select($query, $bindings, $useReadPdo, $fetchUsing) as $record) {
+            yield $record;
+        }
+    }
+
+    /**
+     * Run a raw, unprepared query against the connection.
+     *
+     * @param  literal-string  $query
+     */
+    public function unprepared($query): bool
+    {
+        return $this->statement((string) $query);
+    }
+
+    /**
+     * Bind values to their positional parameters.
+     *
+     * @param  mixed  $statement
+     * @param  mixed[]  $bindings
+     */
+    public function bindValues($statement, $bindings): void
+    {
+        foreach ($bindings as $key => $value) {
+            if (! is_int($key)) {
+                throw new InvalidArgumentException('ClickHouse only supports positional bindings.');
+            }
+
+            /** @var Statement $statement */
+            $statement->bindValue($key + 1, $value);
+        }
+    }
+
+    /**
      * {@inheritDoc}
      *
      * @param  mixed  $value
@@ -104,22 +166,54 @@ trait InteractsWithClickHouseClient
     }
 
     /**
-     * Get the ClickHouse client
+     * Get the last insert ID.
+     */
+    public function getLastInsertId(?string $sequence = null): never
+    {
+        throw new LogicException('ClickHouse does not support retrieving last insert IDs.');
+    }
+
+    /**
+     * Get a human-readable name for the connection driver.
+     */
+    public function getDriverTitle(): string
+    {
+        return 'ClickHouse';
+    }
+
+    /**
+     * Get the server version for the connection.
+     */
+    public function getServerVersion(): string
+    {
+        /** @var string $version */
+        $version = $this->scalar('SELECT version()');
+
+        return $version;
+    }
+
+    /**
+     * Get the ClickHouse client.
      */
     public function getClient(): Client
     {
-        return $this->client;
+        if (! $this->client instanceof Client) {
+            $this->reconnectIfMissingConnection();
+        }
+
+        return $this->client
+            ?? throw new LogicException('The ClickHouse connection has no client.');
     }
 
     /**
      * Create a framework-specific query exception for a failed parallel query.
      */
-    protected function newQueryException(string $sql, mixed $bindings, \Throwable $error): \Throwable
+    protected function newQueryException(string $sql, mixed $bindings, Throwable $error): Throwable
     {
         $exception = static::QUERY_EXCEPTION;
 
         // @phpstan-ignore-next-line
-        return new $exception($this->getName() ?: '', $sql, $bindings, $error);
+        return new $exception($this->getName(), $sql, $bindings, $error);
     }
 
     /**
@@ -164,9 +258,12 @@ trait InteractsWithClickHouseClient
      */
     protected function runSelectStatement(string $query, array $bindings): array
     {
-        $statement = $this->client->prepare($query);
+        if ($this->pretending()) {
+            return [];
+        }
 
-        // @phpstan-ignore-next-line
+        $statement = $this->getClient()->prepare($query);
+
         $this->bindValues($statement, $this->prepareBindings($bindings));
 
         $statement->execute();
@@ -182,10 +279,15 @@ trait InteractsWithClickHouseClient
      */
     protected function runStatement(string $query, array $bindings): bool
     {
-        $statement = $this->client->prepare($query);
+        if ($this->pretending()) {
+            return true;
+        }
 
-        // @phpstan-ignore-next-line
+        $statement = $this->getClient()->prepare($query);
+
         $this->bindValues($statement, $this->prepareBindings($bindings));
+
+        $this->recordsHaveBeenModified();
 
         return $statement->execute();
     }
@@ -197,9 +299,12 @@ trait InteractsWithClickHouseClient
      */
     protected function runAffectingStatement(string $query, array $bindings): int
     {
-        $statement = $this->client->prepare($query);
+        if ($this->pretending()) {
+            return 0;
+        }
 
-        // @phpstan-ignore-next-line
+        $statement = $this->getClient()->prepare($query);
+
         $this->bindValues($statement, $this->prepareBindings($bindings));
 
         $statement->execute();
@@ -207,7 +312,11 @@ trait InteractsWithClickHouseClient
         // ClickHouse reports no written_rows in X-ClickHouse-Summary for
         // DELETE / ALTER TABLE mutations (verified on 24.x and 25.x), so
         // rowCount() is null there; the framework contract requires an int.
-        return $statement->rowCount() ?? 0;
+        $count = $statement->rowCount() ?? 0;
+
+        $this->recordsHaveBeenModified($count > 0);
+
+        return $count;
     }
 
     /**
@@ -216,9 +325,25 @@ trait InteractsWithClickHouseClient
      */
     protected function runFormattedInsert(string $query, string $payload): bool
     {
-        $this->client->getTransport()->execute($query."\n".$payload);
+        if ($this->pretending()) {
+            return true;
+        }
+
+        $this->recordsHaveBeenModified();
+
+        $this->getClient()->getTransport()->execute($query."\n".$payload);
 
         return true;
+    }
+
+    /**
+     * Escape a string value for safe SQL embedding.
+     *
+     * @param  string  $value
+     */
+    protected function escapeString($value): string
+    {
+        return $this->escaper->escapeString($value);
     }
 
     /**
@@ -231,6 +356,7 @@ trait InteractsWithClickHouseClient
      *     password?: string,
      *     transport?: string,
      *     https?: bool,
+     *     connect_timeout?: float|int|numeric-string|null,
      * }  $config
      */
     protected function getDefaultClient(string $database, array $config): Client
@@ -243,6 +369,7 @@ trait InteractsWithClickHouseClient
             password: $config['password'] ?? 'default',
             transport: $config['transport'] ?? 'guzzle',
             https: $config['https'] ?? false,
+            connectTimeout: isset($config['connect_timeout']) ? (float) $config['connect_timeout'] : null,
         );
     }
 }

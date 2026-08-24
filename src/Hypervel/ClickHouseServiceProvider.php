@@ -12,19 +12,23 @@ class ClickHouseServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        Connection::resolverFor('clickhouse', static function ($pdo, string $database, string $tablePrefix, array $config) {
-            // @phpstan-ignore-next-line
-            return new Connection($database, $tablePrefix, $config);
-        });
+        $this->app->make('db')->extend(
+            'clickhouse',
+            static fn (array $config, ?string $name): Connection => new Connection(
+                database: $config['database'] ?? 'default',
+                tablePrefix: $config['prefix'],
+                config: $config,
+            ),
+        );
 
         $this->app->singleton('migration.repository', function ($app) {
-            $migrations = $app['config']['database.migrations'];
+            $migrations = $app->make('config')->get('database.migrations');
 
             $table = is_array($migrations)
                 ? ($migrations['table'] ?? 'migrations')
                 : $migrations;
 
-            return new DatabaseMigrationRepository($app['db'], $table);
+            return new DatabaseMigrationRepository($app->make('db'), $table);
         });
     }
 }

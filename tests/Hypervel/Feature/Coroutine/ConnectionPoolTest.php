@@ -13,9 +13,8 @@ use Hypervel\Support\Facades\DB;
 /**
  * Hypervel-specific (no Laravel mirror): pins the pooled-connection design
  * decisions the Hypervel bridge is built on — each pooled slot carries its
- * own HTTP client, coroutines run queries concurrently, the pool heartbeat
- * is a no-op for the PDO-less connection, and reconnect() replaces the
- * HTTP client.
+ * own HTTP client, coroutines run queries concurrently, pool health checks
+ * query ClickHouse, and reconnect() replaces the HTTP client.
  *
  * The pool-level assertions borrow slots straight from PoolFactory: the
  * testing lifecycle swaps in DatabaseConnectionResolver, whose
@@ -109,9 +108,9 @@ class ConnectionPoolTest extends TestCase
         $this->assertInstanceOf(Connection::class, $connection);
 
         $original = $connection->getClient();
+        $reconnected = DB::reconnect('clickhouse');
 
-        $connection->reconnect();
-
+        $this->assertSame($connection, $reconnected);
         $this->assertInstanceOf(Client::class, $connection->getClient());
         $this->assertNotSame($original, $connection->getClient());
 
@@ -125,5 +124,48 @@ class ConnectionPoolTest extends TestCase
         $this->assertInstanceOf(Connection::class, $connection);
 
         $this->assertTrue($connection->ping());
+    }
+
+    public function testPoolHeartbeatProbesClickHouse(): void
+    {
+        $pool = $this->app->get(PoolFactory::class)->getPool('clickhouse');
+        $pooledConnection = $pool->get();
+
+        try {
+            $this->assertTrue($pooledConnection->ping(1.0));
+        } finally {
+            $pooledConnection->release();
+        }
+    }
+
+    public function testPoolReleaseRetainsTheClientAndRestoresConfiguredMetadata(): void
+    {
+        $pool = $this->app->get(PoolFactory::class)->getPool('clickhouse');
+        $pooledConnection = $pool->get();
+        $connection = $pooledConnection->getConnection();
+        $client = $connection->getClient();
+        $connection->setDatabaseName('temporary');
+        $connection->setTablePrefix('temporary_');
+        $connection->enableQueryLog();
+        $connection->recordsHaveBeenModified();
+
+        $pooledConnection->release();
+
+        $reusedPooledConnection = $pool->get();
+
+        try {
+            $this->assertSame($pooledConnection, $reusedPooledConnection);
+
+            $reusedConnection = $reusedPooledConnection->getConnection();
+
+            $this->assertSame($connection, $reusedConnection);
+            $this->assertSame($client, $reusedConnection->getClient());
+            $this->assertSame('default', $reusedConnection->getDatabaseName());
+            $this->assertSame('', $reusedConnection->getTablePrefix());
+            $this->assertFalse($reusedConnection->logging());
+            $this->assertFalse($reusedConnection->hasModifiedRecords());
+        } finally {
+            $reusedPooledConnection->release();
+        }
     }
 }

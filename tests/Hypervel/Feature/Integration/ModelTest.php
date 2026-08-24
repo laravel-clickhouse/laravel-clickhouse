@@ -76,7 +76,7 @@ class ModelTest extends TestCase
 
     public function testRelationWithSQLite()
     {
-        $sqliteSchema = $this->app['db']->connection('sqlite')->getSchemaBuilder();
+        $sqliteSchema = $this->app->make('db')->connection('sqlite')->getSchemaBuilder();
 
         $sqliteSchema->create('model_sqlite_test', function (Blueprint $table) {
             $table->unsignedInteger('id');
