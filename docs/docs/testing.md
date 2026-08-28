@@ -343,10 +343,32 @@ your migrations. Its `migrate:fresh` command wipes each existing target before
 running the migrations, so no `$connectionsToMigrate` property or package
 testing trait is needed.
 
-`DatabaseTruncation` still uses `$connectionsToTruncate` to choose which
-connections are cleared between tests. It preserves a bare in-memory SQLite
-database when SQLite is one of those connections, so this combined setup works
-without a keepalive connection:
+When your application uses SQLite for application data and ClickHouse for
+analytical data, combine `RefreshDatabase` with `DatabaseTruncation`:
+
+```php
+use Hypervel\Foundation\Testing\DatabaseTruncation;
+use Hypervel\Foundation\Testing\RefreshDatabase;
+
+class AnalyticsTest extends TestCase
+{
+    use DatabaseTruncation;
+    use RefreshDatabase;
+
+    protected array $connectionsToTransact = ['sqlite'];
+
+    protected array $connectionsToTruncate = ['clickhouse'];
+}
+```
+
+`RefreshDatabase` runs the initial migrations, retains the bare in-memory
+SQLite connection, and rolls SQLite back after each test. `DatabaseTruncation`
+clears ClickHouse independently. No shared-cache URI or keepalive connection is
+needed. Keep the two connection lists separate so each connection has one
+reset strategy.
+
+`DatabaseTruncation` may also clear both connections. It preserves a bare
+in-memory SQLite database when SQLite is one of its truncation targets:
 
 ```php
 use Hypervel\Foundation\Testing\DatabaseTruncation;
@@ -359,14 +381,9 @@ class AnalyticsTest extends TestCase
 }
 ```
 
-Do not place ClickHouse in `$connectionsToTransact`. ClickHouse does not
-support transactions, and the connection throws `LogicException` from the
-transaction methods. `RefreshDatabase` and `DatabaseTransactions` may only
-wrap transactional connections.
-
-When SQLite should use transactions and ClickHouse should use truncation, you
-may combine `DatabaseTransactions` with `DatabaseTruncation` and keep their
-connection lists separate:
+You may also combine `DatabaseTransactions` with `DatabaseTruncation`. In this
+arrangement, `DatabaseTruncation` runs the initial migrations while
+`DatabaseTransactions` rolls SQLite back after each test:
 
 ```php
 use Hypervel\Foundation\Testing\DatabaseTransactions;
@@ -383,13 +400,19 @@ class AnalyticsTest extends TestCase
 }
 ```
 
-In this arrangement, `DatabaseTruncation` runs the initial migrations for both
-connections while `DatabaseTransactions` rolls SQLite back after each test. A
-bare `:memory:` SQLite database is not retained because SQLite is not a
-truncation target. Use a file-backed database or the [shared-cache URI and
-keepalive PDO](#last-resort-truncating-sqlite-too-shared-connection-memory)
+A bare `:memory:` SQLite database is not retained in this arrangement because
+SQLite is not a truncation target. Use a file-backed database or the
+[shared-cache URI and keepalive PDO](#last-resort-truncating-sqlite-too-shared-connection-memory)
 described above.
 
-Do not combine `DatabaseTruncation` with `RefreshDatabase` or
-`DatabaseMigrations`. Each of those traits owns the migration lifecycle, so a
-single test class should use only one of them.
+Do not place ClickHouse in `$connectionsToTransact`. ClickHouse does not
+support transactions, and the connection throws `LogicException` from the
+transaction methods. `RefreshDatabase` and `DatabaseTransactions` may only
+wrap transactional connections.
+
+`DatabaseTruncation` cannot be combined with `DatabaseMigrations` or
+`LazilyRefreshDatabase`. Automatic `$seed` and `$seeder` properties are also
+unavailable when reset strategies are combined. Seed transacting connections
+from `afterRefreshingDatabase`, or from `setUpInCoroutine` when using
+`DatabaseTransactions`. Seed truncated connections from
+`afterTruncatingDatabase`.
