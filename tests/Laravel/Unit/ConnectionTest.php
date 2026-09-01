@@ -274,6 +274,23 @@ class ConnectionTest extends TestCase
         $this->assertTrue($connection->hasModifiedRecords());
     }
 
+    public function testConfiglessQueryFailureRetainsItsOriginalExceptionAndNullableConnectionName()
+    {
+        $failure = new RuntimeException('query failed');
+        $client = $this->mock(Client::class);
+        $connection = new Connection(client: $client);
+
+        $client->shouldReceive('prepare')->with($query = 'select 1')->once()->andThrow($failure);
+
+        try {
+            $connection->select($query);
+            $this->fail('Expected query execution to fail.');
+        } catch (QueryException $exception) {
+            $this->assertNull($exception->connectionName);
+            $this->assertSame($failure, $exception->getPrevious());
+        }
+    }
+
     public function testDeleteWithoutAffectedRowsSummary()
     {
         $client = $this->mock(Client::class);
@@ -364,6 +381,14 @@ class ConnectionTest extends TestCase
             $this->assertInstanceOf(QueryException::class, $e->getErrors()['b']);
             $this->assertSame('0', $e->getErrors()['b']->connectionName);
         }
+    }
+
+    public function testReportsDefaultAndConfiguredDriverNames()
+    {
+        $client = $this->mock(Client::class);
+
+        $this->assertSame('clickhouse', (new Connection(client: $client))->getDriverName());
+        $this->assertSame('analytics', (new Connection(config: ['driver' => 'analytics'], client: $client))->getDriverName());
     }
 
     public function testReportsDriverTitleAndServerVersion()
