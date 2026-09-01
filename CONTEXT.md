@@ -13,11 +13,11 @@ classes and core traits.
 **Standalone (core tier)**:
 Core classes that work without any framework installed: the HTTP client
 (`Core\Client`), enums, exceptions and support utilities. The default PHPStan
-configuration can analyze them on their own.
+configuration can analyse them on their own.
 
 **Core trait (core tier)**:
 A trait or contract in `ClickHouse\Core\*` that carries the shared
-implementation (SQL compilation, schema DDL, connection client behavior, ...)
+implementation (SQL compilation, schema DDL, connection client behaviour, ...)
 and only takes effect when mounted onto a bridge class.
 _Avoid_: bridge trait (they live in core, not in a bridge)
 

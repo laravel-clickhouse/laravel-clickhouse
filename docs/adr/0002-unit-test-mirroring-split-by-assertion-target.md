@@ -3,7 +3,7 @@
 Mounting one core trait onto two framework parents creates two execution
 paths, but mirroring every unit test would duplicate ~300 SQL-compilation
 scenarios for little return. The line is the assertion target: a test that
-asserts **behavior** (exception type/message, return value/type, execution
+asserts **behaviour** (exception type/message, return value/type, execution
 dispatch) must exist in both bridges' unit suites — parent differences act
 exactly there; a test that asserts **compiled SQL output** (string in,
 string out) is written once, in the Laravel unit suite — the compilation

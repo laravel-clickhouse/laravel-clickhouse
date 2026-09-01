@@ -1,6 +1,6 @@
 # Hypervel Support
 
-The package ships a second bridge for [Hypervel](https://hypervel.org) 0.4 — a Laravel-style framework with native coroutine support built on Swoole. Both bridges share the same framework-agnostic core, so query behavior is identical between Laravel and Hypervel.
+The package ships a second bridge for [Hypervel](https://hypervel.org) 0.4 — a Laravel-style framework with native coroutine support built on Swoole. Both bridges share the same framework-agnostic core, so query behaviour is identical between Laravel and Hypervel.
 
 ## Requirements
 

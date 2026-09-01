@@ -42,10 +42,16 @@ This is a Laravel ClickHouse integration package that provides:
 - `Transports/Guzzle.php` - Guzzle HTTP transport (default, supports parallel)
 - `Transports/Curl.php` - cURL-based transport via phpclickhouse
 
-**Laravel Integration** (`src/Laravel/`)
+**Core Traits** (`src/Core/{Connection,Query,Schema,Eloquent,Migrations,Testing}/`, `src/Core/RunsParallelQueries.php`)
+- The shared implementation both bridges mount: connection/client integration (`InteractsWithClickHouseClient`), transaction rejection (`RejectsTransactions`), query building and SQL compilation, schema building and DDL compilation, Eloquent deletes, migration-table creation. See "Zero Duplication Between Bridges" for the rules that keep logic here.
+
+**Laravel Bridge** (`src/Laravel/`)
 - `ClickHouseServiceProvider.php` - Laravel service provider registration
 - `Connection.php` - Laravel Database Connection extending BaseConnection
 - `Parallel.php` - Parallel query and statement execution support
+
+**Hypervel Bridge** (`src/Hypervel/`)
+- Mirrors the Laravel bridge layout (`Connection.php`, `Parallel.php`, `ClickHouseServiceProvider.php`, `Query/`, `Schema/`, `Eloquent/`, `Migrations/`, `Facades/`) on Hypervel's driver-neutral connection: the connection owns a real HTTP client and implements Hypervel's driver-resource hooks (presence, forget/replace, `SELECT 1` heartbeat) so the framework's pool lifecycle operates on the client directly — no PDO involved.
 
 **Query Layer** (`src/Laravel/Query/`)
 - `Builder.php` - ClickHouse-specific query builder extending Laravel's builder
@@ -93,6 +99,8 @@ ClickHouse connection config in Laravel `config/database.php`:
     'username' => env('CLICKHOUSE_USERNAME', 'default'),
     'password' => env('CLICKHOUSE_PASSWORD', ''),
     'transport' => env('CLICKHOUSE_TRANSPORT', 'guzzle'),
+    'https' => env('CLICKHOUSE_HTTPS', false),
+    'connect_timeout' => env('CLICKHOUSE_CONNECT_TIMEOUT'),
     'engine' => env('CLICKHOUSE_ENGINE'),
     'use_lightweight_delete' => env('CLICKHOUSE_USE_LIGHTWEIGHT_DELETE', false),
 ]
