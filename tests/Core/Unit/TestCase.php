@@ -40,4 +40,13 @@ abstract class TestCase extends BaseTestCase
 
         return $mock;
     }
+
+    /**
+     * Read a transport's inner HTTP client off its protected property —
+     * the only way to observe what the factory wired in.
+     */
+    protected function innerClient(object $transport): mixed
+    {
+        return (new \ReflectionProperty($transport::class, 'client'))->getValue($transport);
+    }
 }

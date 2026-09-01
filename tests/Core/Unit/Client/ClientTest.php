@@ -14,7 +14,6 @@ use ClickHouse\Tests\Core\Unit\TestCase;
 use ClickHouseDB\Client as ClickHouseClient;
 use Exception;
 use GuzzleHttp\Client as GuzzleClient;
-use ReflectionProperty;
 
 class ClientTest extends TestCase
 {
@@ -147,7 +146,7 @@ class ClientTest extends TestCase
         $transport = $client->getTransport();
         $this->assertInstanceOf(Guzzle::class, $transport);
 
-        $guzzleClient = (new ReflectionProperty(Guzzle::class, 'client'))->getValue($transport);
+        $guzzleClient = $this->innerClient($transport);
 
         $this->assertInstanceOf(GuzzleClient::class, $guzzleClient);
         $this->assertSame(1.25, $guzzleClient->getConfig('connect_timeout'));
@@ -168,7 +167,7 @@ class ClientTest extends TestCase
         $transport = $client->getTransport();
         $this->assertInstanceOf(Curl::class, $transport);
 
-        $clickHouseClient = (new ReflectionProperty(Curl::class, 'client'))->getValue($transport);
+        $clickHouseClient = $this->innerClient($transport);
 
         $this->assertInstanceOf(ClickHouseClient::class, $clickHouseClient);
         $this->assertSame(1.25, $clickHouseClient->getConnectTimeOut());

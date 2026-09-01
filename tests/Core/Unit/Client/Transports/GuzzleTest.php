@@ -14,7 +14,6 @@ use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
-use ReflectionProperty;
 use RuntimeException;
 use TypeError;
 
@@ -214,6 +213,6 @@ class GuzzleTest extends TestCase
 
     private function client(Guzzle $transport): Client
     {
-        return (new ReflectionProperty(Guzzle::class, 'client'))->getValue($transport);
+        return $this->innerClient($transport);
     }
 }

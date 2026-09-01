@@ -5,7 +5,6 @@ namespace ClickHouse\Tests\Core\Unit\Client\Transports;
 use ClickHouse\Core\Client\Transports\Curl;
 use ClickHouse\Tests\Core\Unit\TestCase;
 use ClickHouseDB\Client;
-use ReflectionProperty;
 
 class CurlTest extends TestCase
 {
@@ -59,6 +58,6 @@ class CurlTest extends TestCase
 
     private function client(Curl $transport): Client
     {
-        return (new ReflectionProperty(Curl::class, 'client'))->getValue($transport);
+        return $this->innerClient($transport);
     }
 }
