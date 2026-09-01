@@ -9,12 +9,23 @@ use ClickHouse\Core\Support\Escaper;
 use Generator;
 use InvalidArgumentException;
 use LogicException;
+use RuntimeException;
 use Throwable;
 
 /**
  * ClickHouse HTTP client integration shared by every framework bridge.
  * The using class must extend its framework's database Connection, whose
  * run()/bindValues()/prepareBindings()/logQuery() API this trait relies on.
+ *
+ * @phpstan-type ClickHouseConfig array{
+ *     host?: string,
+ *     port?: int,
+ *     username?: string,
+ *     password?: string,
+ *     transport?: string,
+ *     https?: bool,
+ *     connect_timeout?: float|int|numeric-string|null,
+ * }
  */
 trait InteractsWithClickHouseClient
 {
@@ -206,6 +217,65 @@ trait InteractsWithClickHouseClient
     }
 
     /**
+     * Wire up the client and escaper around the framework parent's own
+     * construction, defaulting the database name for both the wrapper and
+     * the client. The bridge constructors delegate here so the assembly
+     * logic exists once.
+     *
+     * @param  ClickHouseConfig  $config
+     * @param  callable(string, string, array<string, mixed>): void  $constructParent
+     */
+    protected function constructClickHouseConnection(string $database, string $tablePrefix, array $config, ?Client $client, ?Escaper $escaper, callable $constructParent): void
+    {
+        $database = $database ?: 'default';
+
+        $this->client = $client ?? $this->getDefaultClient($database, $config);
+        $this->escaper = $escaper ?? new Escaper;
+
+        $constructParent($database, $tablePrefix, $config);
+    }
+
+    /**
+     * Get the default database driver name. Hypervel's base connection
+     * calls this hook natively; the Laravel bridge routes its
+     * getDriverName() override here so a missing `driver` config key
+     * reports the same name on both bridges.
+     */
+    protected function getDefaultDriverName(): string
+    {
+        return 'clickhouse';
+    }
+
+    /**
+     * Build the framework's schema builder, initialising the default schema
+     * grammar first. The builder class comes from the bridge's
+     * SCHEMA_BUILDER constant; the bridges' overrides delegate here and
+     * only restate their parent's return type.
+     */
+    protected function createClickHouseSchemaBuilder(): mixed
+    {
+        // @phpstan-ignore-next-line
+        if (is_null($this->schemaGrammar)) {
+            $this->useDefaultSchemaGrammar();
+        }
+
+        $builder = static::SCHEMA_BUILDER;
+
+        return new $builder($this);
+    }
+
+    /**
+     * ClickHouse has no schema dump format, so schema state is rejected
+     * with the same exception type and message on every bridge. The
+     * bridges' getSchemaState() overrides delegate here — their signatures
+     * carry framework-typed Filesystem parameters and cannot be shared.
+     */
+    protected function throwSchemaDumpingUnsupported(): never
+    {
+        throw new RuntimeException('Schema dumping is not supported when using ClickHouse.');
+    }
+
+    /**
      * Create a framework-specific query exception for a failed parallel query.
      */
     protected function newQueryException(string $sql, mixed $bindings, Throwable $error): Throwable
@@ -349,15 +419,7 @@ trait InteractsWithClickHouseClient
     /**
      * Get the default ClickHouse client.
      *
-     * @param  array{
-     *     host?: string,
-     *     port?: int,
-     *     username?: string,
-     *     password?: string,
-     *     transport?: string,
-     *     https?: bool,
-     *     connect_timeout?: float|int|numeric-string|null,
-     * }  $config
+     * @param  ClickHouseConfig  $config
      */
     protected function getDefaultClient(string $database, array $config): Client
     {

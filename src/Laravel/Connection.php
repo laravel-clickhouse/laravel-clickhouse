@@ -14,8 +14,10 @@ use ClickHouse\Laravel\Schema\Grammar as SchemaGrammar;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
-use RuntimeException;
 
+/**
+ * @phpstan-import-type ClickHouseConfig from InteractsWithClickHouseClient
+ */
 class Connection extends BaseConnection implements ClickHouseConnection
 {
     use InteractsWithClickHouseClient;
@@ -23,31 +25,25 @@ class Connection extends BaseConnection implements ClickHouseConnection
 
     protected const QUERY_EXCEPTION = QueryException::class;
 
+    protected const SCHEMA_BUILDER = SchemaBuilder::class;
+
     /**
-     * Create a new database connection instance.
+     * {@see InteractsWithClickHouseClient::constructClickHouseConnection()}
+     * — the parent expects a PDO, so the wrapper state is assigned directly
+     * instead of delegating to the parent constructor.
      *
-     * @param  array{
-     *     host?: string,
-     *     port?: int,
-     *     username?: string,
-     *     password?: string,
-     *     transport?: string,
-     *     https?: bool,
-     *     connect_timeout?: float|int|numeric-string|null,
-     * }  $config
+     * @param  ClickHouseConfig  $config
      */
     public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null, ?Escaper $escaper = null)
     {
-        $database = $database ?: 'default';
+        $this->constructClickHouseConnection($database, $tablePrefix, $config, $client, $escaper, function (string $database, string $tablePrefix, array $config): void {
+            $this->database = $database;
+            $this->tablePrefix = $tablePrefix;
+            $this->config = $config;
 
-        $this->database = $database;
-        $this->tablePrefix = $tablePrefix;
-        $this->config = $config;
-        $this->client = $client ?? $this->getDefaultClient($database, $config);
-        $this->escaper = $escaper ?? new Escaper;
-
-        $this->useDefaultQueryGrammar();
-        $this->useDefaultPostProcessor();
+            $this->useDefaultQueryGrammar();
+            $this->useDefaultPostProcessor();
+        });
     }
 
     /** {@inheritDoc} */
@@ -88,6 +84,20 @@ class Connection extends BaseConnection implements ClickHouseConnection
         return $this->executeAffectingStatement($query, $bindings);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * Laravel's base returns the raw `driver` config key (null when
+     * absent); Hypervel's base falls back to getDefaultDriverName(). Route
+     * through the same core default so both bridges report `clickhouse`.
+     */
+    public function getDriverName(): string
+    {
+        $driver = $this->getConfig('driver');
+
+        return is_string($driver) ? $driver : $this->getDefaultDriverName();
+    }
+
     /** {@inheritDoc} */
     public function reconnectIfMissingConnection() {}
 
@@ -95,14 +105,10 @@ class Connection extends BaseConnection implements ClickHouseConnection
     public function disconnect() {}
 
     /** {@inheritDoc} */
-    public function getSchemaBuilder()
+    public function getSchemaBuilder(): SchemaBuilder
     {
-        // @phpstan-ignore-next-line
-        if (is_null($this->schemaGrammar)) {
-            $this->useDefaultSchemaGrammar();
-        }
-
-        return new SchemaBuilder($this);
+        /** @var SchemaBuilder */
+        return $this->createClickHouseSchemaBuilder();
     }
 
     /**
@@ -110,7 +116,7 @@ class Connection extends BaseConnection implements ClickHouseConnection
      */
     public function getSchemaState(?Filesystem $files = null, ?callable $processFactory = null): never
     {
-        throw new RuntimeException('Schema dumping is not supported when using ClickHouse.');
+        $this->throwSchemaDumpingUnsupported();
     }
 
     /** {@inheritDoc} */

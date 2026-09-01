@@ -15,10 +15,12 @@ use Hypervel\Database\Connection as BaseConnection;
 use Hypervel\Database\QueryException;
 use Hypervel\Filesystem\Filesystem;
 use LogicException;
-use RuntimeException;
 use Swoole\Coroutine\CanceledException;
 use Throwable;
 
+/**
+ * @phpstan-import-type ClickHouseConfig from InteractsWithClickHouseClient
+ */
 class Connection extends BaseConnection implements ClickHouseConnection
 {
     use InteractsWithClickHouseClient;
@@ -26,27 +28,16 @@ class Connection extends BaseConnection implements ClickHouseConnection
 
     protected const QUERY_EXCEPTION = QueryException::class;
 
+    protected const SCHEMA_BUILDER = SchemaBuilder::class;
+
     /**
-     * Create a new database connection instance.
+     * {@see InteractsWithClickHouseClient::constructClickHouseConnection()}
      *
-     * @param  array{
-     *     host?: string,
-     *     port?: int,
-     *     username?: string,
-     *     password?: string,
-     *     transport?: string,
-     *     https?: bool,
-     *     connect_timeout?: float|int|numeric-string|null,
-     * }  $config
+     * @param  ClickHouseConfig  $config
      */
     public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null, ?Escaper $escaper = null)
     {
-        $database = $database ?: 'default';
-
-        $this->client = $client ?? $this->getDefaultClient($database, $config);
-        $this->escaper = $escaper ?? new Escaper;
-
-        parent::__construct($database, $tablePrefix, $config);
+        $this->constructClickHouseConnection($database, $tablePrefix, $config, $client, $escaper, parent::__construct(...));
     }
 
     /** {@inheritDoc} */
@@ -111,11 +102,8 @@ class Connection extends BaseConnection implements ClickHouseConnection
     /** {@inheritDoc} */
     public function getSchemaBuilder(): SchemaBuilder
     {
-        if (is_null($this->schemaGrammar)) {
-            $this->useDefaultSchemaGrammar();
-        }
-
-        return new SchemaBuilder($this);
+        /** @var SchemaBuilder */
+        return $this->createClickHouseSchemaBuilder();
     }
 
     /**
@@ -123,7 +111,7 @@ class Connection extends BaseConnection implements ClickHouseConnection
      */
     public function getSchemaState(?Filesystem $files = null, ?callable $processFactory = null): never
     {
-        throw new RuntimeException('Schema dumping is not supported when using ClickHouse.');
+        $this->throwSchemaDumpingUnsupported();
     }
 
     /** {@inheritDoc} */
@@ -136,14 +124,6 @@ class Connection extends BaseConnection implements ClickHouseConnection
     protected function getDefaultSchemaGrammar(): SchemaGrammar
     {
         return new SchemaGrammar($this);
-    }
-
-    /**
-     * Get the default database driver name.
-     */
-    protected function getDefaultDriverName(): string
-    {
-        return 'clickhouse';
     }
 
     /**
