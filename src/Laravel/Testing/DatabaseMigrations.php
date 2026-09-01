@@ -2,7 +2,6 @@
 
 namespace ClickHouse\Laravel\Testing;
 
-use ClickHouse\Core\Testing\WipesClickHouseConnections;
 use Illuminate\Foundation\Testing\DatabaseMigrations as BaseDatabaseMigrations;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
 

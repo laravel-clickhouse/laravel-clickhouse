@@ -3,7 +3,6 @@
 namespace ClickHouse\Tests\Hypervel\Feature\Testing\DatabaseTruncation;
 
 use ClickHouse\Tests\Hypervel\Feature\Testing\Concerns\ResetsRefreshDatabaseState;
-use ClickHouse\Tests\Hypervel\Feature\Testing\Concerns\UsesSharedSqliteDatabase;
 use ClickHouse\Tests\Hypervel\Feature\Testing\SqliteOnlyTestCase;
 use Hypervel\Foundation\Testing\DatabaseTruncation;
 use Hypervel\Support\Facades\DB;
@@ -16,7 +15,6 @@ class SqliteOnlyTest extends SqliteOnlyTestCase
 {
     use DatabaseTruncation;
     use ResetsRefreshDatabaseState;
-    use UsesSharedSqliteDatabase;
 
     public function testRound1Inserts(): void
     {

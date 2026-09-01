@@ -9,21 +9,24 @@ class ConnectionTest extends TestCase
 {
     public function testResolvesClickHouseConnectionFromManager()
     {
-        $connection = $this->app['db']->connection('clickhouse');
+        $connection = $this->app->make('db')->connection('clickhouse');
 
         $this->assertInstanceOf(Connection::class, $connection);
+        $this->assertSame('clickhouse', $connection->getName());
+        $this->assertSame('clickhouse', $connection->getDriverName());
+        $this->assertSame('default', $connection->getDatabaseName());
     }
 
     public function testSelect()
     {
-        $rows = $this->app['db']->connection('clickhouse')->select('SELECT 1 AS one');
+        $rows = $this->app->make('db')->connection('clickhouse')->select('SELECT 1 AS one');
 
         $this->assertSame([['one' => 1]], $rows);
     }
 
     public function testSelectWithBindings()
     {
-        $rows = $this->app['db']->connection('clickhouse')->select('SELECT ? AS value', ['clickhouse']);
+        $rows = $this->app->make('db')->connection('clickhouse')->select('SELECT ? AS value', ['clickhouse']);
 
         $this->assertSame([['value' => 'clickhouse']], $rows);
     }

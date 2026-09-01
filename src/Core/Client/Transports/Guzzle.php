@@ -34,6 +34,7 @@ class Guzzle implements Transport
         protected bool $https = false,
         protected array $guzzleOptions = [],
         ?Client $client = null,
+        protected ?float $connectTimeout = null,
     ) {
         $this->client = $client ?? $this->getDefaultClient();
     }
@@ -59,8 +60,6 @@ class Guzzle implements Transport
             throw new QueryException('ClickHouse request failed: '.$e->getMessage(), previous: $e);
         } catch (GuzzleException $e) {
             throw new QueryException('ClickHouse connection failed: '.$e->getMessage(), previous: $e);
-        } catch (Throwable $e) {
-            throw new QueryException($e->getMessage(), previous: $e);
         }
     }
 
@@ -76,10 +75,16 @@ class Guzzle implements Transport
 
         $pool = new Pool($this->client, $requests, [
             'concurrency' => static::CLICKHOUSE_CONCURRENT_REQUESTS,
-            'fulfilled' => function ($response, $key) use ($sqls, &$responses) {
-                $responses[$key] = $this->parseResponse($sqls[$key], $response);
+            'fulfilled' => function ($response, $key, $aggregate) use ($sqls, &$responses, &$errors) {
+                try {
+                    $responses[$key] = $this->parseResponse($sqls[$key], $response);
+                } catch (QueryException $e) {
+                    $errors[$key] = $e;
+                } catch (Throwable $e) {
+                    $aggregate->reject($e);
+                }
             },
-            'rejected' => function ($e, $key) use ($sqls, &$responses, &$errors) {
+            'rejected' => function ($e, $key, $aggregate) use ($sqls, &$responses, &$errors) {
                 $response = null;
 
                 if ($e instanceof RequestException && $e->getResponse()) {
@@ -94,14 +99,22 @@ class Guzzle implements Transport
                         $errors[$key] = $parseException;
 
                         return;
+                    } catch (Throwable $parseException) {
+                        $aggregate->reject($parseException);
+
+                        return;
                     }
                 }
 
-                $errors[$key] = match (true) {
-                    $e instanceof RequestException => new QueryException('ClickHouse request failed: '.$e->getMessage(), $response, $e),
-                    $e instanceof GuzzleException => new QueryException('ClickHouse connection failed: '.$e->getMessage(), $response, $e),
-                    default => new QueryException($e->getMessage(), $response, $e),
-                };
+                if (! $e instanceof GuzzleException) {
+                    $aggregate->reject($e);
+
+                    return;
+                }
+
+                $errors[$key] = $e instanceof RequestException
+                    ? new QueryException('ClickHouse request failed: '.$e->getMessage(), $response, $e)
+                    : new QueryException('ClickHouse connection failed: '.$e->getMessage(), $response, $e);
             },
         ]);
 
@@ -116,7 +129,13 @@ class Guzzle implements Transport
 
     protected function getDefaultClient(): Client
     {
-        return new Client($this->guzzleOptions);
+        $options = $this->guzzleOptions;
+
+        if ($this->connectTimeout !== null) {
+            $options['connect_timeout'] = $this->connectTimeout;
+        }
+
+        return new Client($options);
     }
 
     protected function createRequest(string $sql): Request

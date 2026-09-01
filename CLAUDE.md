@@ -66,8 +66,8 @@ This is a Laravel ClickHouse integration package that provides:
 **Migrations** (`src/Laravel/Migrations/`)
 - `DatabaseMigrationRepository.php` - ClickHouse-compatible migration repository
 
-**Testing Traits** (`src/Laravel/Testing/`, `src/Hypervel/Testing/`)
-- `RefreshDatabase.php` / `DatabaseMigrations.php` / `DatabaseTruncation.php` - ClickHouse-aware wrappers over each framework's testing traits; shared `db:wipe` pre-pass logic lives in `src/Core/Testing/WipesClickHouseConnections.php`
+**Laravel Testing Traits** (`src/Laravel/Testing/`)
+- `RefreshDatabase.php` / `DatabaseMigrations.php` / `DatabaseTruncation.php` - ClickHouse-aware wrappers over Laravel's testing traits; the Laravel-only `db:wipe` pre-pass lives in `WipesClickHouseConnections.php`. Hypervel uses its native database testing traits.
 
 **Enums** (`src/Core/Enums/`)
 - `Format.php` - ClickHouse input format options
@@ -181,8 +181,8 @@ Acceptable per-bridge remainder (declarations, not logic): one-line
 delegating overrides whose parent signatures differ irreconcilably, hook
 implementations that `new` a framework class with framework-specific
 mechanics, `@method`/`@extends` phpdoc referencing bridge classes, and
-genuinely divergent mechanics (service-provider registration, PDO-vs-HTTP
-connection plumbing).
+genuinely divergent mechanics (service-provider registration and framework
+connection lifecycle).
 
 ## Behavioural Parity Between Bridges
 

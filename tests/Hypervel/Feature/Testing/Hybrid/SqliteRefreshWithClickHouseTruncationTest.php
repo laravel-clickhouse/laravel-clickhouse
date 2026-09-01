@@ -2,49 +2,26 @@
 
 namespace ClickHouse\Tests\Hypervel\Feature\Testing\Hybrid;
 
-use ClickHouse\Hypervel\Testing\DatabaseTruncation;
-use ClickHouse\Hypervel\Testing\RefreshDatabase;
-use ClickHouse\Tests\Hypervel\Feature\TestCase;
-use ClickHouse\Tests\Hypervel\Feature\Testing\Concerns\ResetsRefreshDatabaseState;
+use ClickHouse\Tests\Hypervel\Feature\Testing\SqliteWithClickHouseTestCase;
+use Hypervel\Foundation\Testing\DatabaseTruncation;
+use Hypervel\Foundation\Testing\RefreshDatabase;
 use Hypervel\Support\Facades\DB;
 
-use function Hypervel\Testbench\load_migration_paths;
-
 /**
- * The recommended hybrid: the package's RefreshDatabase rolls `:memory:`
- * SQLite back per test while the package's DatabaseTruncation truncates
- * ClickHouse per test — the same cadence on every connection.
+ * Use transactions for SQLite and truncation for ClickHouse so both
+ * connections reset after every test without rebuilding the schema.
  *
- * Lifecycle: RefreshDatabase owns the one-time migrate:fresh — preceded by
- * the pre-wipe of every connection the class works with, derived as the
- * union of $connectionsToTransact and $connectionsToTruncate — and sets
- * RefreshDatabaseState::$migrated, so DatabaseTruncation's own first-run
- * branch and pre-wipe short-circuit, and it only ever truncates.
+ * RefreshDatabase retains the bare in-memory SQLite connection while
+ * DatabaseTruncation independently clears ClickHouse between tests.
  */
-class SqliteRefreshWithClickHouseTruncationTest extends TestCase
+class SqliteRefreshWithClickHouseTruncationTest extends SqliteWithClickHouseTestCase
 {
     use DatabaseTruncation;
     use RefreshDatabase;
-    use ResetsRefreshDatabaseState;
 
     protected array $connectionsToTransact = ['sqlite'];
 
     protected array $connectionsToTruncate = ['clickhouse'];
-
-    protected function defineEnvironment($app): void
-    {
-        parent::defineEnvironment($app);
-
-        $app['config']->set('database.default', 'sqlite');
-    }
-
-    protected function defineDatabaseMigrations(): void
-    {
-        load_migration_paths($this->app, [
-            __DIR__.'/../../database/migrations',
-            __DIR__.'/../../database/migrations/clickhouse',
-        ]);
-    }
 
     public function testRound1InsertsIntoBothConnections(): void
     {

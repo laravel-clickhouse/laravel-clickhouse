@@ -2,8 +2,8 @@
 
 namespace ClickHouse\Tests\Hypervel\Feature\Testing\DatabaseMigrations;
 
-use ClickHouse\Hypervel\Testing\DatabaseMigrations;
 use ClickHouse\Tests\Hypervel\Feature\Testing\SqliteWithClickHouseTestCase;
+use Hypervel\Foundation\Testing\DatabaseMigrations;
 use Hypervel\Support\Facades\DB;
 
 /**

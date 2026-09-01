@@ -7,9 +7,14 @@ use ClickHouse\Core\Client\Contracts\Transport;
 use ClickHouse\Core\Client\Response;
 use ClickHouse\Core\Client\Statement;
 use ClickHouse\Core\Client\TransportFactory;
+use ClickHouse\Core\Client\Transports\Curl;
+use ClickHouse\Core\Client\Transports\Guzzle;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
 use ClickHouse\Tests\Core\Unit\TestCase;
+use ClickHouseDB\Client as ClickHouseClient;
 use Exception;
+use GuzzleHttp\Client as GuzzleClient;
+use ReflectionProperty;
 
 class ClientTest extends TestCase
 {
@@ -119,15 +124,57 @@ class ClientTest extends TestCase
         }
     }
 
-    public function testGetTransport()
+    public function testInjectedTransportFactoryRemainsAuthoritative()
     {
         $transport = $this->mock(Transport::class);
-        $client = $this->getClient($transport);
+        $client = $this->getClient($transport, 1.25);
 
         $this->assertEquals($transport, $client->getTransport());
     }
 
-    private function getClient(?Transport $transport = null): Client
+    public function testConnectTimeoutReachesGuzzleThroughTheDefaultFactory()
+    {
+        $client = new Client(
+            host: 'localhost',
+            port: 8123,
+            database: 'default',
+            username: 'default',
+            password: 'default',
+            transport: 'guzzle',
+            connectTimeout: 1.25,
+        );
+
+        $transport = $client->getTransport();
+        $this->assertInstanceOf(Guzzle::class, $transport);
+
+        $guzzleClient = (new ReflectionProperty(Guzzle::class, 'client'))->getValue($transport);
+
+        $this->assertInstanceOf(GuzzleClient::class, $guzzleClient);
+        $this->assertSame(1.25, $guzzleClient->getConfig('connect_timeout'));
+    }
+
+    public function testConnectTimeoutReachesCurlThroughTheDefaultFactory()
+    {
+        $client = new Client(
+            host: 'localhost',
+            port: 8123,
+            database: 'default',
+            username: 'default',
+            password: 'default',
+            transport: 'curl',
+            connectTimeout: 1.25,
+        );
+
+        $transport = $client->getTransport();
+        $this->assertInstanceOf(Curl::class, $transport);
+
+        $clickHouseClient = (new ReflectionProperty(Curl::class, 'client'))->getValue($transport);
+
+        $this->assertInstanceOf(ClickHouseClient::class, $clickHouseClient);
+        $this->assertSame(1.25, $clickHouseClient->getConnectTimeOut());
+    }
+
+    private function getClient(?Transport $transport = null, ?float $connectTimeout = null): Client
     {
         $factory = $this->mock(TransportFactory::class);
 
@@ -143,6 +190,7 @@ class ClientTest extends TestCase
             password: 'default',
             transport: 'curl',
             transportFactory: $factory,
+            connectTimeout: $connectTimeout,
         );
     }
 }

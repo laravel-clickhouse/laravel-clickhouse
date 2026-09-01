@@ -10,13 +10,11 @@ abstract class SqliteWithClickHouseTestCase extends TestCase
 {
     protected array $connectionsToTruncate = ['sqlite', 'clickhouse'];
 
-    protected array $connectionsToMigrate = ['sqlite', 'clickhouse'];
-
     protected function defineEnvironment($app): void
     {
         parent::defineEnvironment($app);
 
-        $app['config']->set('database.default', 'sqlite');
+        $app->make('config')->set('database.default', 'sqlite');
     }
 
     protected function defineDatabaseMigrations(): void

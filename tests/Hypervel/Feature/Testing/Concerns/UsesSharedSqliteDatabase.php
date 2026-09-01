@@ -5,23 +5,13 @@ namespace ClickHouse\Tests\Hypervel\Feature\Testing\Concerns;
 use PDO;
 
 /**
- * Switches the demo `sqlite` connection from the base TestCase's bare
- * `:memory:` to a shared-cache in-memory database that survives the
- * per-test pool flush.
+ * Keep the SQLite database available while database transactions are
+ * combined with ClickHouse truncation.
  *
- * Only truncation-based scenarios need this: DatabaseTruncation runs
- * `migrate:fresh` once and then assumes the schema persists, but the
- * testing lifecycle flushes the connection pools between tests, and a
- * bare `:memory:` private database dies with its PDO (the framework's
- * in-memory PDO preservation only kicks in for RefreshDatabase). A URI
- * with `mode=memory&cache=shared` lets every PDO opened in this process
- * join the same in-memory DB, and a keepalive PDO holds the cache alive
- * across flushes.
- *
- * Unlike the Laravel counterpart, no custom driver is needed: Hypervel's
- * SQLiteConnector passes `file:` URIs through untouched, and its
- * SQLiteBuilder routes in-memory schemas (empty path in PRAGMA
- * database_list) through SQL drops rather than file truncation.
+ * SQLite is excluded from the truncation targets in this scenario, so
+ * Hypervel cannot retain its in-memory PDO through DatabaseTruncation.
+ * The shared-cache URI and keepalive PDO preserve the schema while
+ * DatabaseTransactions rolls back each test.
  */
 trait UsesSharedSqliteDatabase
 {
@@ -40,7 +30,7 @@ trait UsesSharedSqliteDatabase
 
         static::$sqliteKeepalive ??= new PDO('sqlite:'.$this->sqliteUri);
 
-        $app['config']->set('database.connections.sqlite', [
+        $app->make('config')->set('database.connections.sqlite', [
             'driver' => 'sqlite',
             'database' => $this->sqliteUri,
         ]);

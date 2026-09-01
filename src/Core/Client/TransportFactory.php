@@ -16,6 +16,7 @@ class TransportFactory
         protected string $username,
         protected string $password,
         protected bool $https = false,
+        protected ?float $connectTimeout = null,
     ) {}
 
     public function make(string $name): Transport
@@ -29,11 +30,27 @@ class TransportFactory
 
     protected function createCurlTransport(): Transport
     {
-        return new Curl($this->host, $this->port, $this->database, $this->username, $this->password, $this->https);
+        return new Curl(
+            $this->host,
+            $this->port,
+            $this->database,
+            $this->username,
+            $this->password,
+            $this->https,
+            connectTimeout: $this->connectTimeout,
+        );
     }
 
     protected function createGuzzleTransport(): Transport
     {
-        return new Guzzle($this->host, $this->port, $this->database, $this->username, $this->password, $this->https);
+        return new Guzzle(
+            $this->host,
+            $this->port,
+            $this->database,
+            $this->username,
+            $this->password,
+            $this->https,
+            connectTimeout: $this->connectTimeout,
+        );
     }
 }

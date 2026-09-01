@@ -1,6 +1,6 @@
 # Hypervel Support
 
-The package ships a second bridge for [Hypervel](https://hypervel.org) 0.4 — a Laravel-style framework with native coroutine support built on Swoole. Both bridges share the same framework-agnostic core (HTTP client, query compilation, DDL compilation), so query behaviour is identical between Laravel and Hypervel.
+The package ships a second bridge for [Hypervel](https://hypervel.org) 0.4 — a Laravel-style framework with native coroutine support built on Swoole. Both bridges share the same framework-agnostic core, so query behavior is identical between Laravel and Hypervel.
 
 ## Requirements
 
@@ -33,12 +33,15 @@ Add a ClickHouse connection to your `config/database.php`:
         'pool' => [
             'min_connections' => 1,
             'max_connections' => 10,
+            'connect_timeout' => 10.0,
         ],
     ],
 ],
 ```
 
-Hypervel resolves connections through its coroutine-aware connection pool. Each pooled connection carries its own HTTP client (Guzzle keep-alive), so concurrent coroutines never share an in-flight HTTP request. Connections must be declared in the config file — Hypervel's `DatabaseManager::build()` / `connectUsing()` dynamic connections are not supported by the framework.
+Hypervel resolves connections through its coroutine-aware connection pool. Connections must be declared in the config file because Hypervel does not support `DatabaseManager::build()` or `connectUsing()` dynamic connections.
+
+The `pool.connect_timeout` option controls how long the driver may spend opening an HTTP connection. Hypervel passes this value to the ClickHouse client, which applies it to either the Guzzle or Curl transport. Fractional values are supported. If this option is not set, Hypervel uses the pool's 10-second default. A top-level `connect_timeout` value on the connection takes precedence over the pool value.
 
 ## Usage
 
@@ -61,14 +64,20 @@ Event::query()
 
 Schema migrations, the `Schema` facade (`ClickHouse\Hypervel\Facades\Schema`), and parallel queries (`ClickHouse\Hypervel\Parallel`) are all available with the same API as their Laravel counterparts.
 
-## How the bridge differs from a PDO driver
+## Connection and Pooling
 
-ClickHouse speaks HTTP, not PDO. The bridge integrates with Hypervel's pool without pretending to be a PDO driver:
+ClickHouse speaks HTTP rather than PDO. The bridge extends Hypervel's driver-neutral connection and uses the ClickHouse client directly, without fake PDO objects or PDO methods. The usual query builder, schema builder, Eloquent, and database APIs remain the same.
 
-- `getPdo()` / `getReadPdo()` throw a `RuntimeException` — use `getClient()` to reach the underlying HTTP client.
-- Transactions throw `LogicException` — same type and message as the Laravel bridge, so cross-framework code can catch one exception.
-- The pool heartbeat is a no-op: `PooledConnection::ping()` only checks raw PDO handles, and this connection has none. Idle-timeout and max-lifetime eviction still apply; a recycled connection gets a fresh HTTP client via the driver resolver.
-- `Connection::ping()` is available for application-level health checks — it runs `SELECT 1` over HTTP.
+Each pooled connection owns a logical ClickHouse client. The client creates a transport for each operation, so pooled connections do not retain a Guzzle or Curl transport between queries. Hypervel uses the connection's native driver hooks to:
+
+- run `SELECT 1` during pool heartbeats;
+- forget or replace the ClickHouse client during disconnects and reconnects;
+- recycle clients when idle or lifetime limits expire; and
+- restore connection state when a pooled connection is released.
+
+You may call `getClient()` when you need the underlying ClickHouse client. The connection's `ping()` method runs the same `SELECT 1` health check used by the pool.
+
+ClickHouse does not support transactions. Calls to `beginTransaction()`, `commit()`, `rollBack()`, and `transaction()` throw the same `LogicException` as the Laravel bridge.
 
 ## Parallel queries under Swoole
 
@@ -76,7 +85,8 @@ ClickHouse speaks HTTP, not PDO. The bridge integrates with Hypervel's pool with
 
 ## Testing
 
-The bridge ships ClickHouse-aware testing traits under
-`ClickHouse\Hypervel\Testing` — `RefreshDatabase`, `DatabaseMigrations` and
-`DatabaseTruncation` — mirroring the Laravel bridge. See
-[Testing](./testing.md#hypervel) for strategies and caveats.
+Use Hypervel's native `RefreshDatabase`, `DatabaseMigrations`, and
+`DatabaseTruncation` traits. Hypervel discovers the connections used by your
+migrations and wipes each existing database before rebuilding the schema. See
+[Testing](./testing.md#hypervel) for the available strategies and ClickHouse's
+transaction limitation.

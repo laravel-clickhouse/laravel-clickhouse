@@ -33,11 +33,14 @@ class Connection extends BaseConnection implements ClickHouseConnection
      *     password?: string,
      *     transport?: string,
      *     https?: bool,
+     *     connect_timeout?: float|int|numeric-string|null,
      * }  $config
      */
     public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null, ?Escaper $escaper = null)
     {
-        $this->database = $database ?: 'default';
+        $database = $database ?: 'default';
+
+        $this->database = $database;
         $this->tablePrefix = $tablePrefix;
         $this->config = $config;
         $this->client = $client ?? $this->getDefaultClient($database, $config);

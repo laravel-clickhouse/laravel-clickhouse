@@ -2,20 +2,18 @@
 
 namespace ClickHouse\Tests\Hypervel\Feature\Testing\DatabaseMigrations;
 
-use ClickHouse\Hypervel\Testing\DatabaseMigrations;
 use ClickHouse\Tests\Hypervel\Feature\Testing\ClickHouseOnlyTestCase;
+use Hypervel\Foundation\Testing\DatabaseMigrations;
 use Hypervel\Support\Facades\DB;
 
 /**
- * DatabaseMigrations rebuilds the schema before every test (`db:wipe` +
- * `migrate:fresh`), so each test starts from an empty ch_events table.
+ * DatabaseMigrations rebuilds the schema before every test, so each test
+ * starts from an empty ch_events table.
  * Use this strategy for engines TRUNCATE cannot handle (Distributed, View).
  */
 class ClickHouseOnlyTest extends ClickHouseOnlyTestCase
 {
     use DatabaseMigrations;
-
-    protected array $connectionsToMigrate = ['clickhouse'];
 
     public function testRound1Inserts(): void
     {

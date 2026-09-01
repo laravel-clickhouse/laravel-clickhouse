@@ -12,7 +12,7 @@ abstract class SqliteOnlyTestCase extends TestCase
     {
         parent::defineEnvironment($app);
 
-        $app['config']->set('database.default', 'sqlite');
+        $app->make('config')->set('database.default', 'sqlite');
     }
 
     protected function defineDatabaseMigrations(): void

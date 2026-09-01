@@ -2,9 +2,9 @@
 
 namespace ClickHouse\Tests\Hypervel\Feature\Testing\DatabaseTruncation;
 
-use ClickHouse\Hypervel\Testing\DatabaseTruncation;
 use ClickHouse\Tests\Hypervel\Feature\Testing\ClickHouseOnlyTestCase;
 use ClickHouse\Tests\Hypervel\Feature\Testing\Concerns\ResetsRefreshDatabaseState;
+use Hypervel\Foundation\Testing\DatabaseTruncation;
 use Hypervel\Support\Facades\DB;
 
 /**

@@ -91,7 +91,7 @@ class QueryTest extends TestCase
 
     public function testInsertWithFormat()
     {
-        $connection = $this->app['db']->connection('clickhouse');
+        $connection = $this->app->make('db')->connection('clickhouse');
 
         $connection->statement('create table query_format_test (id UInt64, name String, tags Array(String), created_at DateTime64(6)) engine = Memory');
 
@@ -116,6 +116,6 @@ class QueryTest extends TestCase
 
     protected function table(): Builder
     {
-        return $this->app['db']->connection('clickhouse')->table('query_test');
+        return $this->app->make('db')->connection('clickhouse')->table('query_test');
     }
 }
