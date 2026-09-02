@@ -18,9 +18,6 @@ use LogicException;
 use Swoole\Coroutine\CanceledException;
 use Throwable;
 
-/**
- * @phpstan-import-type ClickHouseConfig from InteractsWithClickHouseClient
- */
 class Connection extends BaseConnection implements ClickHouseConnection
 {
     use InteractsWithClickHouseClient;
@@ -33,7 +30,15 @@ class Connection extends BaseConnection implements ClickHouseConnection
     /**
      * {@see InteractsWithClickHouseClient::constructClickHouseConnection()}
      *
-     * @param  ClickHouseConfig  $config
+     * @param  array{
+     *     host?: string,
+     *     port?: int,
+     *     username?: string,
+     *     password?: string,
+     *     transport?: string,
+     *     https?: bool,
+     *     connect_timeout?: float|int|numeric-string|null,
+     * }  $config
      */
     public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null, ?Escaper $escaper = null)
     {

@@ -16,16 +16,6 @@ use Throwable;
  * ClickHouse HTTP client integration shared by every framework bridge.
  * The using class must extend its framework's database Connection, whose
  * run()/bindValues()/prepareBindings()/logQuery() API this trait relies on.
- *
- * @phpstan-type ClickHouseConfig array{
- *     host?: string,
- *     port?: int,
- *     username?: string,
- *     password?: string,
- *     transport?: string,
- *     https?: bool,
- *     connect_timeout?: float|int|numeric-string|null,
- * }
  */
 trait InteractsWithClickHouseClient
 {
@@ -222,7 +212,15 @@ trait InteractsWithClickHouseClient
      * the client. The bridge constructors delegate here so the assembly
      * logic exists once.
      *
-     * @param  ClickHouseConfig  $config
+     * @param  array{
+     *     host?: string,
+     *     port?: int,
+     *     username?: string,
+     *     password?: string,
+     *     transport?: string,
+     *     https?: bool,
+     *     connect_timeout?: float|int|numeric-string|null,
+     * }  $config
      * @param  callable(string, string, array<string, mixed>): void  $constructParent
      */
     protected function constructClickHouseConnection(string $database, string $tablePrefix, array $config, ?Client $client, ?Escaper $escaper, callable $constructParent): void
@@ -419,7 +417,15 @@ trait InteractsWithClickHouseClient
     /**
      * Get the default ClickHouse client.
      *
-     * @param  ClickHouseConfig  $config
+     * @param  array{
+     *     host?: string,
+     *     port?: int,
+     *     username?: string,
+     *     password?: string,
+     *     transport?: string,
+     *     https?: bool,
+     *     connect_timeout?: float|int|numeric-string|null,
+     * }  $config
      */
     protected function getDefaultClient(string $database, array $config): Client
     {

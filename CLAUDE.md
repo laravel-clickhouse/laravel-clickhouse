@@ -142,6 +142,17 @@ All classes use `ClickHouse\` as root namespace:
   they are analysed per-bridge by `phpstan.laravel.neon` and
   `phpstan.hypervel.neon`.
 
+## PHP Style Rules
+
+- **Always import classes with `use`** — never reference a class by
+  leading-backslash FQN inline (`new \ReflectionProperty(...)`). Add the
+  `use` statement at the top of the file and use the short name.
+- **No PHPStan-only phpdoc tags** (`@phpstan-type`,
+  `@phpstan-import-type`, `@phpstan-assert`, ...) — IDEs do not resolve
+  them, so the types they carry are invisible at call sites. Write the
+  full inline type (e.g. the array shape) in each `@param` instead, even
+  when that repeats the shape across files.
+
 ## Code Comments Language
 
 - All code (`src/`, `tests/`) — comments and docblocks MUST be in English.

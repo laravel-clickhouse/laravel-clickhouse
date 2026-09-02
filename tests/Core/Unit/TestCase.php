@@ -9,6 +9,7 @@ use Mockery as m;
 use Mockery\LegacyMockInterface;
 use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase as BaseTestCase;
+use ReflectionProperty;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -47,6 +48,6 @@ abstract class TestCase extends BaseTestCase
      */
     protected function innerClient(object $transport): mixed
     {
-        return (new \ReflectionProperty($transport::class, 'client'))->getValue($transport);
+        return (new ReflectionProperty($transport::class, 'client'))->getValue($transport);
     }
 }

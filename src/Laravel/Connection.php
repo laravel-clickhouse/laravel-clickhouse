@@ -15,9 +15,6 @@ use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
 
-/**
- * @phpstan-import-type ClickHouseConfig from InteractsWithClickHouseClient
- */
 class Connection extends BaseConnection implements ClickHouseConnection
 {
     use InteractsWithClickHouseClient;
@@ -32,7 +29,15 @@ class Connection extends BaseConnection implements ClickHouseConnection
      * — the parent expects a PDO, so the wrapper state is assigned directly
      * instead of delegating to the parent constructor.
      *
-     * @param  ClickHouseConfig  $config
+     * @param  array{
+     *     host?: string,
+     *     port?: int,
+     *     username?: string,
+     *     password?: string,
+     *     transport?: string,
+     *     https?: bool,
+     *     connect_timeout?: float|int|numeric-string|null,
+     * }  $config
      */
     public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null, ?Escaper $escaper = null)
     {
