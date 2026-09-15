@@ -1,0 +1,20 @@
+<?php
+
+namespace ClickHouse\Tests\Laravel\Feature\Testing;
+
+use ClickHouse\Tests\Laravel\Feature\TestCase;
+
+use function Orchestra\Testbench\load_migration_paths;
+
+abstract class ClickHouseOnlyTestCase extends TestCase
+{
+    protected function defaultConnection(): string
+    {
+        return 'clickhouse';
+    }
+
+    protected function defineDatabaseMigrations(): void
+    {
+        load_migration_paths($this->app, __DIR__.'/../database/migrations/clickhouse');
+    }
+}

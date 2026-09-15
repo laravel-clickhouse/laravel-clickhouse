@@ -1,0 +1,34 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:26.3-alpine
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: default
+    ports:
+      - "8123:8123"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://127.0.0.1:8123/ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  # Swoole runner for the Hypervel bridge suite. Uses the isolated vendor
+  # tree in environments/hypervel (Hypervel conflicts with testbench, so it
+  # cannot share the root vendor). Run via: make test-hypervel
+  hypervel:
+    build: environments/hypervel
+    working_dir: /package
+    volumes:
+      - .:/package
+    environment:
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_DATABASE: default
+      CLICKHOUSE_USERNAME: default
+      CLICKHOUSE_PASSWORD: default
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    profiles:
+      - hypervel

@@ -82,7 +82,7 @@ Each query entry requires `sql` and `bindings` keys.
 When one or more parallel queries fail, a `ParallelQueryException` is thrown. This exception provides access to both successful responses and errors:
 
 ```php
-use ClickHouse\Exceptions\ParallelQueryException;
+use ClickHouse\Core\Exceptions\ParallelQueryException;
 
 try {
     $results = Parallel::get([

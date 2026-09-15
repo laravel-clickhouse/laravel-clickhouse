@@ -2,6 +2,7 @@
 
 namespace ClickHouse\Laravel\Eloquent;
 
+use ClickHouse\Core\Eloquent\DeletesClickHouseModels;
 use ClickHouse\Laravel\Query\Builder as QueryBuilder;
 use Illuminate\Database\Eloquent\Builder as BaseBuilder;
 
@@ -9,31 +10,22 @@ use Illuminate\Database\Eloquent\Builder as BaseBuilder;
  * @template TModel of Model
  *
  * @extends BaseBuilder<TModel>
+ *
+ * @property QueryBuilder $query
  */
 class Builder extends BaseBuilder
 {
-    /**
-     * {@inheritDoc}
-     *
-     * @var QueryBuilder
-     */
-    protected $query;
+    use DeletesClickHouseModels;
 
     /** {@inheritDoc} */
     public function delete(?bool $lightweight = null, mixed $partition = null)
     {
-        // @phpstan-ignore-next-line
-        if (isset($this->onDelete)) {
-            return call_user_func($this->onDelete, $this);
-        }
-
-        // @phpstan-ignore-next-line
-        return $this->toBase()->delete(null, $lightweight, $partition);
+        return $this->deleteClickHouseModels($lightweight, $partition);
     }
 
     /** {@inheritDoc} */
     public function forceDelete(?bool $lightweight = null, mixed $partition = null)
     {
-        return $this->query->delete(null, $lightweight, $partition);
+        return $this->forceDeleteClickHouseModels($lightweight, $partition);
     }
 }

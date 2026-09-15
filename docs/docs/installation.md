@@ -15,6 +15,8 @@ Before installing the package, make sure your environment meets the following re
 - **Laravel** >= 11.0
 - **ClickHouse Server** (any currently supported version)
 
+Using Hypervel instead of Laravel? See [Hypervel Support](./hypervel.md).
+
 ## Installation
 
 Install the package via Composer:
@@ -43,6 +45,7 @@ Add a `clickhouse` connection to your `config/database.php` file under the `conn
         'password' => env('CLICKHOUSE_PASSWORD', ''),
         'https' => env('CLICKHOUSE_HTTPS', false),
         'transport' => env('CLICKHOUSE_TRANSPORT', 'guzzle'),
+        'connect_timeout' => env('CLICKHOUSE_CONNECT_TIMEOUT'),
         'engine' => env('CLICKHOUSE_ENGINE'),
         'use_lightweight_delete' => env('CLICKHOUSE_USE_LIGHTWEIGHT_DELETE', false),
     ],
@@ -62,6 +65,7 @@ Add a `clickhouse` connection to your `config/database.php` file under the `conn
 | `password` | `''` | The password for authentication. |
 | `https` | `false` | Enables TLS connections to ClickHouse. |
 | `transport` | `'guzzle'` | The HTTP transport driver. Supported: `'guzzle'`, `'curl'`. |
+| `connect_timeout` | `null` | The number of seconds to wait while opening an HTTP connection. Both transports accept fractional values. |
 | `engine` | `null` | The default table engine for migrations (e.g. `'MergeTree()'`). When not set, defaults to `MergeTree()`. |
 | `use_lightweight_delete` | `false` | When `true`, Eloquent `delete()` uses lightweight `DELETE` statements instead of `ALTER TABLE ... DELETE`. |
 
@@ -77,6 +81,7 @@ CLICKHOUSE_USERNAME=default
 CLICKHOUSE_PASSWORD=
 CLICKHOUSE_HTTPS=
 CLICKHOUSE_TRANSPORT=guzzle
+CLICKHOUSE_CONNECT_TIMEOUT=10
 CLICKHOUSE_ENGINE=
 CLICKHOUSE_USE_LIGHTWEIGHT_DELETE=false
 ```
