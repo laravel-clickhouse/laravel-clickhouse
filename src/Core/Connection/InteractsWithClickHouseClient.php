@@ -75,7 +75,7 @@ trait InteractsWithClickHouseClient
             $errors = [];
 
             foreach ($e->getErrors() as $key => $error) {
-                $errors[$key] = $this->newQueryException(
+                $errors[$key] = $this->newParallelQueryException(
                     $queries[$key]['sql'],
                     $queries[$key]['bindings'],
                     $error
@@ -276,7 +276,7 @@ trait InteractsWithClickHouseClient
     /**
      * Create a framework-specific query exception for a failed parallel query.
      */
-    protected function newQueryException(string $sql, mixed $bindings, Throwable $error): Throwable
+    protected function newParallelQueryException(string $sql, mixed $bindings, Throwable $error): Throwable
     {
         $exception = static::QUERY_EXCEPTION;
 

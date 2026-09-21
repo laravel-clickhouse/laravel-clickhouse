@@ -7,7 +7,7 @@ use ClickHouse\Hypervel\Connection;
 use ClickHouse\Hypervel\Facades\Schema;
 use ClickHouse\Tests\Hypervel\Feature\TestCase;
 use Hypervel\Coroutine\Parallel as CoroutineParallel;
-use Hypervel\Database\Pool\PoolFactory;
+use Hypervel\Database\Pool\PoolManager;
 use Hypervel\Support\Facades\DB;
 
 /**
@@ -16,7 +16,7 @@ use Hypervel\Support\Facades\DB;
  * own HTTP client, coroutines run queries concurrently, pool health checks
  * query ClickHouse, and reconnect() replaces the HTTP client.
  *
- * The pool-level assertions borrow slots straight from PoolFactory: the
+ * The pool-level assertions borrow slots straight from PoolManager: the
  * testing lifecycle swaps in DatabaseConnectionResolver, whose
  * process-global connection cache would otherwise hand every coroutine the
  * same wrapper and hide the pool behaviour under test.
@@ -68,10 +68,10 @@ class ConnectionPoolTest extends TestCase
 
     public function testEachPooledSlotCarriesItsOwnHttpClient(): void
     {
-        $pool = $this->app->get(PoolFactory::class)->getPool('clickhouse');
+        $pool = $this->app->get(PoolManager::class)->pool('clickhouse');
 
-        $first = $pool->get();
-        $second = $pool->get();
+        $first = $pool->borrow();
+        $second = $pool->borrow();
 
         try {
             $firstConnection = $first->getConnection();
@@ -90,16 +90,16 @@ class ConnectionPoolTest extends TestCase
         }
     }
 
-    public function testReleasedSlotsReturnToTheChannel(): void
+    public function testReleasedSlotsReturnToTheIdleSet(): void
     {
-        $pool = $this->app->get(PoolFactory::class)->getPool('clickhouse');
+        $pool = $this->app->get(PoolManager::class)->pool('clickhouse');
 
-        $borrowed = $pool->get();
-        $inChannelWhileBorrowed = $pool->getConnectionsInChannel();
+        $borrowed = $pool->borrow();
+        $inChannelWhileBorrowed = $pool->getIdleCount();
 
         $pool->release($borrowed);
 
-        $this->assertSame($inChannelWhileBorrowed + 1, $pool->getConnectionsInChannel());
+        $this->assertSame($inChannelWhileBorrowed + 1, $pool->getIdleCount());
     }
 
     public function testReconnectReplacesTheHttpClient(): void
@@ -128,8 +128,8 @@ class ConnectionPoolTest extends TestCase
 
     public function testPoolHeartbeatProbesClickHouse(): void
     {
-        $pool = $this->app->get(PoolFactory::class)->getPool('clickhouse');
-        $pooledConnection = $pool->get();
+        $pool = $this->app->get(PoolManager::class)->pool('clickhouse');
+        $pooledConnection = $pool->borrow();
 
         try {
             $this->assertTrue($pooledConnection->ping(1.0));
@@ -140,8 +140,8 @@ class ConnectionPoolTest extends TestCase
 
     public function testPoolReleaseRetainsTheClientAndRestoresConfiguredMetadata(): void
     {
-        $pool = $this->app->get(PoolFactory::class)->getPool('clickhouse');
-        $pooledConnection = $pool->get();
+        $pool = $this->app->get(PoolManager::class)->pool('clickhouse');
+        $pooledConnection = $pool->borrow();
         $connection = $pooledConnection->getConnection();
         $client = $connection->getClient();
         $connection->setDatabaseName('temporary');
@@ -151,7 +151,7 @@ class ConnectionPoolTest extends TestCase
 
         $pooledConnection->release();
 
-        $reusedPooledConnection = $pool->get();
+        $reusedPooledConnection = $pool->borrow();
 
         try {
             $this->assertSame($pooledConnection, $reusedPooledConnection);

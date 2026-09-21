@@ -39,6 +39,9 @@ parameters:
     -
       message: "#Offset '(prewhere|arrayJoin|partition|settings|withQuery)' does not exist on array#"
       path: src/Core/Query/BuildsClickHouseQueries.php
+    -
+      message: '#Property .+::\$bindings \(array<.+>\) does not accept #'
+      path: src/Core/Query/BuildsClickHouseQueries.php
     # newExpression() returns mixed (the EXPRESSION class-string is opaque
     # to PHPStan); the frameworks' $from property accepts the result.
     -
