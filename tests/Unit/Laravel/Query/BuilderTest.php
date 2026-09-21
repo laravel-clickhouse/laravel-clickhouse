@@ -2,9 +2,11 @@
 
 namespace ClickHouse\Tests\Unit\Laravel\Query;
 
+use Carbon\Carbon;
 use ClickHouse\Enums\Format;
 use ClickHouse\Laravel\Query\Builder;
 use ClickHouse\Laravel\Query\Grammar;
+use ClickHouse\Support\Escaper;
 use ClickHouse\Tests\Unit\TestCase;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Processors\Processor;
@@ -168,6 +170,17 @@ class BuilderTest extends TestCase
         $this->assertEquals(
             'select * from `table` where `column` not between 1 and 2',
             $this->getBuilder()->from('table')->whereNotBetween('column', [1, 2])->toRawSql()
+        );
+    }
+
+    public function testWhereBetweenDateTimes()
+    {
+        $this->assertEquals(
+            "select * from `table` where `column` between '2026-08-13 10:00:00' and toDateTime64('2026-08-13 11:00:00.123456', 6)",
+            $this->getBuilder()->from('table')->whereBetween('column', [
+                Carbon::parse('2026-08-13 10:00:00'),
+                Carbon::parse('2026-08-13 11:00:00.123456'),
+            ])->toRawSql()
         );
     }
 
@@ -1635,7 +1648,13 @@ class BuilderTest extends TestCase
                 $connection->shouldReceive('getDatabaseName')->andReturn('database');
                 $connection->shouldReceive('getTablePrefix')->andReturn('');
                 $connection->shouldReceive('prepareBindings')->andReturnUsing(fn ($bindings) => $bindings);
-                $connection->shouldReceive('escape')->andReturnUsing(fn ($value) => is_string($value) ? "'{$value}'" : $value);
+                $connection->shouldReceive('escape')->andReturnUsing(function ($value) {
+                    if ($value instanceof \DateTimeInterface) {
+                        return (new Escaper)->escape($value);
+                    }
+
+                    return is_string($value) ? "'{$value}'" : $value;
+                });
 
                 if ($select) {
                     $connection->shouldReceive('select')
