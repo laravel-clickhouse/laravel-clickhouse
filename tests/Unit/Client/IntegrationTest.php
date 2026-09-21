@@ -40,7 +40,9 @@ class IntegrationTest extends TestCase
     #[DataProvider('clientProvider')]
     public function testTemporaryTableWorksWithinSession(Client $client): void
     {
-        $client->startSession('integration-test-session', 120);
+        // A unique session ID keeps concurrent test runs against the same
+        // server from colliding with SESSION_IS_LOCKED.
+        $client->startSession(uniqid('integration-test-session-'), 120);
 
         try {
             $client->exec('DROP TEMPORARY TABLE IF EXISTS test_session_words');

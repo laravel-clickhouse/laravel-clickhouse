@@ -2,51 +2,64 @@
 
 namespace ClickHouse\Tests\Unit\Client\Transports;
 
-use ClickHouse\Client\Transports\Curl;
 use ClickHouse\Client\Transports\Guzzle;
 use ClickHouse\Tests\Unit\TestCase;
-use ReflectionMethod;
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
+use GuzzleHttp\Psr7\Response;
+use Psr\Http\Message\RequestInterface;
 
 class GuzzleTest extends TestCase
 {
-    public function testSessionParametersAreAddedToGuzzleUri(): void
+    public function testSessionParametersAreAddedToRequestUri(): void
     {
-        $transport = new Guzzle(
-            host: 'localhost',
-            port: 8123,
-            database: 'default',
-            username: 'default',
-            password: '',
-            sessionId: 'session-id',
-            sessionTimeout: 120,
-        );
+        $history = [];
 
-        $method = new ReflectionMethod($transport, 'buildRequestUri');
+        $transport = $this->getTransport($history, sessionId: 'session-id', sessionTimeout: 120);
+
+        $transport->execute('SELECT 1');
 
         $this->assertSame(
             'http://localhost:8123/?database=default&default_format=JSON&session_id=session-id&session_timeout=120',
-            $method->invoke($transport),
+            (string) $history[0]['request']->getUri(),
         );
     }
 
-    public function testSessionParametersAreAddedToCurlSettings(): void
+    public function testRequestUriOmitsSessionParametersWithoutSession(): void
     {
-        $transport = new Curl(
+        $history = [];
+
+        $transport = $this->getTransport($history);
+
+        $transport->execute('SELECT 1');
+
+        $this->assertSame(
+            'http://localhost:8123/?database=default&default_format=JSON',
+            (string) $history[0]['request']->getUri(),
+        );
+    }
+
+    /**
+     * @param  array<int, array{request: RequestInterface}>  $history
+     */
+    protected function getTransport(array &$history, ?string $sessionId = null, ?int $sessionTimeout = null): Guzzle
+    {
+        $handler = HandlerStack::create(new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], '{"data": []}'),
+        ]));
+        $handler->push(Middleware::history($history));
+
+        return new Guzzle(
             host: 'localhost',
             port: 8123,
             database: 'default',
             username: 'default',
             password: '',
-            sessionId: 'session-id',
-            sessionTimeout: 120,
+            client: new Client(['handler' => $handler]),
+            sessionId: $sessionId,
+            sessionTimeout: $sessionTimeout,
         );
-
-        $method = new ReflectionMethod($transport, 'querySettings');
-
-        $this->assertSame([
-            'default_format' => 'JSON',
-            'session_id' => 'session-id',
-            'session_timeout' => 120,
-        ], $method->invoke($transport));
     }
 }

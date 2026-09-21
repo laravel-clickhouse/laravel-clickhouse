@@ -34,6 +34,6 @@ class TransportFactory
 
     protected function createGuzzleTransport(?string $sessionId, ?int $sessionTimeout): Transport
     {
-        return new Guzzle($this->host, $this->port, $this->database, $this->username, $this->password, $this->https, [], null, $sessionId, $sessionTimeout);
+        return new Guzzle($this->host, $this->port, $this->database, $this->username, $this->password, $this->https, sessionId: $sessionId, sessionTimeout: $sessionTimeout);
     }
 }

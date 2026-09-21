@@ -86,12 +86,19 @@ $results = DB::connection('clickhouse')->session(function ($connection) {
     ]);
 
     return $connection->table('tmp_words')->get();
-}, sessionTimeout: 120);
+}, timeout: 120);
 ```
 
-The package generates a UUID session ID and applies it to every query inside
-the callback. The session is cleared when the callback finishes, including
-when the callback throws an exception.
+The package generates a unique session ID and applies it to every query inside
+the callback. Once the callback finishes — including when it throws an
+exception — subsequent queries no longer join the session. The server keeps
+the session and its temporary tables alive until `timeout` seconds
+(60 by default) have passed since the session's last query; the timeout must
+not exceed the server's `max_session_timeout` setting (3600 by default).
+
+ClickHouse executes at most one query per session at a time, so parallel
+queries (`selectParallelly()`, the `Parallel` helper) throw a
+`LogicException` when called inside `session()`.
 
 ### Eloquent Model
 

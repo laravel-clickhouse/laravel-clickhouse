@@ -11,7 +11,6 @@ use ClickHouse\Laravel\Connection;
 use ClickHouse\Tests\Unit\TestCase;
 use Exception;
 use Illuminate\Database\QueryException;
-use Illuminate\Support\Str;
 use LogicException;
 use PDO;
 
@@ -43,8 +42,9 @@ class ConnectionTest extends TestCase
         $client = $this->mock(Client::class);
         $connection = new Connection(client: $client);
 
+        $client->shouldReceive('getSession')->once()->andReturnNull();
         $client->shouldReceive('startSession')
-            ->withArgs(fn (string $sessionId, int $timeout) => Str::isUuid($sessionId) && $timeout === 120)
+            ->withArgs(fn (string $sessionId, int $timeout) => ctype_xdigit($sessionId) && strlen($sessionId) === 32 && $timeout === 120)
             ->once();
         $client->shouldReceive('endSession')->once();
 
@@ -52,6 +52,23 @@ class ConnectionTest extends TestCase
             fn ($session) => $session === $connection ? 'result' : null,
             120,
         ));
+    }
+
+    public function testNestedSessionRestoresPreviousSession()
+    {
+        $client = $this->mock(Client::class);
+        $connection = new Connection(client: $client);
+
+        $client->shouldReceive('getSession')
+            ->once()
+            ->andReturn(['id' => 'outer-session', 'timeout' => 30]);
+        $client->shouldReceive('startSession')
+            ->withArgs(fn (string $sessionId, int $timeout) => ctype_xdigit($sessionId) && strlen($sessionId) === 32 && $timeout === 120)
+            ->once();
+        $client->shouldReceive('startSession')->with('outer-session', 30)->once();
+        $client->shouldNotReceive('endSession');
+
+        $connection->session(fn () => null, 120);
     }
 
     public function testSessionRejectsNonPositiveTimeout()

@@ -14,7 +14,6 @@ use Closure;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
-use Illuminate\Support\Str;
 use LogicException;
 use RuntimeException;
 
@@ -29,10 +28,6 @@ class Connection extends BaseConnection
      * The value escaper.
      */
     protected Escaper $escaper;
-
-    protected ?string $sessionId = null;
-
-    protected ?int $sessionTimeout = null;
 
     /**
      * Create a new database connection instance.
@@ -279,30 +274,32 @@ class Connection extends BaseConnection
     /**
      * Execute the callback using a ClickHouse HTTP session.
      *
+     * The server keeps the session (and its temporary tables) alive until
+     * $timeout seconds have passed since its last query; the value must
+     * not exceed the server's max_session_timeout setting (3600 by
+     * default). Parallel queries are rejected inside a session because
+     * ClickHouse executes at most one query per session at a time.
+     *
      * @param  Closure(static): mixed  $callback
      */
-    public function session(Closure $callback, int $sessionTimeout = 60): mixed
+    public function session(Closure $callback, int $timeout = 60): mixed
     {
-        if ($sessionTimeout < 1) {
+        if ($timeout < 1) {
             throw new LogicException('The ClickHouse session timeout must be greater than zero.');
         }
 
-        $previousSessionId = $this->sessionId;
-        $previousSessionTimeout = $this->sessionTimeout;
-        $this->sessionId = (string) Str::uuid();
-        $this->sessionTimeout = $sessionTimeout;
-        $this->client->startSession($this->sessionId, $sessionTimeout);
+        // random_bytes() instead of Str::uuid(): the latter needs ramsey/uuid,
+        // which this package does not require.
+        $previousSession = $this->client->getSession();
+        $this->client->startSession(bin2hex(random_bytes(16)), $timeout);
 
         try {
             return $callback($this);
         } finally {
-            $this->sessionId = $previousSessionId;
-            $this->sessionTimeout = $previousSessionTimeout;
-
-            if ($previousSessionId === null) {
+            if ($previousSession === null) {
                 $this->client->endSession();
             } else {
-                $this->client->startSession($previousSessionId, $previousSessionTimeout ?? 60);
+                $this->client->startSession($previousSession['id'], $previousSession['timeout']);
             }
         }
     }
