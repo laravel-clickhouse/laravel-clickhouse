@@ -28,7 +28,10 @@ class IntrospectionTest extends ClickHouseOnlyTestCase
                 $this->assertArrayHasKey($key, $column);
             }
 
-            $this->assertFalse((bool) $column['auto_increment']);
+            // The documented column shape types these keys as bool, so strict
+            // consumers must not receive ClickHouse's UInt8 0/1 here.
+            $this->assertIsBool($column['nullable']);
+            $this->assertFalse($column['auto_increment']);
         }
 
         $this->assertSame(['id', 'name'], array_column($columns, 'name'));
@@ -38,5 +41,10 @@ class IntrospectionTest extends ClickHouseOnlyTestCase
     {
         $this->assertSame([], Schema::connection('clickhouse')->getIndexes('ch_events'));
         $this->assertSame([], Schema::connection('clickhouse')->getIndexListing('ch_events'));
+    }
+
+    public function testGetForeignKeysReturnsAnEmptyResultInsteadOfThrowing(): void
+    {
+        $this->assertSame([], Schema::connection('clickhouse')->getForeignKeys('ch_events'));
     }
 }

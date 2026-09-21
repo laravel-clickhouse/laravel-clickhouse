@@ -69,9 +69,9 @@ class Grammar extends BaseGrammar
 
         return sprintf(
             "SELECT name AS name, type AS type_name, type AS type, '' AS collation, "
-            ."position(type, 'Nullable(') > 0 AS nullable, "
+            ."toBool(position(type, 'Nullable(') > 0) AS nullable, "
             .'default_expression AS default, comment AS comment, '
-            .'0 AS auto_increment '
+            .'false AS auto_increment '
             .'FROM system.columns '
             .'WHERE database = %s AND table = %s '
             .'ORDER BY position ASC',
@@ -94,7 +94,23 @@ class Grammar extends BaseGrammar
      */
     public function compileIndexes($schema, $table = null): string
     {
-        return "SELECT '' AS name, [] AS columns, '' AS type, 0 AS `unique`, 0 AS `primary` FROM system.one WHERE 1 = 0";
+        return "SELECT '' AS name, [] AS columns, '' AS type, false AS `unique`, false AS `primary` FROM system.one WHERE 1 = 0";
+    }
+
+    /**
+     * Compile the query to determine the foreign keys.
+     *
+     * ClickHouse has no foreign key mechanism at all, so the query yields the
+     * expected columns but no rows for the same reason compileIndexes() does:
+     * consumers which introspect a connection get an empty result instead of
+     * an exception.
+     *
+     * @param  string|null  $schema
+     * @param  string|null  $table
+     */
+    public function compileForeignKeys($schema, $table = null): string
+    {
+        return "SELECT '' AS name, [] AS columns, '' AS foreign_schema, '' AS foreign_table, [] AS foreign_columns, '' AS on_update, '' AS on_delete FROM system.one WHERE 1 = 0";
     }
 
     /**
