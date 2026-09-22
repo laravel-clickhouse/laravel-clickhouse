@@ -30,7 +30,7 @@ class Escaper
         }
 
         if ($value instanceof DateTimeInterface) {
-            $value = DateTimeFormatter::format($value);
+            return $this->escapeDateTime($value);
         }
 
         if (is_object($value) && is_callable([$value, '__toString'])) {
@@ -58,6 +58,26 @@ class Escaper
     public function escapeArray(array $values, bool $binary = false): string
     {
         return '['.implode(', ', array_map(fn ($value) => $this->escape($value, $binary), $values)).']';
+    }
+
+    /**
+     * A whole-second value becomes a plain quoted literal, which every
+     * ClickHouse version accepts against both DateTime and DateTime64
+     * columns. A value carrying microseconds is wrapped in
+     * toDateTime64(..., 6) instead: a bare fractional literal is rejected
+     * by older ClickHouse versions when compared against a DateTime column
+     * and silently truncated before comparison by newer ones, while the
+     * expression keeps exact comparison semantics on both column types.
+     */
+    public function escapeDateTime(DateTimeInterface $value): string
+    {
+        $escaped = $this->escapeString(DateTimeFormatter::format($value));
+
+        if (! DateTimeFormatter::hasMicroseconds($value)) {
+            return $escaped;
+        }
+
+        return sprintf('toDateTime64(%s, 6)', $escaped);
     }
 
     public function escapeBinary(mixed $value): string

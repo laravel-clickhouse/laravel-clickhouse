@@ -2,6 +2,7 @@
 
 namespace ClickHouse\Tests\Unit\Laravel;
 
+use Carbon\Carbon;
 use ClickHouse\Client\Client;
 use ClickHouse\Client\Contracts\Transport;
 use ClickHouse\Client\Response;
@@ -76,6 +77,19 @@ class ConnectionTest extends TestCase
         $this->expectException(LogicException::class);
 
         (new Connection(client: $this->mock(Client::class)))->session(fn () => null, 0);
+    }
+
+    public function testPrepareBindingsKeepsDateTimeInterfaceIntact()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $date = Carbon::parse('2026-08-13 10:00:00.123456');
+
+        $prepared = $connection->prepareBindings([$date, true, 'value']);
+
+        $this->assertSame($date, $prepared[0]);
+        $this->assertSame(1, $prepared[1]);
+        $this->assertSame('value', $prepared[2]);
     }
 
     public function testInsert()

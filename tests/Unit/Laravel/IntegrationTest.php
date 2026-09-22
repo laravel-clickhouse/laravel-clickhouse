@@ -8,6 +8,7 @@ use ClickHouse\Laravel\Eloquent\Model as BaseClickHouseModel;
 use ClickHouse\Laravel\Parallel;
 use ClickHouse\Laravel\Schema\Blueprint as ClickHouseBlueprint;
 use ClickHouse\Tests\Unit\TestCase;
+use DateTimeImmutable;
 use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model as BaseSQLiteModel;
@@ -128,7 +129,7 @@ class IntegrationTest extends TestCase
         try {
             $inserted = $connection->table('test_format_types')->insert([
                 'tags' => ['a', 'b'],
-                'created_at' => new \DateTimeImmutable('2026-07-29 12:34:56.123456'),
+                'created_at' => new DateTimeImmutable('2026-07-29 12:34:56.123456'),
                 'id' => 1,
             ], format: Format::JSONEachRow);
 
@@ -139,6 +140,54 @@ class IntegrationTest extends TestCase
             );
         } finally {
             $connection->statement('drop table test_format_types');
+        }
+    }
+
+    /**
+     * Regression test for issue #29: a DateTimeInterface binding carrying
+     * microseconds must not error against a second-precision DateTime column
+     * (older ClickHouse versions reject the bare fractional literal) and must
+     * not be truncated before the comparison (newer versions would otherwise
+     * wrongly match on equality).
+     */
+    public function testDateTimeBindingsCompareCorrectlyAgainstDateTimeColumns()
+    {
+        $connection = $this->db->getConnection('clickhouse');
+
+        $connection->statement('create table test_datetime_bindings (id UInt64, dt DateTime, dt64 DateTime64(6)) engine = Memory');
+
+        try {
+            $connection->table('test_datetime_bindings')->insert([
+                ['id' => 1, 'dt' => '2026-08-13 10:00:00', 'dt64' => '2026-08-13 10:00:00.123456'],
+                ['id' => 2, 'dt' => '2026-08-13 11:00:00', 'dt64' => '2026-08-13 11:00:00.500000'],
+            ], format: Format::JSONEachRow);
+
+            $table = fn () => $connection->table('test_datetime_bindings');
+
+            $this->assertEquals(
+                [2],
+                $table()->where('dt', '>', new DateTimeImmutable('2026-08-13 10:00:00.000001'))->pluck('id')->all()
+            );
+
+            $this->assertEquals(
+                [],
+                $table()->where('dt', '=', new DateTimeImmutable('2026-08-13 10:00:00.123456'))->pluck('id')->all()
+            );
+
+            $this->assertEquals(
+                [1],
+                $table()->where('dt', '=', new DateTimeImmutable('2026-08-13 10:00:00'))->pluck('id')->all()
+            );
+
+            $this->assertEquals(
+                [1],
+                $table()->whereBetween('dt64', [
+                    new DateTimeImmutable('2026-08-13 10:00:00.123456'),
+                    new DateTimeImmutable('2026-08-13 10:00:00.123456'),
+                ])->pluck('id')->all()
+            );
+        } finally {
+            $connection->statement('drop table test_datetime_bindings');
         }
     }
 

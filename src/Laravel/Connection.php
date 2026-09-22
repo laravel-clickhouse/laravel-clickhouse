@@ -11,6 +11,7 @@ use ClickHouse\Laravel\Schema\Builder as SchemaBuilder;
 use ClickHouse\Laravel\Schema\Grammar as SchemaGrammar;
 use ClickHouse\Support\Escaper;
 use Closure;
+use DateTimeInterface;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
@@ -183,6 +184,24 @@ class Connection extends BaseConnection
 
             return true;
         });
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * DateTimeInterface bindings intentionally stay objects instead of being
+     * stringified with the grammar's date format, so the Escaper can choose
+     * between a plain 'Y-m-d H:i:s' literal and a toDateTime64(..., 6)
+     * expression depending on whether the value carries microseconds.
+     *
+     * @param  mixed[]  $bindings
+     * @return mixed[]
+     */
+    public function prepareBindings(array $bindings)
+    {
+        $dates = array_filter($bindings, fn ($value) => $value instanceof DateTimeInterface);
+
+        return array_replace(parent::prepareBindings($bindings), $dates);
     }
 
     /** {@inheritDoc} */
