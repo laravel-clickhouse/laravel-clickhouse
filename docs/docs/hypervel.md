@@ -83,6 +83,15 @@ ClickHouse does not support transactions. Calls to `beginTransaction()`, `commit
 
 `selectParallelly()` and `ClickHouse\Hypervel\Parallel` use Guzzle's curl multi handle. Under Swoole's native curl hook this runs inside the coroutine scheduler — covered by `tests/Hypervel/Feature/Integration/ParallelTest.php`, which runs inside a coroutine like every feature test. In most cases, prefer launching multiple coroutines with regular queries — the connection pool already gives you concurrency — and reserve `Parallel` for porting code from the Laravel bridge.
 
+## Sessions and pooling
+
+[Sessions](./advanced.md#sessions) work the same way as on Laravel; what differs is where the session lives. Hypervel hands each coroutine one pooled connection for the coroutine's lifetime, and the session belongs to that connection — so inside `session()` every query the coroutine issues joins it, whether through the callback argument, the `DB` facade or an Eloquent model.
+
+Two consequences follow from that ownership:
+
+- **A released slot never carries a session.** The session is cleared by `session()` itself when the callback finishes, and again by the connection's `resetForPool()` hook when the slot returns to the pool — the same pool-boundary reset the framework applies to pretend mode.
+- **A coroutine started with `go()` inside the callback is not in the session.** It borrows its own pooled connection, which starts clean. Only `Coroutine::fork()`, which copies the parent's context, shares the parent's connection — and with it the session, exactly as it would share an open transaction. Two coroutines issuing queries under one session at the same time are rejected by the server (`SESSION_IS_LOCKED`), so fork only when the child runs its queries after the parent is done.
+
 ## Testing
 
 Use Hypervel's native `RefreshDatabase`, `DatabaseMigrations`, and

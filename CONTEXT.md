@@ -40,3 +40,13 @@ that routes a connection to this package. Not a synonym for bridge.
 **Transport**:
 The HTTP mechanism the client sends queries through — Guzzle (default) or
 Curl (phpclickhouse).
+
+**Session**:
+A ClickHouse HTTP session (`ClickHouse\Core\Client\Session`): an id every
+request carries so the server shares state — chiefly temporary tables —
+across them, dropped once its timeout passes without a request. Opened for
+the duration of a `Connection::session()` callback; on Hypervel it belongs
+to the coroutine's pooled connection and never survives a release back to
+the pool.
+_Avoid_: transaction (ClickHouse has none; a session shares state, it does
+not isolate or roll back)

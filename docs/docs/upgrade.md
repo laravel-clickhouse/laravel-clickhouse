@@ -46,6 +46,14 @@ require `illuminate/database` in your own `composer.json`.
 
 ### Low-impact changes
 
+- **`Client` no longer holds session state.** `Client::startSession()`,
+  `endSession()` and `getSession()` are gone; sessions are
+  `ClickHouse\Core\Client\Session` values passed per call —
+  `$client->exec($sql, $session)`, `$client->prepare($sql, $session)`,
+  `$client->getTransport($session)` — and `TransportFactory::make()` takes
+  the same value instead of an id/timeout pair. `Connection::session()` is
+  unchanged; only code driving the client directly needs updating. See
+  [Sessions](./advanced.md#sessions).
 - **`Connection::insertUsingFormat()` was renamed to `insertRawPayload()`**
   and marked `@internal` — it is plumbing between the query builder's
   formatted insert and the transport, not a public entry point. Call

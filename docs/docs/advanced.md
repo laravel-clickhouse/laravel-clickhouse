@@ -74,6 +74,35 @@ $affected = DB::connection('clickhouse')->affectingStatement(
 );
 ```
 
+## Sessions
+
+ClickHouse temporary tables only exist inside an HTTP session, and every request has to carry the same `session_id` to see them. `session()` runs a callback under one freshly generated session and returns whatever the callback returns:
+
+```php
+$results = DB::connection('clickhouse')->session(function ($connection) {
+    $connection->statement('CREATE TEMPORARY TABLE tmp_words (word String) ENGINE = Memory');
+    $connection->table('tmp_words')->insert(['word' => 'clickhouse']);
+
+    return $connection->table('tmp_words')->get();
+}, timeout: 120);
+```
+
+Inside the callback every query issued through that connection joins the session — including queries resolved again through the `DB` facade or through Eloquent models, since they reach the same connection instance. The session ends when the callback returns or throws; the server drops it, and its temporary tables, once `timeout` seconds (60 by default) pass without a query. The timeout must not exceed the server's `max_session_timeout` setting (3600 by default). Nested `session()` calls open an inner session and restore the outer one afterwards.
+
+ClickHouse executes at most one query per session at a time, so `selectParallelly()` and the `Parallel` helper throw a `LogicException` when called inside `session()`.
+
+The session is a plain value object, so the underlying `Client` stays stateless — pass it explicitly when working with the client directly:
+
+```php
+use ClickHouse\Core\Client\Session;
+
+$client = DB::connection('clickhouse')->getClient();
+$session = Session::start(timeout: 120);
+
+$client->exec('CREATE TEMPORARY TABLE tmp_words (word String) ENGINE = Memory', $session);
+$statement = $client->prepare('SELECT * FROM tmp_words', $session);
+```
+
 ## Direct Client Access
 
 For low-level operations that go beyond Laravel's database abstraction, you can access the underlying `Client` instance directly:

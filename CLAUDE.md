@@ -36,6 +36,7 @@ This is a Laravel ClickHouse integration package that provides:
 **Client Layer** (`src/Core/Client/`)
 - `Client.php` - Main ClickHouse client with connection management
 - `Statement.php` - Prepared statement handling
+- `Session.php` - HTTP session value object passed per call (the client itself is stateless)
 - `Response.php` - Response parsing and data handling
 - `TransportFactory.php` - HTTP transport factory
 - `Contracts/Transport.php` - Transport interface
