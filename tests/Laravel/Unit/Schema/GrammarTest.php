@@ -1579,7 +1579,7 @@ class GrammarTest extends TestCase
 
         $this->assertEquals(
             <<<'SQL'
-            SELECT name AS name, type AS type_name, type AS type, '' AS collation, position(type, 'Nullable(') > 0 AS nullable, default_expression AS default, comment AS comment FROM system.columns WHERE database = currentDatabase() AND table = 'users' ORDER BY position ASC
+            SELECT name AS name, type AS type_name, type AS type, '' AS collation, toBool(position(type, 'Nullable(') > 0) AS nullable, default_expression AS default, comment AS comment, false AS auto_increment FROM system.columns WHERE database = currentDatabase() AND table = 'users' ORDER BY position ASC
             SQL,
             $sql
         );
@@ -1592,7 +1592,47 @@ class GrammarTest extends TestCase
 
         $this->assertEquals(
             <<<'SQL'
-            SELECT name AS name, type AS type_name, type AS type, '' AS collation, position(type, 'Nullable(') > 0 AS nullable, default_expression AS default, comment AS comment FROM system.columns WHERE database = 'default' AND table = 'users' ORDER BY position ASC
+            SELECT name AS name, type AS type_name, type AS type, '' AS collation, toBool(position(type, 'Nullable(') > 0) AS nullable, default_expression AS default, comment AS comment, false AS auto_increment FROM system.columns WHERE database = 'default' AND table = 'users' ORDER BY position ASC
+            SQL,
+            $sql
+        );
+    }
+
+    public function testCompileColumnsWithTableOnly()
+    {
+        // Laravel 11's Schema\Builder passes the table as the only argument.
+        $grammar = $this->getGrammar(Grammar::class);
+        $sql = $grammar->compileColumns('users');
+
+        $this->assertEquals(
+            <<<'SQL'
+            SELECT name AS name, type AS type_name, type AS type, '' AS collation, toBool(position(type, 'Nullable(') > 0) AS nullable, default_expression AS default, comment AS comment, false AS auto_increment FROM system.columns WHERE database = currentDatabase() AND table = 'users' ORDER BY position ASC
+            SQL,
+            $sql
+        );
+    }
+
+    public function testCompileIndexes()
+    {
+        $grammar = $this->getGrammar(Grammar::class);
+        $sql = $grammar->compileIndexes(null, 'users');
+
+        $this->assertEquals(
+            <<<'SQL'
+            SELECT '' AS name, [] AS columns, '' AS type, false AS `unique`, false AS `primary` FROM system.one WHERE 1 = 0
+            SQL,
+            $sql
+        );
+    }
+
+    public function testCompileForeignKeys()
+    {
+        $grammar = $this->getGrammar(Grammar::class);
+        $sql = $grammar->compileForeignKeys(null, 'users');
+
+        $this->assertEquals(
+            <<<'SQL'
+            SELECT '' AS name, [] AS columns, '' AS foreign_schema, '' AS foreign_table, [] AS foreign_columns, '' AS on_update, '' AS on_delete FROM system.one WHERE 1 = 0
             SQL,
             $sql
         );

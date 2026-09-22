@@ -8,6 +8,7 @@ use ClickHouse\Core\Client\Response;
 use ClickHouse\Core\Client\Statement;
 use ClickHouse\Core\Support\Escaper;
 use ClickHouse\Tests\Core\Unit\TestCase;
+use DateTimeImmutable;
 
 class StatementTest extends TestCase
 {
@@ -62,5 +63,26 @@ class StatementTest extends TestCase
 
         $this->assertEquals($records, $statement->fetchAll());
         $this->assertEquals($affectedRows, $statement->rowCount());
+    }
+
+    public function testToRawSqlWithDateTimeBindings()
+    {
+        $client = $this->mock(Client::class);
+
+        $client
+            ->shouldReceive('getEscaper')
+            ->withNoArgs()
+            ->twice()
+            ->andReturn(new Escaper);
+
+        $statement = new Statement($client, 'select * from `table` where `dt` between ? and ?');
+
+        $statement->bindValue(1, new DateTimeImmutable('2024-01-02 03:04:05'));
+        $statement->bindValue(2, new DateTimeImmutable('2024-01-02 03:04:05.123456'));
+
+        $this->assertEquals(
+            "select * from `table` where `dt` between '2024-01-02 03:04:05' and toDateTime64('2024-01-02 03:04:05.123456', 6)",
+            $statement->toRawSql()
+        );
     }
 }

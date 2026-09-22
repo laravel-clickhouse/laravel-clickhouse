@@ -22,6 +22,8 @@ class Curl implements Transport
         protected bool $https = false,
         ?Client $client = null,
         protected ?float $connectTimeout = null,
+        protected ?string $sessionId = null,
+        protected ?int $sessionTimeout = null,
     ) {
         $this->client = $client ?? $this->getDefaultClient();
     }
@@ -29,7 +31,7 @@ class Curl implements Transport
     public function execute(string $sql): Response
     {
         /** @var ClickHouseDBStatement $statement */
-        $statement = $this->client->write($sql, querySettings: ['default_format' => 'JSON']);
+        $statement = $this->client->write($sql, querySettings: $this->querySettings());
 
         return $this->parseResponse($sql, $statement);
     }
@@ -37,7 +39,10 @@ class Curl implements Transport
     public function executeParallelly(array $sqls): array
     {
         $statements = array_map(function ($sql) {
-            return $this->client->selectAsync($sql);
+            return $this->client->selectAsync(
+                $sql,
+                querySettings: $this->querySettings(),
+            );
         }, $sqls);
 
         $this->client->executeAsync();
@@ -76,6 +81,19 @@ class Curl implements Transport
         }
 
         return $client;
+    }
+
+    /** @return array<string, int|string> */
+    protected function querySettings(): array
+    {
+        $settings = ['default_format' => 'JSON'];
+
+        if ($this->sessionId !== null && $this->sessionTimeout !== null) {
+            $settings['session_id'] = $this->sessionId;
+            $settings['session_timeout'] = $this->sessionTimeout;
+        }
+
+        return $settings;
     }
 
     protected function parseResponse(string $sql, ClickHouseDBStatement $statement): Response

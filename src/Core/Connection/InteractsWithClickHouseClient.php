@@ -6,6 +6,8 @@ use ClickHouse\Core\Client\Client;
 use ClickHouse\Core\Client\Statement;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
 use ClickHouse\Core\Support\Escaper;
+use Closure;
+use DateTimeInterface;
 use Generator;
 use InvalidArgumentException;
 use LogicException;
@@ -110,6 +112,38 @@ trait InteractsWithClickHouseClient
     }
 
     /**
+     * Execute the callback using a ClickHouse HTTP session.
+     *
+     * The server keeps the session (and its temporary tables) alive until
+     * $timeout seconds have passed since its last query; the value must
+     * not exceed the server's max_session_timeout setting (3600 by
+     * default). Parallel queries are rejected inside a session because
+     * ClickHouse executes at most one query per session at a time.
+     *
+     * @param  Closure(static): mixed  $callback
+     */
+    public function session(Closure $callback, int $timeout = 60): mixed
+    {
+        if ($timeout < 1) {
+            throw new LogicException('The ClickHouse session timeout must be greater than zero.');
+        }
+
+        $client = $this->getClient();
+        $previousSession = $client->getSession();
+        $client->startSession(bin2hex(random_bytes(16)), $timeout);
+
+        try {
+            return $callback($this);
+        } finally {
+            if ($previousSession === null) {
+                $client->endSession();
+            } else {
+                $client->startSession($previousSession['id'], $previousSession['timeout']);
+            }
+        }
+    }
+
+    /**
      * Run a select statement and yield each result.
      *
      * @param  string  $query
@@ -153,6 +187,24 @@ trait InteractsWithClickHouseClient
             /** @var Statement $statement */
             $statement->bindValue($key + 1, $value);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * DateTimeInterface bindings intentionally stay objects instead of being
+     * stringified with the grammar's date format, so the Escaper can choose
+     * between a plain 'Y-m-d H:i:s' literal and a toDateTime64(..., 6)
+     * expression depending on whether the value carries microseconds.
+     *
+     * @param  mixed[]  $bindings
+     * @return mixed[]
+     */
+    public function prepareBindings(array $bindings): array
+    {
+        $dates = array_filter($bindings, fn ($value) => $value instanceof DateTimeInterface);
+
+        return array_replace(parent::prepareBindings($bindings), $dates);
     }
 
     /**

@@ -6,6 +6,7 @@ use ClickHouse\Core\Enums\Format;
 use ClickHouse\Laravel\Facades\Schema;
 use ClickHouse\Laravel\Query\Builder;
 use ClickHouse\Tests\Laravel\Feature\TestCase;
+use DateTimeImmutable;
 
 class QueryTest extends TestCase
 {
@@ -97,8 +98,8 @@ class QueryTest extends TestCase
 
         try {
             $inserted = $connection->table('query_format_test')->insert([
-                ['id' => 1, 'name' => 'héllo 👋', 'tags' => ['a', 'b'], 'created_at' => new \DateTimeImmutable('2026-07-29 12:34:56.123456')],
-                ['id' => 2, 'name' => 'second', 'tags' => [], 'created_at' => new \DateTimeImmutable('2026-07-29 12:34:56.654321')],
+                ['id' => 1, 'name' => 'héllo 👋', 'tags' => ['a', 'b'], 'created_at' => new DateTimeImmutable('2026-07-29 12:34:56.123456')],
+                ['id' => 2, 'name' => 'second', 'tags' => [], 'created_at' => new DateTimeImmutable('2026-07-29 12:34:56.654321')],
             ], format: Format::JSONEachRow);
 
             $this->assertTrue($inserted);
@@ -111,6 +112,54 @@ class QueryTest extends TestCase
             );
         } finally {
             $connection->statement('drop table query_format_test');
+        }
+    }
+
+    /**
+     * Regression test for issue #29: a DateTimeInterface binding carrying
+     * microseconds must not error against a second-precision DateTime column
+     * (older ClickHouse versions reject the bare fractional literal) and must
+     * not be truncated before the comparison (newer versions would otherwise
+     * wrongly match on equality).
+     */
+    public function testDateTimeBindingsCompareCorrectlyAgainstDateTimeColumns()
+    {
+        $connection = $this->app->make('db')->connection('clickhouse');
+
+        $connection->statement('create table query_datetime_test (id UInt64, dt DateTime, dt64 DateTime64(6)) engine = Memory');
+
+        try {
+            $connection->table('query_datetime_test')->insert([
+                ['id' => 1, 'dt' => '2026-08-13 10:00:00', 'dt64' => '2026-08-13 10:00:00.123456'],
+                ['id' => 2, 'dt' => '2026-08-13 11:00:00', 'dt64' => '2026-08-13 11:00:00.500000'],
+            ], format: Format::JSONEachRow);
+
+            $table = fn () => $connection->table('query_datetime_test');
+
+            $this->assertEquals(
+                [2],
+                $table()->where('dt', '>', new DateTimeImmutable('2026-08-13 10:00:00.000001'))->pluck('id')->all()
+            );
+
+            $this->assertEquals(
+                [],
+                $table()->where('dt', '=', new DateTimeImmutable('2026-08-13 10:00:00.123456'))->pluck('id')->all()
+            );
+
+            $this->assertEquals(
+                [1],
+                $table()->where('dt', '=', new DateTimeImmutable('2026-08-13 10:00:00'))->pluck('id')->all()
+            );
+
+            $this->assertEquals(
+                [1],
+                $table()->whereBetween('dt64', [
+                    new DateTimeImmutable('2026-08-13 10:00:00.123456'),
+                    new DateTimeImmutable('2026-08-13 10:00:00.123456'),
+                ])->pluck('id')->all()
+            );
+        } finally {
+            $connection->statement('drop table query_datetime_test');
         }
     }
 

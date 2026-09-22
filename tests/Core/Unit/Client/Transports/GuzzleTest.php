@@ -9,9 +9,13 @@ use ClickHouse\Tests\Core\Unit\TestCase;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
+use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
 use RuntimeException;
@@ -194,10 +198,36 @@ class GuzzleTest extends TestCase
         $this->assertSame(9, $client->getConfig('connect_timeout'));
     }
 
+    public function testSessionParametersAreAddedToRequestUri(): void
+    {
+        $history = [];
+
+        $this->transport(client: $this->recordingClient($history), sessionId: 'session-id', sessionTimeout: 120)->execute('SELECT 1');
+
+        $this->assertSame(
+            'http://localhost:8123/?database=default&default_format=JSON&session_id=session-id&session_timeout=120',
+            (string) $history[0]['request']->getUri(),
+        );
+    }
+
+    public function testRequestUriOmitsSessionParametersWithoutSession(): void
+    {
+        $history = [];
+
+        $this->transport(client: $this->recordingClient($history))->execute('SELECT 1');
+
+        $this->assertSame(
+            'http://localhost:8123/?database=default&default_format=JSON',
+            (string) $history[0]['request']->getUri(),
+        );
+    }
+
     private function transport(
         array $guzzleOptions = [],
         ?Client $client = null,
         ?float $connectTimeout = null,
+        ?string $sessionId = null,
+        ?int $sessionTimeout = null,
     ): Guzzle {
         return new Guzzle(
             host: 'localhost',
@@ -208,7 +238,25 @@ class GuzzleTest extends TestCase
             guzzleOptions: $guzzleOptions,
             client: $client,
             connectTimeout: $connectTimeout,
+            sessionId: $sessionId,
+            sessionTimeout: $sessionTimeout,
         );
+    }
+
+    /**
+     * A Guzzle client that answers every request with an empty JSON result
+     * and records each request into $history.
+     *
+     * @param  array<int, array{request: RequestInterface}>  $history
+     */
+    private function recordingClient(array &$history): Client
+    {
+        $handler = HandlerStack::create(new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], '{"data": []}'),
+        ]));
+        $handler->push(Middleware::history($history));
+
+        return new Client(['handler' => $handler]);
     }
 
     private function client(Guzzle $transport): Client

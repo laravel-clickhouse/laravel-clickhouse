@@ -59,14 +59,25 @@ class EscaperTest extends TestCase
     {
         $date = DateTime::createFromFormat('Y-m-d H:i:s.u', '2024-01-02 03:04:05.123456');
 
-        $this->assertEquals("'2024-01-02 03:04:05.123456'", (new Escaper)->escape($date));
+        $this->assertEquals("toDateTime64('2024-01-02 03:04:05.123456', 6)", (new Escaper)->escape($date));
     }
 
     public function testDateTimeImmutablePreservesMicroseconds()
     {
         $date = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', '2024-01-02 03:04:05.000001');
 
-        $this->assertEquals("'2024-01-02 03:04:05.000001'", (new Escaper)->escape($date));
+        $this->assertEquals("toDateTime64('2024-01-02 03:04:05.000001', 6)", (new Escaper)->escape($date));
+    }
+
+    public function testDateTimeArray()
+    {
+        $whole = DateTime::createFromFormat('Y-m-d H:i:s', '2024-01-02 03:04:05');
+        $micro = DateTime::createFromFormat('Y-m-d H:i:s.u', '2024-01-02 03:04:05.123456');
+
+        $this->assertEquals(
+            "['2024-01-02 03:04:05', toDateTime64('2024-01-02 03:04:05.123456', 6)]",
+            (new Escaper)->escape([$whole, $micro])
+        );
     }
 
     public function testArray()

@@ -2,6 +2,7 @@
 
 namespace ClickHouse\Tests\Laravel\Unit;
 
+use Carbon\Carbon;
 use ClickHouse\Core\Client\Client;
 use ClickHouse\Core\Client\Contracts\Transport;
 use ClickHouse\Core\Client\Response;
@@ -381,6 +382,60 @@ class ConnectionTest extends TestCase
             $this->assertInstanceOf(QueryException::class, $e->getErrors()['b']);
             $this->assertSame('0', $e->getErrors()['b']->connectionName);
         }
+    }
+
+    public function testSessionRunsCallbackWithSessionAndRestoresClientState()
+    {
+        $client = $this->mock(Client::class);
+        $connection = new Connection(client: $client);
+
+        $client->shouldReceive('getSession')->once()->andReturnNull();
+        $client->shouldReceive('startSession')
+            ->withArgs(fn (string $sessionId, int $timeout) => ctype_xdigit($sessionId) && strlen($sessionId) === 32 && $timeout === 120)
+            ->once();
+        $client->shouldReceive('endSession')->once();
+
+        $this->assertSame('result', $connection->session(
+            fn ($session) => $session === $connection ? 'result' : null,
+            120,
+        ));
+    }
+
+    public function testNestedSessionRestoresPreviousSession()
+    {
+        $client = $this->mock(Client::class);
+        $connection = new Connection(client: $client);
+
+        $client->shouldReceive('getSession')
+            ->once()
+            ->andReturn(['id' => 'outer-session', 'timeout' => 30]);
+        $client->shouldReceive('startSession')
+            ->withArgs(fn (string $sessionId, int $timeout) => ctype_xdigit($sessionId) && strlen($sessionId) === 32 && $timeout === 120)
+            ->once();
+        $client->shouldReceive('startSession')->with('outer-session', 30)->once();
+        $client->shouldNotReceive('endSession');
+
+        $connection->session(fn () => null, 120);
+    }
+
+    public function testSessionRejectsNonPositiveTimeout()
+    {
+        $this->expectException(LogicException::class);
+
+        (new Connection(client: $this->mock(Client::class)))->session(fn () => null, 0);
+    }
+
+    public function testPrepareBindingsKeepsDateTimeInterfaceIntact()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $date = Carbon::parse('2026-08-13 10:00:00.123456');
+
+        $prepared = $connection->prepareBindings([$date, true, 'value']);
+
+        $this->assertSame($date, $prepared[0]);
+        $this->assertSame(1, $prepared[1]);
+        $this->assertSame('value', $prepared[2]);
     }
 
     public function testReportsDefaultAndConfiguredDriverNames()

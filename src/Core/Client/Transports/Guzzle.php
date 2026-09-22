@@ -35,6 +35,8 @@ class Guzzle implements Transport
         protected array $guzzleOptions = [],
         ?Client $client = null,
         protected ?float $connectTimeout = null,
+        protected ?string $sessionId = null,
+        protected ?int $sessionTimeout = null,
     ) {
         $this->client = $client ?? $this->getDefaultClient();
     }
@@ -152,6 +154,11 @@ class Guzzle implements Transport
             'database' => $this->database,
             'default_format' => 'JSON',
         ];
+
+        if ($this->sessionId !== null && $this->sessionTimeout !== null) {
+            $params['session_id'] = $this->sessionId;
+            $params['session_timeout'] = $this->sessionTimeout;
+        }
 
         return $baseUrl.'?'.http_build_query($params);
     }

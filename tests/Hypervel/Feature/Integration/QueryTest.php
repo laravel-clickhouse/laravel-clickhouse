@@ -6,6 +6,7 @@ use ClickHouse\Core\Enums\Format;
 use ClickHouse\Hypervel\Facades\Schema;
 use ClickHouse\Hypervel\Query\Builder;
 use ClickHouse\Tests\Hypervel\Feature\TestCase;
+use DateTimeImmutable;
 
 class QueryTest extends TestCase
 {
@@ -97,8 +98,8 @@ class QueryTest extends TestCase
 
         try {
             $inserted = $connection->table('query_format_test')->insert([
-                ['id' => 1, 'name' => 'héllo 👋', 'tags' => ['a', 'b'], 'created_at' => new \DateTimeImmutable('2026-07-29 12:34:56.123456')],
-                ['id' => 2, 'name' => 'second', 'tags' => [], 'created_at' => new \DateTimeImmutable('2026-07-29 12:34:56.654321')],
+                ['id' => 1, 'name' => 'héllo 👋', 'tags' => ['a', 'b'], 'created_at' => new DateTimeImmutable('2026-07-29 12:34:56.123456')],
+                ['id' => 2, 'name' => 'second', 'tags' => [], 'created_at' => new DateTimeImmutable('2026-07-29 12:34:56.654321')],
             ], format: Format::JSONEachRow);
 
             $this->assertTrue($inserted);
