@@ -3,11 +3,14 @@
 namespace ClickHouse\Tests\Core\Unit\Client\Transports;
 
 use ClickHouse\Core\Client\Transports\Curl;
+use ClickHouse\Tests\Core\Unit\Client\Concerns\InspectsTransportClients;
 use ClickHouse\Tests\Core\Unit\TestCase;
 use ClickHouseDB\Client;
 
 class CurlTest extends TestCase
 {
+    use InspectsTransportClients;
+
     public function testConfiguredConnectTimeoutReachesTheDefaultClient()
     {
         $transport = $this->transport(connectTimeout: 1.25);

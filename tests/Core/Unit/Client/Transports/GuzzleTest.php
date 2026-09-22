@@ -6,6 +6,7 @@ use ClickHouse\Core\Client\Session;
 use ClickHouse\Core\Client\Transports\Guzzle;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
 use ClickHouse\Core\Exceptions\QueryException;
+use ClickHouse\Tests\Core\Unit\Client\Concerns\InspectsTransportClients;
 use ClickHouse\Tests\Core\Unit\TestCase;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
@@ -24,6 +25,8 @@ use TypeError;
 
 class GuzzleTest extends TestCase
 {
+    use InspectsTransportClients;
+
     public function testExecuteDoesNotWrapClickHouseQueryErrors()
     {
         foreach ([

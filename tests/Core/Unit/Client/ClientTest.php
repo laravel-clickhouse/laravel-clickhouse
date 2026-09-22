@@ -11,6 +11,7 @@ use ClickHouse\Core\Client\TransportFactory;
 use ClickHouse\Core\Client\Transports\Curl;
 use ClickHouse\Core\Client\Transports\Guzzle;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
+use ClickHouse\Tests\Core\Unit\Client\Concerns\InspectsTransportClients;
 use ClickHouse\Tests\Core\Unit\TestCase;
 use ClickHouseDB\Client as ClickHouseClient;
 use Exception;
@@ -19,6 +20,8 @@ use LogicException;
 
 class ClientTest extends TestCase
 {
+    use InspectsTransportClients;
+
     public function testExec()
     {
         $transport = $this->mock(Transport::class);

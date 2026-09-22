@@ -9,7 +9,6 @@ use Mockery as m;
 use Mockery\LegacyMockInterface;
 use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase as BaseTestCase;
-use ReflectionProperty;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -40,14 +39,5 @@ abstract class TestCase extends BaseTestCase
         }
 
         return $mock;
-    }
-
-    /**
-     * Read a transport's inner HTTP client off its protected property —
-     * the only way to observe what the factory wired in.
-     */
-    protected function innerClient(object $transport): mixed
-    {
-        return (new ReflectionProperty($transport::class, 'client'))->getValue($transport);
     }
 }
