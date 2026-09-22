@@ -191,6 +191,64 @@ class IntegrationTest extends TestCase
         }
     }
 
+    /**
+     * Values-format inserts carry DateTimeInterface objects as bindings, so
+     * the Escaper renders whole-second values as plain literals and
+     * microsecond values as toDateTime64() expressions, which the Values
+     * parser evaluates (input_format_values_interpret_expressions is on by
+     * default).
+     */
+    public function testInsertValuesFormatWithDateTimeObjects()
+    {
+        $connection = $this->db->getConnection('clickhouse');
+
+        $connection->statement('create table test_values_datetime (id UInt64, dt DateTime, dt64 DateTime64(6)) engine = Memory');
+
+        try {
+            $inserted = $connection->table('test_values_datetime')->insert([
+                'id' => 1,
+                'dt' => new DateTimeImmutable('2026-08-13 10:00:00'),
+                'dt64' => new DateTimeImmutable('2026-08-13 10:00:00.123456'),
+            ]);
+
+            $this->assertTrue($inserted);
+            $this->assertEquals(
+                [['id' => 1, 'dt' => '2026-08-13 10:00:00', 'dt64' => '2026-08-13 10:00:00.123456']],
+                $connection->table('test_values_datetime')->get()->map(fn ($row) => (array) $row)->all()
+            );
+        } finally {
+            $connection->statement('drop table test_values_datetime');
+        }
+    }
+
+    /**
+     * Date attributes default to the Laravel-wide second-precision storage
+     * format, which every ClickHouse version accepts for DateTime columns;
+     * models persisting into DateTime64 columns opt into sub-second
+     * precision by setting $dateFormat explicitly.
+     */
+    public function testModelDateAttributesDefaultToSecondPrecisionWithOptIn()
+    {
+        $connection = $this->db->getConnection('clickhouse');
+
+        $connection->statement('create table test_date_format (id UInt64, occurred_at DateTime64(6)) engine = Memory');
+
+        try {
+            DefaultDateFormatModel::create(['id' => 1, 'occurred_at' => new DateTimeImmutable('2026-07-29 12:34:56.123456')]);
+            MicrosecondDateFormatModel::create(['id' => 2, 'occurred_at' => new DateTimeImmutable('2026-07-29 12:34:56.123456')]);
+
+            $this->assertEquals(
+                [
+                    ['id' => 1, 'occurred_at' => '2026-07-29 12:34:56.000000'],
+                    ['id' => 2, 'occurred_at' => '2026-07-29 12:34:56.123456'],
+                ],
+                $connection->table('test_date_format')->orderBy('id')->get()->map(fn ($row) => (array) $row)->all()
+            );
+        } finally {
+            $connection->statement('drop table test_date_format');
+        }
+    }
+
     public function testInsertWithFormatThroughModel()
     {
         $inserted = ClickHouseModel::insert([
@@ -319,6 +377,24 @@ class ClickHouseModel extends BaseClickHouseModel
     {
         return $this->belongsTo(SQLiteModel::class, 'id', 'id');
     }
+}
+
+class DefaultDateFormatModel extends BaseClickHouseModel
+{
+    public $timestamps = false;
+
+    protected $connection = 'clickhouse';
+
+    protected $table = 'test_date_format';
+
+    protected $fillable = ['id', 'occurred_at'];
+
+    protected $casts = ['occurred_at' => 'datetime'];
+}
+
+class MicrosecondDateFormatModel extends DefaultDateFormatModel
+{
+    protected $dateFormat = 'Y-m-d H:i:s.u';
 }
 
 class SQLiteModel extends BaseSQLiteModel
