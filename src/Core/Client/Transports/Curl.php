@@ -4,6 +4,7 @@ namespace ClickHouse\Core\Client\Transports;
 
 use ClickHouse\Core\Client\Contracts\Transport;
 use ClickHouse\Core\Client\Response;
+use ClickHouse\Core\Client\Session;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
 use ClickHouseDB\Client;
 use ClickHouseDB\Statement as ClickHouseDBStatement;
@@ -22,8 +23,7 @@ class Curl implements Transport
         protected bool $https = false,
         ?Client $client = null,
         protected ?float $connectTimeout = null,
-        protected ?string $sessionId = null,
-        protected ?int $sessionTimeout = null,
+        protected ?Session $session = null,
     ) {
         $this->client = $client ?? $this->getDefaultClient();
     }
@@ -88,9 +88,9 @@ class Curl implements Transport
     {
         $settings = ['default_format' => 'JSON'];
 
-        if ($this->sessionId !== null && $this->sessionTimeout !== null) {
-            $settings['session_id'] = $this->sessionId;
-            $settings['session_timeout'] = $this->sessionTimeout;
+        if ($this->session !== null) {
+            $settings['session_id'] = $this->session->id;
+            $settings['session_timeout'] = $this->session->timeout;
         }
 
         return $settings;

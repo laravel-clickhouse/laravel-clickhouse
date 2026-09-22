@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use ClickHouse\Core\Client\Client;
 use ClickHouse\Core\Client\Contracts\Transport;
 use ClickHouse\Core\Client\Response;
+use ClickHouse\Core\Client\Session;
 use ClickHouse\Core\Client\Statement;
 use ClickHouse\Core\Client\Transports\Guzzle as GuzzleTransport;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
@@ -52,7 +53,7 @@ class ConnectionTest extends TestCase
         $query = 'select * from `table` where `column` = ?';
         $bindings = ['value'];
 
-        $client->shouldReceive('prepare')->with($query)->once()->andReturn($statement);
+        $client->shouldReceive('prepare')->with($query, null)->once()->andReturn($statement);
         $statement->shouldReceive('bindValue')->with(1, $bindings[0])->once();
         $statement->shouldReceive('execute')->withNoArgs()->once();
         $statement->shouldReceive('fetchAll')->withNoArgs()->once()->andReturn($expected);
@@ -82,7 +83,7 @@ class ConnectionTest extends TestCase
         $statement = $this->mock(Statement::class);
         $connection = new Connection(client: $client);
 
-        $client->shouldReceive('prepare')->with($query = 'select * from `table`')->once()->andReturn($statement);
+        $client->shouldReceive('prepare')->with($query = 'select * from `table`', null)->once()->andReturn($statement);
         $statement->shouldReceive('execute')->withNoArgs()->once();
         $statement->shouldReceive('fetchAll')->withNoArgs()->once()->andReturn($expected);
 
@@ -145,7 +146,7 @@ class ConnectionTest extends TestCase
         $query = 'insert into `table` (`column`) values (?)';
         $bindings = ['value'];
 
-        $client->shouldReceive('prepare')->with($query)->once()->andReturn($statement);
+        $client->shouldReceive('prepare')->with($query, null)->once()->andReturn($statement);
         $statement->shouldReceive('bindValue')->with(1, $bindings[0])->once();
         $statement->shouldReceive('execute')->withNoArgs()->once()->andReturnTrue();
 
@@ -161,7 +162,7 @@ class ConnectionTest extends TestCase
         $statement = $this->mock(Statement::class);
         $connection = new Connection(client: $client);
 
-        $client->shouldReceive('prepare')->with($query = 'optimize table `events`')->once()->andReturn($statement);
+        $client->shouldReceive('prepare')->with($query = 'optimize table `events`', null)->once()->andReturn($statement);
         $statement->shouldReceive('execute')->withNoArgs()->once()->andReturnTrue();
 
         $this->assertTrue($connection->unprepared($query));
@@ -175,7 +176,7 @@ class ConnectionTest extends TestCase
         $statement = $this->mock(Statement::class);
         $connection = new Connection(client: $client);
 
-        $client->shouldReceive('prepare')->with($query = 'insert into `events` values (1)')->once()->andReturn($statement);
+        $client->shouldReceive('prepare')->with($query = 'insert into `events` values (1)', null)->once()->andReturn($statement);
         $statement->shouldReceive('execute')->withNoArgs()->once()->andThrow($failure);
 
         $caught = null;
@@ -199,7 +200,7 @@ class ConnectionTest extends TestCase
         $query = 'insert into `table` (`id`) format JSONEachRow';
         $data = '{"id":1}'."\n".'{"id":2}';
 
-        $client->shouldReceive('getTransport')->withNoArgs()->once()->andReturn($transport);
+        $client->shouldReceive('getTransport')->with(null)->once()->andReturn($transport);
         $transport->shouldReceive('execute')
             ->with($query."\n".$data)
             ->once()
@@ -216,7 +217,7 @@ class ConnectionTest extends TestCase
         $transport = $this->mock(Transport::class);
         $connection = new Connection(client: $client);
 
-        $client->shouldReceive('getTransport')->withNoArgs()->once()->andReturn($transport);
+        $client->shouldReceive('getTransport')->with(null)->once()->andReturn($transport);
         $transport->shouldReceive('execute')
             ->with(($query = 'insert into `events` format JSONEachRow')."\n".($payload = '{"id":1}'))
             ->once()
@@ -243,7 +244,7 @@ class ConnectionTest extends TestCase
         $query = 'alter table `table` update `column` = ? where `column` = ?';
         $bindings = ['value_b', 'value_a'];
 
-        $client->shouldReceive('prepare')->with($query)->once()->andReturn($statement);
+        $client->shouldReceive('prepare')->with($query, null)->once()->andReturn($statement);
         $statement->shouldReceive('bindValue')->with(1, $bindings[0])->once();
         $statement->shouldReceive('bindValue')->with(2, $bindings[1])->once();
         $statement->shouldReceive('execute')->withNoArgs()->once()->andReturnTrue();
@@ -264,7 +265,7 @@ class ConnectionTest extends TestCase
         $query = 'alter table `table` delete where `column` = ?';
         $bindings = ['value'];
 
-        $client->shouldReceive('prepare')->with($query)->once()->andReturn($statement);
+        $client->shouldReceive('prepare')->with($query, null)->once()->andReturn($statement);
         $statement->shouldReceive('bindValue')->with(1, $bindings[0])->once();
         $statement->shouldReceive('execute')->withNoArgs()->once()->andReturnTrue();
         $statement->shouldReceive('rowCount')->withNoArgs()->once()->andReturn($rowCount = 1);
@@ -281,7 +282,7 @@ class ConnectionTest extends TestCase
         $client = $this->mock(Client::class);
         $connection = new Connection(client: $client);
 
-        $client->shouldReceive('prepare')->with($query = 'select 1')->once()->andThrow($failure);
+        $client->shouldReceive('prepare')->with($query = 'select 1', null)->once()->andThrow($failure);
 
         try {
             $connection->select($query);
@@ -301,7 +302,7 @@ class ConnectionTest extends TestCase
         $query = 'delete from `table` where `column` = ?';
         $bindings = ['value'];
 
-        $client->shouldReceive('prepare')->with($query)->once()->andReturn($statement);
+        $client->shouldReceive('prepare')->with($query, null)->once()->andReturn($statement);
         $statement->shouldReceive('bindValue')->with(1, $bindings[0])->once();
         $statement->shouldReceive('execute')->withNoArgs()->once()->andReturnTrue();
         $statement->shouldReceive('rowCount')->withNoArgs()->once()->andReturnNull();
@@ -316,7 +317,7 @@ class ConnectionTest extends TestCase
         $statement = $this->mock(Statement::class);
         $connection = new Connection(client: $client);
 
-        $client->shouldReceive('prepare')->with($query = 'alter table `table` delete where 0')->once()->andReturn($statement);
+        $client->shouldReceive('prepare')->with($query = 'alter table `table` delete where 0', null)->once()->andReturn($statement);
         $statement->shouldReceive('execute')->withNoArgs()->once()->andReturnTrue();
         $statement->shouldReceive('rowCount')->withNoArgs()->once()->andReturn(0);
 
@@ -335,8 +336,8 @@ class ConnectionTest extends TestCase
         $connection = new Connection(client: $client);
         $connection->enableQueryLog();
 
-        $client->shouldReceive('prepare')->with($sqlA = 'select * from `table_a` where `column_a` = ?')->once()->andReturn($statementA);
-        $client->shouldReceive('prepare')->with($sqlB = 'select * from `table_b` where `column_b` = ?')->once()->andReturn($statementB);
+        $client->shouldReceive('prepare')->with($sqlA = 'select * from `table_a` where `column_a` = ?', null)->once()->andReturn($statementA);
+        $client->shouldReceive('prepare')->with($sqlB = 'select * from `table_b` where `column_b` = ?', null)->once()->andReturn($statementB);
         $client->shouldReceive('parallel')->with(['a' => $statementA, 'b' => $statementB])->once();
         $statementA->shouldReceive('bindValue')->with(1, $bindingA = 'value_a')->once();
         $statementA->shouldReceive('fetchAll')->withNoArgs()->once()->andReturn($expectedA);
@@ -365,8 +366,8 @@ class ConnectionTest extends TestCase
         $connection = new Connection(config: ['name' => '0'], client: $client);
         $exception = new ParallelQueryException(['a' => $expectedA], ['b' => new Exception('error')]);
 
-        $client->shouldReceive('prepare')->with($sqlA = 'select * from `table_a` where `column_a` = ?')->once()->andReturn($statementA);
-        $client->shouldReceive('prepare')->with($sqlB = 'select * from `table_b` where `column_b` = ?')->once()->andReturn($statementB);
+        $client->shouldReceive('prepare')->with($sqlA = 'select * from `table_a` where `column_a` = ?', null)->once()->andReturn($statementA);
+        $client->shouldReceive('prepare')->with($sqlB = 'select * from `table_b` where `column_b` = ?', null)->once()->andReturn($statementB);
         $client->shouldReceive('parallel')->with(['a' => $statementA, 'b' => $statementB])->once()->andThrow($exception);
         $statementA->shouldReceive('bindValue')->with(1, $bindingA = 'value_a')->once();
         $statementB->shouldReceive('bindValue')->with(1, $bindingB = 'value_b')->once();
@@ -384,38 +385,68 @@ class ConnectionTest extends TestCase
         }
     }
 
-    public function testSessionRunsCallbackWithSessionAndRestoresClientState()
+    public function testSessionScopesQueriesToASessionAndClearsItAfterwards()
     {
         $client = $this->mock(Client::class);
+        $statement = $this->mock(Statement::class);
         $connection = new Connection(client: $client);
+        $issued = null;
 
-        $client->shouldReceive('getSession')->once()->andReturnNull();
-        $client->shouldReceive('startSession')
-            ->withArgs(fn (string $sessionId, int $timeout) => ctype_xdigit($sessionId) && strlen($sessionId) === 32 && $timeout === 120)
-            ->once();
-        $client->shouldReceive('endSession')->once();
+        $client->shouldReceive('prepare')
+            ->withArgs(function (string $query, ?Session $session) use (&$issued) {
+                $issued = $session;
 
-        $this->assertSame('result', $connection->session(
-            fn ($session) => $session === $connection ? 'result' : null,
-            120,
-        ));
+                return $query === 'select 1';
+            })
+            ->once()
+            ->andReturn($statement);
+        $statement->shouldReceive('execute')->withNoArgs()->once();
+        $statement->shouldReceive('fetchAll')->withNoArgs()->once()->andReturn([]);
+
+        $result = $connection->session(function (Connection $scoped) use ($connection) {
+            $scoped->select('select 1');
+
+            return [$scoped === $connection, $scoped->getSession()];
+        }, 120);
+
+        [$sameConnection, $active] = $result;
+
+        $this->assertTrue($sameConnection);
+        $this->assertInstanceOf(Session::class, $active);
+        $this->assertSame($active, $issued);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{32}$/', $active->id);
+        $this->assertSame(120, $active->timeout);
+        $this->assertNull($connection->getSession());
+    }
+
+    public function testSessionIsClearedWhenTheCallbackThrows()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        try {
+            $connection->session(fn () => throw new RuntimeException('boom'));
+        } catch (RuntimeException) {
+        }
+
+        $this->assertNull($connection->getSession());
     }
 
     public function testNestedSessionRestoresPreviousSession()
     {
-        $client = $this->mock(Client::class);
-        $connection = new Connection(client: $client);
+        $connection = new Connection(client: $this->mock(Client::class));
 
-        $client->shouldReceive('getSession')
-            ->once()
-            ->andReturn(['id' => 'outer-session', 'timeout' => 30]);
-        $client->shouldReceive('startSession')
-            ->withArgs(fn (string $sessionId, int $timeout) => ctype_xdigit($sessionId) && strlen($sessionId) === 32 && $timeout === 120)
-            ->once();
-        $client->shouldReceive('startSession')->with('outer-session', 30)->once();
-        $client->shouldNotReceive('endSession');
+        $connection->session(function (Connection $connection) {
+            $outer = $connection->getSession();
 
-        $connection->session(fn () => null, 120);
+            $connection->session(function (Connection $connection) use ($outer) {
+                $this->assertNotSame($outer, $connection->getSession());
+                $this->assertSame(120, $connection->getSession()->timeout);
+            }, 120);
+
+            $this->assertSame($outer, $connection->getSession());
+        }, 30);
+
+        $this->assertNull($connection->getSession());
     }
 
     public function testSessionRejectsNonPositiveTimeout()
@@ -452,7 +483,7 @@ class ConnectionTest extends TestCase
         $statement = $this->mock(Statement::class);
         $connection = new Connection(client: $client);
 
-        $client->shouldReceive('prepare')->with('SELECT version()')->once()->andReturn($statement);
+        $client->shouldReceive('prepare')->with('SELECT version()', null)->once()->andReturn($statement);
         $statement->shouldReceive('execute')->withNoArgs()->once();
         $statement->shouldReceive('fetchAll')->withNoArgs()->once()->andReturn([['version()' => '25.8.1.1']]);
 

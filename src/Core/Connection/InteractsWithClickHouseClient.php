@@ -3,6 +3,7 @@
 namespace ClickHouse\Core\Connection;
 
 use ClickHouse\Core\Client\Client;
+use ClickHouse\Core\Client\Session;
 use ClickHouse\Core\Client\Statement;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
 use ClickHouse\Core\Support\Escaper;
@@ -30,6 +31,11 @@ trait InteractsWithClickHouseClient
      * The value escaper.
      */
     protected Escaper $escaper;
+
+    /**
+     * The HTTP session every query is currently issued under, if any.
+     */
+    protected ?Session $session = null;
 
     /**
      * Run select statements parallelly against the database.
@@ -60,7 +66,7 @@ trait InteractsWithClickHouseClient
                 continue;
             }
 
-            $statement = $client->prepare($query['sql']);
+            $statement = $client->prepare($query['sql'], $this->session);
 
             $this->bindValues($statement, $this->prepareBindings($query['bindings']));
 
@@ -124,23 +130,23 @@ trait InteractsWithClickHouseClient
      */
     public function session(Closure $callback, int $timeout = 60): mixed
     {
-        if ($timeout < 1) {
-            throw new LogicException('The ClickHouse session timeout must be greater than zero.');
-        }
-
-        $client = $this->getClient();
-        $previousSession = $client->getSession();
-        $client->startSession(bin2hex(random_bytes(16)), $timeout);
+        $previousSession = $this->session;
+        $this->session = Session::start($timeout);
 
         try {
             return $callback($this);
         } finally {
-            if ($previousSession === null) {
-                $client->endSession();
-            } else {
-                $client->startSession($previousSession['id'], $previousSession['timeout']);
-            }
+            $this->session = $previousSession;
         }
+    }
+
+    /**
+     * The session the connection is currently issuing queries under, or
+     * null outside session().
+     */
+    public function getSession(): ?Session
+    {
+        return $this->session;
     }
 
     /**
@@ -382,7 +388,7 @@ trait InteractsWithClickHouseClient
             return [];
         }
 
-        $statement = $this->getClient()->prepare($query);
+        $statement = $this->getClient()->prepare($query, $this->session);
 
         $this->bindValues($statement, $this->prepareBindings($bindings));
 
@@ -403,7 +409,7 @@ trait InteractsWithClickHouseClient
             return true;
         }
 
-        $statement = $this->getClient()->prepare($query);
+        $statement = $this->getClient()->prepare($query, $this->session);
 
         $this->bindValues($statement, $this->prepareBindings($bindings));
 
@@ -423,7 +429,7 @@ trait InteractsWithClickHouseClient
             return 0;
         }
 
-        $statement = $this->getClient()->prepare($query);
+        $statement = $this->getClient()->prepare($query, $this->session);
 
         $this->bindValues($statement, $this->prepareBindings($bindings));
 
@@ -451,7 +457,7 @@ trait InteractsWithClickHouseClient
 
         $this->recordsHaveBeenModified();
 
-        $this->getClient()->getTransport()->execute($query."\n".$payload);
+        $this->getClient()->getTransport($this->session)->execute($query."\n".$payload);
 
         return true;
     }

@@ -3,6 +3,7 @@
 namespace ClickHouse\Tests\Core\Feature;
 
 use ClickHouse\Core\Client\Client;
+use ClickHouse\Core\Client\Session;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
 use ClickHouse\Core\Exceptions\QueryException;
 use ClickHouse\Tests\Core\Unit\TestCase;
@@ -40,25 +41,21 @@ class IntegrationTest extends TestCase
     #[DataProvider('clientProvider')]
     public function testTemporaryTableWorksWithinSession(Client $client): void
     {
-        // A unique session ID keeps concurrent test runs against the same
+        // A freshly generated id keeps concurrent test runs against the same
         // server from colliding with SESSION_IS_LOCKED.
-        $client->startSession(uniqid('integration-test-session-'), 120);
+        $session = Session::start(120);
 
-        try {
-            $client->exec('DROP TEMPORARY TABLE IF EXISTS test_session_words');
-            $client->exec('CREATE TEMPORARY TABLE test_session_words (word String) ENGINE = Memory');
-            $client->exec("INSERT INTO test_session_words FORMAT TabSeparated\nhello\nworld");
+        $client->exec('DROP TEMPORARY TABLE IF EXISTS test_session_words', $session);
+        $client->exec('CREATE TEMPORARY TABLE test_session_words (word String) ENGINE = Memory', $session);
+        $client->exec("INSERT INTO test_session_words FORMAT TabSeparated\nhello\nworld", $session);
 
-            $statement = $client->prepare('SELECT * FROM test_session_words ORDER BY word');
-            $statement->execute();
+        $statement = $client->prepare('SELECT * FROM test_session_words ORDER BY word', $session);
+        $statement->execute();
 
-            $this->assertSame([
-                ['word' => 'hello'],
-                ['word' => 'world'],
-            ], $statement->fetchAll());
-        } finally {
-            $client->endSession();
-        }
+        $this->assertSame([
+            ['word' => 'hello'],
+            ['word' => 'world'],
+        ], $statement->fetchAll());
     }
 
     #[DataProvider('clientProvider')]

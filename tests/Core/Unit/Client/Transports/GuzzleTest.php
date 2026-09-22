@@ -2,6 +2,7 @@
 
 namespace ClickHouse\Tests\Core\Unit\Client\Transports;
 
+use ClickHouse\Core\Client\Session;
 use ClickHouse\Core\Client\Transports\Guzzle;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
 use ClickHouse\Core\Exceptions\QueryException;
@@ -202,7 +203,7 @@ class GuzzleTest extends TestCase
     {
         $history = [];
 
-        $this->transport(client: $this->recordingClient($history), sessionId: 'session-id', sessionTimeout: 120)->execute('SELECT 1');
+        $this->transport(client: $this->recordingClient($history), session: new Session('session-id', 120))->execute('SELECT 1');
 
         $this->assertSame(
             'http://localhost:8123/?database=default&default_format=JSON&session_id=session-id&session_timeout=120',
@@ -226,8 +227,7 @@ class GuzzleTest extends TestCase
         array $guzzleOptions = [],
         ?Client $client = null,
         ?float $connectTimeout = null,
-        ?string $sessionId = null,
-        ?int $sessionTimeout = null,
+        ?Session $session = null,
     ): Guzzle {
         return new Guzzle(
             host: 'localhost',
@@ -238,8 +238,7 @@ class GuzzleTest extends TestCase
             guzzleOptions: $guzzleOptions,
             client: $client,
             connectTimeout: $connectTimeout,
-            sessionId: $sessionId,
-            sessionTimeout: $sessionTimeout,
+            session: $session,
         );
     }
 

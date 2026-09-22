@@ -4,6 +4,7 @@ namespace ClickHouse\Core\Client\Transports;
 
 use ClickHouse\Core\Client\Contracts\Transport;
 use ClickHouse\Core\Client\Response;
+use ClickHouse\Core\Client\Session;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
 use ClickHouse\Core\Exceptions\QueryException;
 use GuzzleHttp\Client;
@@ -35,8 +36,7 @@ class Guzzle implements Transport
         protected array $guzzleOptions = [],
         ?Client $client = null,
         protected ?float $connectTimeout = null,
-        protected ?string $sessionId = null,
-        protected ?int $sessionTimeout = null,
+        protected ?Session $session = null,
     ) {
         $this->client = $client ?? $this->getDefaultClient();
     }
@@ -155,9 +155,9 @@ class Guzzle implements Transport
             'default_format' => 'JSON',
         ];
 
-        if ($this->sessionId !== null && $this->sessionTimeout !== null) {
-            $params['session_id'] = $this->sessionId;
-            $params['session_timeout'] = $this->sessionTimeout;
+        if ($this->session !== null) {
+            $params['session_id'] = $this->session->id;
+            $params['session_timeout'] = $this->session->timeout;
         }
 
         return $baseUrl.'?'.http_build_query($params);

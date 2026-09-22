@@ -21,7 +21,7 @@ class StatementTest extends TestCase
 
         $client
             ->shouldReceive('getTransport')
-            ->withNoArgs()
+            ->with(null)
             ->once()
             ->andReturn($transport);
         $client

@@ -104,6 +104,21 @@ class Connection extends BaseConnection implements ClickHouseConnection
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * A session only ever lives for the duration of session(); clearing it
+     * here makes "a released slot carries no session" a pool-boundary
+     * invariant rather than something the callback's finally block alone
+     * upholds — the same treatment the framework gives pretend mode.
+     */
+    public function resetForPool(): void
+    {
+        parent::resetForPool();
+
+        $this->session = null;
+    }
+
     /** {@inheritDoc} */
     public function getSchemaBuilder(): SchemaBuilder
     {

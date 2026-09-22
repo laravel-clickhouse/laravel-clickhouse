@@ -14,6 +14,7 @@ class Statement
     public function __construct(
         protected Client $client,
         protected string $query,
+        protected ?Session $session = null,
     ) {}
 
     public function bindValue(int $index, mixed $value): bool
@@ -25,7 +26,7 @@ class Statement
 
     public function execute(): bool
     {
-        $this->response = $this->client->getTransport()->execute($this->toRawSql());
+        $this->response = $this->client->getTransport($this->session)->execute($this->toRawSql());
 
         return true;
     }
@@ -36,6 +37,11 @@ class Statement
     public function fetchAll(): ?array
     {
         return $this->response->getRecords();
+    }
+
+    public function getSession(): ?Session
+    {
+        return $this->session;
     }
 
     public function rowCount(): ?int

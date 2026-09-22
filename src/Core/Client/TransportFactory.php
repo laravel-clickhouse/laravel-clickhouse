@@ -19,16 +19,16 @@ class TransportFactory
         protected ?float $connectTimeout = null,
     ) {}
 
-    public function make(string $name, ?string $sessionId = null, ?int $sessionTimeout = null): Transport
+    public function make(string $name, ?Session $session = null): Transport
     {
         return match ($name) {
-            'curl' => $this->createCurlTransport($sessionId, $sessionTimeout),
-            'guzzle' => $this->createGuzzleTransport($sessionId, $sessionTimeout),
+            'curl' => $this->createCurlTransport($session),
+            'guzzle' => $this->createGuzzleTransport($session),
             default => throw new InvalidArgumentException("Unsupported transport: [{$name}]"),
         };
     }
 
-    protected function createCurlTransport(?string $sessionId, ?int $sessionTimeout): Transport
+    protected function createCurlTransport(?Session $session): Transport
     {
         return new Curl(
             $this->host,
@@ -38,12 +38,11 @@ class TransportFactory
             $this->password,
             $this->https,
             connectTimeout: $this->connectTimeout,
-            sessionId: $sessionId,
-            sessionTimeout: $sessionTimeout,
+            session: $session,
         );
     }
 
-    protected function createGuzzleTransport(?string $sessionId, ?int $sessionTimeout): Transport
+    protected function createGuzzleTransport(?Session $session): Transport
     {
         return new Guzzle(
             $this->host,
@@ -53,8 +52,7 @@ class TransportFactory
             $this->password,
             $this->https,
             connectTimeout: $this->connectTimeout,
-            sessionId: $sessionId,
-            sessionTimeout: $sessionTimeout,
+            session: $session,
         );
     }
 }
