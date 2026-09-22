@@ -8,6 +8,7 @@ use ClickHouse\Client\Response;
 use ClickHouse\Client\Statement;
 use ClickHouse\Support\Escaper;
 use ClickHouse\Tests\Unit\TestCase;
+use DateTimeImmutable;
 
 class StatementTest extends TestCase
 {
@@ -76,8 +77,8 @@ class StatementTest extends TestCase
 
         $statement = new Statement($client, 'select * from `table` where `dt` between ? and ?');
 
-        $statement->bindValue(1, new \DateTimeImmutable('2024-01-02 03:04:05'));
-        $statement->bindValue(2, new \DateTimeImmutable('2024-01-02 03:04:05.123456'));
+        $statement->bindValue(1, new DateTimeImmutable('2024-01-02 03:04:05'));
+        $statement->bindValue(2, new DateTimeImmutable('2024-01-02 03:04:05.123456'));
 
         $this->assertEquals(
             "select * from `table` where `dt` between '2024-01-02 03:04:05' and toDateTime64('2024-01-02 03:04:05.123456', 6)",

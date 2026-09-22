@@ -8,6 +8,7 @@ use ClickHouse\Laravel\Query\Builder;
 use ClickHouse\Laravel\Query\Grammar;
 use ClickHouse\Support\Escaper;
 use ClickHouse\Tests\Unit\TestCase;
+use DateTimeInterface;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Processors\Processor;
 use LogicException;
@@ -1649,7 +1650,7 @@ class BuilderTest extends TestCase
                 $connection->shouldReceive('getTablePrefix')->andReturn('');
                 $connection->shouldReceive('prepareBindings')->andReturnUsing(fn ($bindings) => $bindings);
                 $connection->shouldReceive('escape')->andReturnUsing(function ($value) {
-                    if ($value instanceof \DateTimeInterface) {
+                    if ($value instanceof DateTimeInterface) {
                         return (new Escaper)->escape($value);
                     }
 
