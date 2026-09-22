@@ -168,4 +168,66 @@ class ConnectionPoolTest extends TestCase
             $reusedPooledConnection->release();
         }
     }
+
+    public function testPoolReleaseClearsAnActiveSession(): void
+    {
+        $pool = $this->app->get(PoolManager::class)->pool('clickhouse');
+        $pooledConnection = $pool->borrow();
+        $connection = $pooledConnection->getConnection();
+        $this->assertInstanceOf(Connection::class, $connection);
+
+        // Releasing the slot while its session is still active exercises the
+        // pool boundary itself rather than session()'s own finally block.
+        $afterRelease = $connection->session(function (Connection $connection) use ($pooledConnection) {
+            $pooledConnection->release();
+
+            return $connection->getSession();
+        });
+
+        $reused = $pool->borrow();
+
+        try {
+            $this->assertNull($afterRelease);
+            $this->assertSame($pooledConnection, $reused);
+            $this->assertNull($reused->getConnection()->getSession());
+        } finally {
+            $reused->release();
+        }
+    }
+
+    public function testSessionsAreBoundToTheirOwnPooledSlot(): void
+    {
+        $pool = $this->app->get(PoolManager::class)->pool('clickhouse');
+        $parent = $pool->borrow();
+        $parentConnection = $parent->getConnection();
+        $this->assertInstanceOf(Connection::class, $parentConnection);
+
+        try {
+            $parentConnection->session(function (Connection $parentConnection) use ($pool) {
+                $parallel = new CoroutineParallel;
+
+                // A child coroutine borrows its own slot: a different client,
+                // and no trace of the parent's session on it.
+                $parallel->add(function () use ($pool) {
+                    $child = $pool->borrow();
+
+                    try {
+                        $childConnection = $child->getConnection();
+
+                        return [$childConnection->getClient(), $childConnection->getSession()];
+                    } finally {
+                        $child->release();
+                    }
+                });
+
+                [[$childClient, $childSession]] = $parallel->wait();
+
+                $this->assertNotSame($parentConnection->getClient(), $childClient);
+                $this->assertNull($childSession);
+                $this->assertNotNull($parentConnection->getSession());
+            });
+        } finally {
+            $parent->release();
+        }
+    }
 }

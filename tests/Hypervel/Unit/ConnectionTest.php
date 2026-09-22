@@ -2,9 +2,11 @@
 
 namespace ClickHouse\Tests\Hypervel\Unit;
 
+use Carbon\Carbon;
 use ClickHouse\Core\Client\Client;
 use ClickHouse\Core\Client\Contracts\Transport;
 use ClickHouse\Core\Client\Response;
+use ClickHouse\Core\Client\Session;
 use ClickHouse\Core\Client\Statement;
 use ClickHouse\Core\Client\Transports\Guzzle as GuzzleTransport;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
@@ -387,6 +389,90 @@ class ConnectionTest extends TestCase
             $this->assertInstanceOf(QueryException::class, $e->getErrors()['b']);
             $this->assertSame('0', $e->getErrors()['b']->connectionName);
         }
+    }
+
+    public function testSessionScopesQueriesToASessionAndClearsItAfterwards()
+    {
+        $client = $this->mock(Client::class);
+        $statement = $this->mock(Statement::class);
+        $connection = new Connection(client: $client);
+        $issued = null;
+
+        $client->shouldReceive('prepare')
+            ->withArgs(function (string $query, ?Session $session) use (&$issued) {
+                $issued = $session;
+
+                return $query === 'select 1';
+            })
+            ->once()
+            ->andReturn($statement);
+        $statement->shouldReceive('execute')->withNoArgs()->once();
+        $statement->shouldReceive('fetchAll')->withNoArgs()->once()->andReturn([]);
+
+        $result = $connection->session(function (Connection $scoped) use ($connection) {
+            $scoped->select('select 1');
+
+            return [$scoped === $connection, $scoped->getSession()];
+        }, 120);
+
+        [$sameConnection, $active] = $result;
+
+        $this->assertTrue($sameConnection);
+        $this->assertInstanceOf(Session::class, $active);
+        $this->assertSame($active, $issued);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{32}$/', $active->id);
+        $this->assertSame(120, $active->timeout);
+        $this->assertNull($connection->getSession());
+    }
+
+    public function testSessionIsClearedWhenTheCallbackThrows()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        try {
+            $connection->session(fn () => throw new RuntimeException('boom'));
+        } catch (RuntimeException) {
+        }
+
+        $this->assertNull($connection->getSession());
+    }
+
+    public function testNestedSessionRestoresPreviousSession()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $connection->session(function (Connection $connection) {
+            $outer = $connection->getSession();
+
+            $connection->session(function (Connection $connection) use ($outer) {
+                $this->assertNotSame($outer, $connection->getSession());
+                $this->assertSame(120, $connection->getSession()->timeout);
+            }, 120);
+
+            $this->assertSame($outer, $connection->getSession());
+        }, 30);
+
+        $this->assertNull($connection->getSession());
+    }
+
+    public function testSessionRejectsNonPositiveTimeout()
+    {
+        $this->expectException(LogicException::class);
+
+        (new Connection(client: $this->mock(Client::class)))->session(fn () => null, 0);
+    }
+
+    public function testPrepareBindingsKeepsDateTimeInterfaceIntact()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $date = Carbon::parse('2026-08-13 10:00:00.123456');
+
+        $prepared = $connection->prepareBindings([$date, true, 'value']);
+
+        $this->assertSame($date, $prepared[0]);
+        $this->assertSame(1, $prepared[1]);
+        $this->assertSame('value', $prepared[2]);
     }
 
     public function testReportsDefaultAndConfiguredDriverNames()
