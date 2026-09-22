@@ -10,6 +10,7 @@ use ClickHouse\Client\TransportFactory;
 use ClickHouse\Exceptions\ParallelQueryException;
 use ClickHouse\Tests\Unit\TestCase;
 use Exception;
+use LogicException;
 
 class ClientTest extends TestCase
 {
@@ -125,6 +126,57 @@ class ClientTest extends TestCase
         $client = $this->getClient($transport);
 
         $this->assertEquals($transport, $client->getTransport());
+    }
+
+    public function testSessionIsPassedToTransportFactory()
+    {
+        $factory = $this->mock(TransportFactory::class);
+        $transport = $this->mock(Transport::class);
+
+        $factory->shouldReceive('make')
+            ->with('curl', 'session-id', 120)
+            ->once()
+            ->andReturn($transport);
+
+        $client = new Client(
+            host: 'localhost',
+            port: 8123,
+            database: 'default',
+            username: 'default',
+            password: 'default',
+            transport: 'curl',
+            transportFactory: $factory,
+        );
+
+        $client->startSession('session-id', 120);
+
+        $this->assertSame($transport, $client->getTransport());
+    }
+
+    public function testParallelRejectsActiveSession()
+    {
+        $client = $this->getClient();
+        $client->startSession('session-id', 120);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Parallel queries cannot be executed within a ClickHouse session.');
+
+        $client->parallel([]);
+    }
+
+    public function testGetSession()
+    {
+        $client = $this->getClient();
+
+        $this->assertNull($client->getSession());
+
+        $client->startSession('session-id', 120);
+
+        $this->assertSame(['id' => 'session-id', 'timeout' => 120], $client->getSession());
+
+        $client->endSession();
+
+        $this->assertNull($client->getSession());
     }
 
     private function getClient(?Transport $transport = null): Client

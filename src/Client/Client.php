@@ -5,12 +5,17 @@ namespace ClickHouse\Client;
 use ClickHouse\Client\Contracts\Transport;
 use ClickHouse\Exceptions\ParallelQueryException;
 use ClickHouse\Support\Escaper;
+use LogicException;
 
 class Client
 {
     protected TransportFactory $transportFactory;
 
     protected Escaper $escaper;
+
+    protected ?string $sessionId = null;
+
+    protected ?int $sessionTimeout = null;
 
     public function __construct(
         protected string $host,
@@ -46,6 +51,13 @@ class Client
      */
     public function parallel(array $statements): void
     {
+        // ClickHouse executes at most one query per session at a time, so
+        // concurrent queries sharing a session_id would fail server-side
+        // with SESSION_IS_LOCKED (code 373).
+        if ($this->sessionId !== null) {
+            throw new LogicException('Parallel queries cannot be executed within a ClickHouse session.');
+        }
+
         $sqls = array_map(function ($statement) {
             return $statement->toRawSql();
         }, $statements);
@@ -68,7 +80,31 @@ class Client
 
     public function getTransport(): Transport
     {
-        return $this->transportFactory->make($this->transport);
+        return $this->transportFactory->make($this->transport, $this->sessionId, $this->sessionTimeout);
+    }
+
+    public function startSession(string $sessionId, int $sessionTimeout): void
+    {
+        $this->sessionId = $sessionId;
+        $this->sessionTimeout = $sessionTimeout;
+    }
+
+    public function endSession(): void
+    {
+        $this->sessionId = null;
+        $this->sessionTimeout = null;
+    }
+
+    /**
+     * @return array{id: string, timeout: int}|null
+     */
+    public function getSession(): ?array
+    {
+        if ($this->sessionId === null || $this->sessionTimeout === null) {
+            return null;
+        }
+
+        return ['id' => $this->sessionId, 'timeout' => $this->sessionTimeout];
     }
 
     public function getEscaper(): Escaper

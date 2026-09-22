@@ -37,6 +37,47 @@ class ConnectionTest extends TestCase
         $this->assertEquals($expected, $actual);
     }
 
+    public function testSessionRunsCallbackWithSessionAndRestoresClientState()
+    {
+        $client = $this->mock(Client::class);
+        $connection = new Connection(client: $client);
+
+        $client->shouldReceive('getSession')->once()->andReturnNull();
+        $client->shouldReceive('startSession')
+            ->withArgs(fn (string $sessionId, int $timeout) => ctype_xdigit($sessionId) && strlen($sessionId) === 32 && $timeout === 120)
+            ->once();
+        $client->shouldReceive('endSession')->once();
+
+        $this->assertSame('result', $connection->session(
+            fn ($session) => $session === $connection ? 'result' : null,
+            120,
+        ));
+    }
+
+    public function testNestedSessionRestoresPreviousSession()
+    {
+        $client = $this->mock(Client::class);
+        $connection = new Connection(client: $client);
+
+        $client->shouldReceive('getSession')
+            ->once()
+            ->andReturn(['id' => 'outer-session', 'timeout' => 30]);
+        $client->shouldReceive('startSession')
+            ->withArgs(fn (string $sessionId, int $timeout) => ctype_xdigit($sessionId) && strlen($sessionId) === 32 && $timeout === 120)
+            ->once();
+        $client->shouldReceive('startSession')->with('outer-session', 30)->once();
+        $client->shouldNotReceive('endSession');
+
+        $connection->session(fn () => null, 120);
+    }
+
+    public function testSessionRejectsNonPositiveTimeout()
+    {
+        $this->expectException(LogicException::class);
+
+        (new Connection(client: $this->mock(Client::class)))->session(fn () => null, 0);
+    }
+
     public function testInsert()
     {
         $client = $this->mock(Client::class);

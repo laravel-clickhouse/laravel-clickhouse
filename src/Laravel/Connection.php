@@ -271,6 +271,39 @@ class Connection extends BaseConnection
         return $this->client;
     }
 
+    /**
+     * Execute the callback using a ClickHouse HTTP session.
+     *
+     * The server keeps the session (and its temporary tables) alive until
+     * $timeout seconds have passed since its last query; the value must
+     * not exceed the server's max_session_timeout setting (3600 by
+     * default). Parallel queries are rejected inside a session because
+     * ClickHouse executes at most one query per session at a time.
+     *
+     * @param  Closure(static): mixed  $callback
+     */
+    public function session(Closure $callback, int $timeout = 60): mixed
+    {
+        if ($timeout < 1) {
+            throw new LogicException('The ClickHouse session timeout must be greater than zero.');
+        }
+
+        // random_bytes() instead of Str::uuid(): the latter needs ramsey/uuid,
+        // which this package does not require.
+        $previousSession = $this->client->getSession();
+        $this->client->startSession(bin2hex(random_bytes(16)), $timeout);
+
+        try {
+            return $callback($this);
+        } finally {
+            if ($previousSession === null) {
+                $this->client->endSession();
+            } else {
+                $this->client->startSession($previousSession['id'], $previousSession['timeout']);
+            }
+        }
+    }
+
     /** {@inheritDoc} */
     protected function getDefaultQueryGrammar()
     {
