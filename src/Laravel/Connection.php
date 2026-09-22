@@ -288,8 +288,6 @@ class Connection extends BaseConnection
             throw new LogicException('The ClickHouse session timeout must be greater than zero.');
         }
 
-        // random_bytes() instead of Str::uuid(): the latter needs ramsey/uuid,
-        // which this package does not require.
         $previousSession = $this->client->getSession();
         $this->client->startSession(bin2hex(random_bytes(16)), $timeout);
 
