@@ -7,6 +7,7 @@ use ClickHouse\Client\Response;
 use ClickHouse\Exceptions\ParallelQueryException;
 use ClickHouse\Exceptions\QueryException;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\BadResponseException;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Pool;
@@ -50,8 +51,10 @@ class Guzzle implements Transport
         } catch (RequestException $e) {
             // Prefer the full error message from the response body over
             // Guzzle's 120-character summary in $e->getMessage().
-            $exception = $e->getResponse()
-                ? $this->extractErrorMessage((string) $e->getResponse()->getBody())
+            $errorResponse = $this->extractResponse($e);
+
+            $exception = $errorResponse !== null
+                ? $this->extractErrorMessage((string) $errorResponse->getBody())
                 : null;
 
             if ($exception !== null) {
@@ -83,15 +86,16 @@ class Guzzle implements Transport
             },
             'rejected' => function ($e, $key) use ($sqls, &$responses, &$errors) {
                 $response = null;
+                $errorResponse = $this->extractResponse($e);
 
-                if ($e instanceof RequestException && $e->getResponse()) {
+                if ($errorResponse !== null) {
                     // parseResponse() throws QueryException when the error
                     // body is plain text (ClickHouse <= 23 style). Capture
                     // it as this key's error instead of letting it escape
                     // the pool callback — an escape would abort the whole
                     // collection and discard every other query's result.
                     try {
-                        $responses[$key] = $response = $this->parseResponse($sqls[$key], $e->getResponse());
+                        $responses[$key] = $response = $this->parseResponse($sqls[$key], $errorResponse);
                     } catch (QueryException $parseException) {
                         $errors[$key] = $parseException;
 
@@ -206,6 +210,14 @@ class Guzzle implements Transport
         $writtenRows = $summary['written_rows'];
 
         return is_numeric($writtenRows) ? (int) $writtenRows : null;
+    }
+
+    /**
+     * Only BadResponseException carries a response on both Guzzle majors.
+     */
+    protected function extractResponse(mixed $e): ?ResponseInterface
+    {
+        return $e instanceof BadResponseException ? $e->getResponse() : null;
     }
 
     /**

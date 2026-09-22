@@ -4,6 +4,11 @@ parameters:
     - src
   reportUnmatchedIgnoredErrors: true
   ignoreErrors:
+    # Guzzle 8 shape-types the client constructor; $guzzleOptions is user config.
+    -
+      message: '#Parameter \#1 \$config of class GuzzleHttp\\Client constructor expects#'
+      path: src/Client/Transports/Guzzle.php
+      reportUnmatched: false
     # Dynamic SQL vs L13's literal-string typing on Expression / fromRaw / Arr::wrap.
     -
       message: '#Expression constructor expects TValue#'
