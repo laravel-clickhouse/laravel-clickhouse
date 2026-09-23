@@ -18,6 +18,10 @@ jobs:
       # (majors differ in observable ways — e.g. 23.x returns plain-text
       # error bodies where 24+ returns JSON — but that variance lives in
       # the transport, which PHP/Laravel versions do not affect).
+      # Both Guzzle majors are covered without pinning: testbench pulls in
+      # laravel/framework, which requires Guzzle ^7.8.2 on 11/12 and
+      # accepts ^8.0 on 13, so the Laravel 11/12 legs run Guzzle 7 and the
+      # Laravel 13 legs resolve to Guzzle 8.
       # 25-alpine/26-alpine bare-major tags do not exist on Docker Hub,
       # hence the explicit LTS minors.
       matrix:

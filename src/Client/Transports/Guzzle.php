@@ -9,6 +9,7 @@ use ClickHouse\Exceptions\QueryException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\ResponseException;
 use GuzzleHttp\Pool;
 use GuzzleHttp\Psr7\Request;
 use Psr\Http\Message\ResponseInterface;
@@ -50,8 +51,10 @@ class Guzzle implements Transport
         } catch (RequestException $e) {
             // Prefer the full error message from the response body over
             // Guzzle's 120-character summary in $e->getMessage().
-            $exception = $e->getResponse()
-                ? $this->extractErrorMessage((string) $e->getResponse()->getBody())
+            $errorResponse = $this->extractResponse($e);
+
+            $exception = $errorResponse !== null
+                ? $this->extractErrorMessage((string) $errorResponse->getBody())
                 : null;
 
             if ($exception !== null) {
@@ -83,15 +86,16 @@ class Guzzle implements Transport
             },
             'rejected' => function ($e, $key) use ($sqls, &$responses, &$errors) {
                 $response = null;
+                $errorResponse = $this->extractResponse($e);
 
-                if ($e instanceof RequestException && $e->getResponse()) {
+                if ($errorResponse !== null) {
                     // parseResponse() throws QueryException when the error
                     // body is plain text (ClickHouse <= 23 style). Capture
                     // it as this key's error instead of letting it escape
                     // the pool callback — an escape would abort the whole
                     // collection and discard every other query's result.
                     try {
-                        $responses[$key] = $response = $this->parseResponse($sqls[$key], $e->getResponse());
+                        $responses[$key] = $response = $this->parseResponse($sqls[$key], $errorResponse);
                     } catch (QueryException $parseException) {
                         $errors[$key] = $parseException;
 
@@ -206,6 +210,23 @@ class Guzzle implements Transport
         $writtenRows = $summary['written_rows'];
 
         return is_numeric($writtenRows) ? (int) $writtenRows : null;
+    }
+
+    /**
+     * Guzzle 8 keeps the response only on ResponseException and its
+     * subclasses, while Guzzle 7 exposes it on any RequestException. Both
+     * cover more than HTTP error statuses: a query that fails after
+     * ClickHouse has started streaming a 200 response aborts the transfer,
+     * and the partial body attached to that exception ends with the
+     * DB::Exception text.
+     */
+    protected function extractResponse(mixed $e): ?ResponseInterface
+    {
+        if (class_exists(ResponseException::class)) {
+            return $e instanceof ResponseException ? $e->getResponse() : null;
+        }
+
+        return $e instanceof RequestException ? $e->getResponse() : null;
     }
 
     /**
