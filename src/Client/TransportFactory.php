@@ -16,7 +16,17 @@ class TransportFactory
         protected string $username,
         protected string $password,
         protected bool $https = false,
-    ) {}
+        protected ?float $timeout = null,
+        protected ?float $connectTimeout = null,
+    ) {
+        if ($timeout !== null && $timeout < 0) {
+            throw new InvalidArgumentException('The timeout must not be negative.');
+        }
+
+        if ($connectTimeout !== null && $connectTimeout < 0) {
+            throw new InvalidArgumentException('The connect timeout must not be negative.');
+        }
+    }
 
     public function make(string $name, ?string $sessionId = null, ?int $sessionTimeout = null): Transport
     {
@@ -29,11 +39,16 @@ class TransportFactory
 
     protected function createCurlTransport(?string $sessionId, ?int $sessionTimeout): Transport
     {
-        return new Curl($this->host, $this->port, $this->database, $this->username, $this->password, $this->https, sessionId: $sessionId, sessionTimeout: $sessionTimeout);
+        return new Curl($this->host, $this->port, $this->database, $this->username, $this->password, $this->https, sessionId: $sessionId, sessionTimeout: $sessionTimeout, timeout: $this->timeout, connectTimeout: $this->connectTimeout);
     }
 
     protected function createGuzzleTransport(?string $sessionId, ?int $sessionTimeout): Transport
     {
-        return new Guzzle($this->host, $this->port, $this->database, $this->username, $this->password, $this->https, sessionId: $sessionId, sessionTimeout: $sessionTimeout);
+        $guzzleOptions = array_filter([
+            'timeout' => $this->timeout,
+            'connect_timeout' => $this->connectTimeout,
+        ], fn ($value) => $value !== null);
+
+        return new Guzzle($this->host, $this->port, $this->database, $this->username, $this->password, $this->https, $guzzleOptions, sessionId: $sessionId, sessionTimeout: $sessionTimeout);
     }
 }

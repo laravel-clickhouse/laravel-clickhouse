@@ -12,8 +12,10 @@ use ClickHouse\Laravel\Connection;
 use ClickHouse\Tests\Unit\TestCase;
 use Exception;
 use Illuminate\Database\QueryException;
+use InvalidArgumentException;
 use LogicException;
 use PDO;
+use ReflectionProperty;
 
 class ConnectionTest extends TestCase
 {
@@ -270,5 +272,31 @@ class ConnectionTest extends TestCase
         $this->expectExceptionMessage('Transactions are not supported when using ClickHouse.');
 
         (new Connection(client: $this->mock(Client::class)))->transaction(fn () => null);
+    }
+
+    public function testTimeoutConfigIsPassedToClient()
+    {
+        $connection = new Connection(config: ['timeout' => '30', 'connect_timeout' => 2.5]);
+        $client = (new ReflectionProperty($connection, 'client'))->getValue($connection);
+
+        $this->assertSame(30.0, (new ReflectionProperty($client, 'timeout'))->getValue($client));
+        $this->assertSame(2.5, (new ReflectionProperty($client, 'connectTimeout'))->getValue($client));
+    }
+
+    public function testMissingOrBlankTimeoutConfigIsNull()
+    {
+        $connection = new Connection(config: ['timeout' => '']);
+        $client = (new ReflectionProperty($connection, 'client'))->getValue($connection);
+
+        $this->assertNull((new ReflectionProperty($client, 'timeout'))->getValue($client));
+        $this->assertNull((new ReflectionProperty($client, 'connectTimeout'))->getValue($client));
+    }
+
+    public function testNonNumericTimeoutConfigThrowsException()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('The [timeout] config value must be numeric.');
+
+        new Connection(config: ['timeout' => 'forever']);
     }
 }
