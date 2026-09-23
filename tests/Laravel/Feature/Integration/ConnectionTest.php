@@ -1,0 +1,77 @@
+<?php
+
+namespace ClickHouse\Tests\Laravel\Feature\Integration;
+
+use ClickHouse\Laravel\Connection;
+use ClickHouse\Tests\Laravel\Feature\TestCase;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+
+class ConnectionTest extends TestCase
+{
+    public function testResolvesClickHouseConnectionFromManager()
+    {
+        $connection = $this->app['db']->connection('clickhouse');
+
+        $this->assertInstanceOf(Connection::class, $connection);
+    }
+
+    public function testSelect()
+    {
+        $rows = $this->app['db']->connection('clickhouse')->select('SELECT 1 AS one');
+
+        $this->assertSame([['one' => 1]], $rows);
+    }
+
+    public function testSelectWithBindings()
+    {
+        $rows = $this->app['db']->connection('clickhouse')->select('SELECT ? AS value', ['clickhouse']);
+
+        $this->assertSame([['value' => 'clickhouse']], $rows);
+    }
+
+    public function testSessionKeepsTemporaryTablesAcrossQueries()
+    {
+        $words = DB::connection('clickhouse')->session(function ($connection) {
+            $connection->statement('CREATE TEMPORARY TABLE session_words (word String) ENGINE = Memory');
+            $connection->table('session_words')->insert(['word' => 'clickhouse']);
+
+            return $connection->table('session_words')->pluck('word')->all();
+        });
+
+        $this->assertSame(['clickhouse'], $words);
+    }
+
+    public function testQueriesResolvedThroughTheFacadeJoinTheSession()
+    {
+        $words = DB::connection('clickhouse')->session(function ($connection) {
+            $connection->statement('CREATE TEMPORARY TABLE session_words (word String) ENGINE = Memory');
+
+            // Resolved again through the facade rather than the callback
+            // argument — the same connection, so still inside the session.
+            DB::connection('clickhouse')->table('session_words')->insert(['word' => 'facade']);
+
+            return DB::connection('clickhouse')->table('session_words')->pluck('word')->all();
+        });
+
+        $this->assertSame(['facade'], $words);
+    }
+
+    public function testTemporaryTablesDoNotOutliveTheSession()
+    {
+        DB::connection('clickhouse')->session(function ($connection) {
+            $connection->statement('CREATE TEMPORARY TABLE session_words (word String) ENGINE = Memory');
+        });
+
+        $this->assertNull(DB::connection('clickhouse')->getSession());
+
+        $this->expectException(QueryException::class);
+
+        DB::connection('clickhouse')->table('session_words')->count();
+    }
+
+    protected function defaultConnection(): string
+    {
+        return 'clickhouse';
+    }
+}

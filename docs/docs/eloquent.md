@@ -33,7 +33,7 @@ The following properties can be configured on your model:
 | `$keyType` | `'string'` | The data type of the primary key. |
 | `$incrementing` | `false` | Whether the primary key is auto-incrementing. Always `false` for ClickHouse. |
 | `$timestamps` | `true` | Whether the model uses `created_at` and `updated_at` columns. |
-| `$dateFormat` | `null` | The storage format of the model's date columns. |
+| `$dateFormat` | `null` | The storage format of the model's date columns. Defaults to second precision (`Y-m-d H:i:s`); see [Date Precision](#date-precision). |
 
 ```php
 class Event extends Model
@@ -47,6 +47,25 @@ class Event extends Model
     public $timestamps = false;
 }
 ```
+
+## Date Precision
+
+Date attributes are stored with second precision (`Y-m-d H:i:s`) by default — the same format Laravel uses for other databases, and one that every ClickHouse version accepts for both `DateTime` and `DateTime64` columns.
+
+If your model persists into `DateTime64` columns and you want to keep sub-second precision, opt in by setting `$dateFormat`:
+
+```php
+class Event extends Model
+{
+    protected $connection = 'clickhouse';
+
+    protected $dateFormat = 'Y-m-d H:i:s.u';
+}
+```
+
+> **Note:** Older ClickHouse versions reject fractional seconds when inserting into a second-precision `DateTime` column, so only opt in on models whose date columns are `DateTime64`.
+
+`$dateFormat` only affects how attributes are stored. Query bindings need no configuration: passing a `Carbon`/`DateTime` instance to `where()` or `whereBetween()` always compares correctly — values carrying microseconds are automatically wrapped in `toDateTime64(..., 6)` so precision is preserved against `DateTime64` columns without breaking comparisons against `DateTime` columns.
 
 ## Querying
 

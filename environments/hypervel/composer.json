@@ -1,0 +1,34 @@
+{
+    "description": "Isolated test environment for the Hypervel bridge. Hypervel requires PHPUnit ^13 and conflicts with orchestra/testbench, so its vendor tree cannot live in the root composer.json — this manifest symlinks the package in and installs the Hypervel toolchain beside it.",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../..",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
+    "require": {
+        "hypervel/components": "0.4.x-dev",
+        "laravel-clickhouse/laravel-clickhouse": "@dev"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^13.0.3",
+        "symfony/yaml": "^8.1",
+        "fakerphp/faker": "^1.23",
+        "mockery/mockery": "1.6.*"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ClickHouse\\Tests\\Hypervel\\": "../../tests/Hypervel/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    }
+}

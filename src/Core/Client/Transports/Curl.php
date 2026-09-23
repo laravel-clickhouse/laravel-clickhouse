@@ -1,0 +1,134 @@
+<?php
+
+namespace ClickHouse\Core\Client\Transports;
+
+use ClickHouse\Core\Client\Contracts\Transport;
+use ClickHouse\Core\Client\Response;
+use ClickHouse\Core\Client\Session;
+use ClickHouse\Core\Exceptions\ParallelQueryException;
+use ClickHouseDB\Client;
+use ClickHouseDB\Statement as ClickHouseDBStatement;
+use Exception;
+
+class Curl implements Transport
+{
+    protected Client $client;
+
+    public function __construct(
+        protected string $host,
+        protected int $port,
+        protected string $database,
+        protected string $username,
+        protected string $password,
+        protected bool $https = false,
+        ?Client $client = null,
+        protected ?float $connectTimeout = null,
+        protected ?Session $session = null,
+    ) {
+        $this->client = $client ?? $this->getDefaultClient();
+    }
+
+    public function execute(string $sql): Response
+    {
+        /** @var ClickHouseDBStatement $statement */
+        $statement = $this->client->write($sql, querySettings: $this->querySettings());
+
+        return $this->parseResponse($sql, $statement);
+    }
+
+    public function executeParallelly(array $sqls): array
+    {
+        $statements = array_map(function ($sql) {
+            return $this->client->selectAsync(
+                $sql,
+                querySettings: $this->querySettings(),
+            );
+        }, $sqls);
+
+        $this->client->executeAsync();
+
+        $results = ['responses' => [], 'errors' => []];
+
+        foreach ($statements as $key => $statement) {
+            try {
+                $results['responses'][$key] = $this->parseResponse($sqls[$key], $statement);
+            } catch (Exception $e) {
+                $results['errors'][$key] = $e;
+            }
+        }
+
+        if (count($results['errors'])) {
+            throw new ParallelQueryException($results['responses'], $results['errors']);
+        }
+
+        return $results['responses'];
+    }
+
+    protected function getDefaultClient(): Client
+    {
+        $client = new Client([
+            'host' => $this->host,
+            'port' => $this->port,
+            'username' => $this->username,
+            'password' => $this->password,
+            'https' => $this->https,
+        ]);
+
+        $client->database($this->database);
+
+        if ($this->connectTimeout !== null) {
+            $client->setConnectTimeOut($this->connectTimeout);
+        }
+
+        return $client;
+    }
+
+    /** @return array<string, int|string> */
+    protected function querySettings(): array
+    {
+        $settings = ['default_format' => 'JSON'];
+
+        if ($this->session !== null) {
+            $settings['session_id'] = $this->session->id;
+            $settings['session_timeout'] = $this->session->timeout;
+        }
+
+        return $settings;
+    }
+
+    protected function parseResponse(string $sql, ClickHouseDBStatement $statement): Response
+    {
+        if ($statement->isError()) {
+            $statement->error();
+        }
+
+        $records = $this->parseRecords($statement->getRequest()->response()->body());
+
+        return new Response(
+            $sql,
+            $records === null ? $this->parseAffectedRows($statement) : null,
+            $records,
+        );
+    }
+
+    protected function parseAffectedRows(ClickHouseDBStatement $statement): ?int
+    {
+        $writtenRows = $statement->summary('written_rows');
+
+        return is_numeric($writtenRows) ? (int) $writtenRows : null;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>|null
+     */
+    protected function parseRecords(string $body): ?array
+    {
+        $data = json_decode($body, true);
+
+        if (! is_array($data) || ! isset($data['data']) || ! is_array($data['data'])) {
+            return null;
+        }
+
+        return $data['data'];
+    }
+}
