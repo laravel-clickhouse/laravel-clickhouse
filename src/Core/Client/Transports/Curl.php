@@ -22,8 +22,9 @@ class Curl implements Transport
         protected string $password,
         protected bool $https = false,
         ?Client $client = null,
-        protected ?float $connectTimeout = null,
         protected ?Session $session = null,
+        protected ?float $timeout = null,
+        protected ?float $connectTimeout = null,
     ) {
         $this->client = $client ?? $this->getDefaultClient();
     }
@@ -75,6 +76,13 @@ class Curl implements Transport
         ]);
 
         $client->database($this->database);
+
+        // phpclickhouse applies this value both as the cURL timeout and as
+        // the server-side max_execution_time, truncated to whole seconds.
+        // Round up so a sub-second timeout never collapses to 0 (unlimited).
+        if ($this->timeout !== null) {
+            $client->setTimeout((int) ceil($this->timeout));
+        }
 
         if ($this->connectTimeout !== null) {
             $client->setConnectTimeOut($this->connectTimeout);

@@ -101,6 +101,7 @@ ClickHouse connection config in Laravel `config/database.php`:
     'password' => env('CLICKHOUSE_PASSWORD', ''),
     'transport' => env('CLICKHOUSE_TRANSPORT', 'guzzle'),
     'https' => env('CLICKHOUSE_HTTPS', false),
+    'timeout' => env('CLICKHOUSE_TIMEOUT'),
     'connect_timeout' => env('CLICKHOUSE_CONNECT_TIMEOUT'),
     'engine' => env('CLICKHOUSE_ENGINE'),
     'use_lightweight_delete' => env('CLICKHOUSE_USE_LIGHTWEIGHT_DELETE', false),

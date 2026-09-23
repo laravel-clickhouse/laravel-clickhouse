@@ -18,7 +18,7 @@
     "require": {
         "php": "^8.2",
         "smi2/phpclickhouse": "^1.5",
-        "guzzlehttp/guzzle": "^7.0",
+        "guzzlehttp/guzzle": "^7.0 || ^8.0",
         "nesbot/carbon": "^2.0 || ^3.0"
     },
     "require-dev": {

@@ -36,6 +36,8 @@ The Curl transport is a lightweight alternative built on the phpClickHouse libra
 
 > **Note:** If you plan to use [Parallel Queries](parallel-queries.md), you must use the Guzzle transport.
 
+> **Note:** The Curl transport applies a 20-second request timeout and a 5-second connect timeout by default. The `timeout` option is also sent to the server as `max_execution_time` and is rounded up to whole seconds. See [Configuration Options](installation.md#configuration-options).
+
 ## Raw Queries
 
 You can execute raw SQL queries directly through the connection instance. This is useful for ClickHouse-specific statements that are not covered by the Query Builder.

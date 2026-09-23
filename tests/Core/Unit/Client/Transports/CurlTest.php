@@ -11,22 +11,33 @@ class CurlTest extends TestCase
 {
     use InspectsTransportClients;
 
-    public function testConfiguredConnectTimeoutReachesTheDefaultClient()
+    public function testTimeoutsAreAppliedToClient(): void
     {
-        $transport = $this->transport(connectTimeout: 1.25);
+        $client = $this->client($this->transport(timeout: 30, connectTimeout: 2.5));
 
-        $this->assertSame(1.25, $this->client($transport)->getConnectTimeOut());
+        $this->assertSame(30, $client->getTimeout());
+        $this->assertSame(2.5, $client->getConnectTimeOut());
     }
 
-    public function testOmittedConnectTimeoutPreservesTheClientDefault()
+    public function testSubSecondTimeoutIsRoundedUpInsteadOfBecomingUnlimited(): void
     {
-        $expected = $this->newClient()->getConnectTimeOut();
-        $transport = $this->transport();
-
-        $this->assertSame($expected, $this->client($transport)->getConnectTimeOut());
+        $this->assertSame(1, $this->client($this->transport(timeout: 0.5))->getTimeout());
     }
 
-    public function testInjectedClientRemainsUnchanged()
+    public function testZeroTimeoutDisablesLimit(): void
+    {
+        $this->assertSame(0, $this->client($this->transport(timeout: 0))->getTimeout());
+    }
+
+    public function testLibraryDefaultsAreKeptWhenTimeoutsAreNotConfigured(): void
+    {
+        $client = $this->client($this->transport());
+
+        $this->assertSame(20, $client->getTimeout());
+        $this->assertSame(5.0, $client->getConnectTimeOut());
+    }
+
+    public function testInjectedClientRemainsUnchanged(): void
     {
         $client = $this->newClient();
         $client->setConnectTimeOut(9.0);
@@ -36,7 +47,7 @@ class CurlTest extends TestCase
         $this->assertSame(9.0, $client->getConnectTimeOut());
     }
 
-    private function transport(?Client $client = null, ?float $connectTimeout = null): Curl
+    private function transport(?Client $client = null, ?float $timeout = null, ?float $connectTimeout = null): Curl
     {
         return new Curl(
             host: 'localhost',
@@ -45,6 +56,7 @@ class CurlTest extends TestCase
             username: 'default',
             password: 'default',
             client: $client,
+            timeout: $timeout,
             connectTimeout: $connectTimeout,
         );
     }

@@ -8,7 +8,6 @@ use ClickHouse\Core\Client\Contracts\Transport;
 use ClickHouse\Core\Client\Response;
 use ClickHouse\Core\Client\Session;
 use ClickHouse\Core\Client\Statement;
-use ClickHouse\Core\Client\Transports\Guzzle as GuzzleTransport;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
 use ClickHouse\Hypervel\Connection;
 use ClickHouse\Hypervel\Query\Builder as QueryBuilder;
@@ -17,7 +16,6 @@ use ClickHouse\Hypervel\Schema\Builder as SchemaBuilder;
 use ClickHouse\Hypervel\Schema\Grammar as SchemaGrammar;
 use DateTimeImmutable;
 use Exception;
-use GuzzleHttp\Client as GuzzleClient;
 use Hypervel\Database\DatabaseTransactionsManager;
 use Hypervel\Database\QueryException;
 use InvalidArgumentException;
@@ -37,14 +35,30 @@ class ConnectionTest extends TestCase
         $this->assertSame('default', $connection->defaultClientDatabase);
     }
 
-    public function testPropagatesConfiguredConnectTimeoutToTheClient()
+    public function testTimeoutConfigIsPassedToClient()
     {
-        $connection = new Connection(config: ['connect_timeout' => '1.25']);
-        $transport = $connection->getClient()->getTransport();
-        $client = (new ReflectionProperty(GuzzleTransport::class, 'client'))->getValue($transport);
+        $connection = new Connection(config: ['timeout' => '30', 'connect_timeout' => 2.5]);
+        $client = (new ReflectionProperty($connection, 'client'))->getValue($connection);
 
-        $this->assertInstanceOf(GuzzleClient::class, $client);
-        $this->assertSame(1.25, $client->getConfig('connect_timeout'));
+        $this->assertSame(30.0, (new ReflectionProperty($client, 'timeout'))->getValue($client));
+        $this->assertSame(2.5, (new ReflectionProperty($client, 'connectTimeout'))->getValue($client));
+    }
+
+    public function testMissingOrBlankTimeoutConfigIsNull()
+    {
+        $connection = new Connection(config: ['timeout' => '']);
+        $client = (new ReflectionProperty($connection, 'client'))->getValue($connection);
+
+        $this->assertNull((new ReflectionProperty($client, 'timeout'))->getValue($client));
+        $this->assertNull((new ReflectionProperty($client, 'connectTimeout'))->getValue($client));
+    }
+
+    public function testNonNumericTimeoutConfigThrowsException()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('The [timeout] config value must be numeric.');
+
+        new Connection(config: ['timeout' => 'forever']);
     }
 
     public function testSelect()

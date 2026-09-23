@@ -14,6 +14,14 @@ parameters:
     - src/Hypervel
   reportUnmatchedIgnoredErrors: false
   ignoreErrors:
+    # Guzzle 8 shape-types the client constructor; $guzzleOptions is user config.
+    -
+      message: '#Parameter \#1 \$config of class GuzzleHttp\\Client constructor expects#'
+      path: src/Core/Client/Transports/Guzzle.php
+    # Guzzle 7-only branch of extractResponse(); Guzzle 8 moved getResponse() to ResponseException.
+    -
+      message: '#Call to an undefined method GuzzleHttp\\Exception\\RequestException::getResponse\(\)#'
+      path: src/Core/Client/Transports/Guzzle.php
     # The shared traits widen native parameter types to `mixed` so the same
     # code satisfies both Laravel's and Hypervel's signatures; the framework
     # methods they delegate to keep their narrower expectations.

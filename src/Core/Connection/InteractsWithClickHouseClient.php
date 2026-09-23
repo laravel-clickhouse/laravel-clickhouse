@@ -277,7 +277,8 @@ trait InteractsWithClickHouseClient
      *     password?: string,
      *     transport?: string,
      *     https?: bool,
-     *     connect_timeout?: float|int|numeric-string|null,
+     *     timeout?: int|float|string|null,
+     *     connect_timeout?: int|float|string|null,
      * }  $config
      * @param  callable(string, string, array<string, mixed>): void  $constructParent
      */
@@ -482,7 +483,8 @@ trait InteractsWithClickHouseClient
      *     password?: string,
      *     transport?: string,
      *     https?: bool,
-     *     connect_timeout?: float|int|numeric-string|null,
+     *     timeout?: int|float|string|null,
+     *     connect_timeout?: int|float|string|null,
      * }  $config
      */
     protected function getDefaultClient(string $database, array $config): Client
@@ -495,7 +497,30 @@ trait InteractsWithClickHouseClient
             password: $config['password'] ?? 'default',
             transport: $config['transport'] ?? 'guzzle',
             https: $config['https'] ?? false,
-            connectTimeout: isset($config['connect_timeout']) ? (float) $config['connect_timeout'] : null,
+            timeout: $this->parseTimeout($config, 'timeout'),
+            connectTimeout: $this->parseTimeout($config, 'connect_timeout'),
         );
+    }
+
+    /**
+     * Normalize a timeout config value, which may arrive as a numeric
+     * string when read from the environment. An empty string (a blank
+     * env variable) is treated as not configured.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function parseTimeout(array $config, string $key): ?float
+    {
+        $value = $config[$key] ?? null;
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (! is_numeric($value)) {
+            throw new InvalidArgumentException("The [{$key}] config value must be numeric.");
+        }
+
+        return (float) $value;
     }
 }

@@ -12,3 +12,14 @@ parameters:
     - src/Core/Exceptions
     - src/Core/Support
   reportUnmatchedIgnoredErrors: true
+  ignoreErrors:
+    # Guzzle 8 shape-types the client constructor; $guzzleOptions is user config.
+    -
+      message: '#Parameter \#1 \$config of class GuzzleHttp\\Client constructor expects#'
+      path: src/Core/Client/Transports/Guzzle.php
+      reportUnmatched: false
+    # Guzzle 7-only branch of extractResponse(); Guzzle 8 moved getResponse() to ResponseException.
+    -
+      message: '#Call to an undefined method GuzzleHttp\\Exception\\RequestException::getResponse\(\)#'
+      path: src/Core/Client/Transports/Guzzle.php
+      reportUnmatched: false
