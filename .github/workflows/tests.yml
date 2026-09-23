@@ -12,13 +12,16 @@ jobs:
 
     strategy:
       fail-fast: false
-      # Three one-dimensional sweeps instead of a full cross product: the
-      # PHP x Laravel legs pin ClickHouse to the current LTS, a single
+      # Two one-dimensional sweeps instead of a full cross product: the
+      # PHP x Laravel legs pin ClickHouse to the current LTS, and a single
       # pinned PHP + Laravel leg sweeps every supported ClickHouse major
       # (majors differ in observable ways — e.g. 23.x returns plain-text
       # error bodies where 24+ returns JSON — but that variance lives in
-      # the transport, which PHP/Laravel versions do not affect), and one
-      # more pins Guzzle 7, which resolution would otherwise never pick.
+      # the transport, which PHP/Laravel versions do not affect).
+      # Both Guzzle majors are covered without pinning: testbench pulls in
+      # laravel/framework, which requires Guzzle ^7.8.2 on 11/12 and
+      # accepts ^8.0 on 13, so the Laravel 11/12 legs run Guzzle 7 and the
+      # Laravel 13 legs resolve to Guzzle 8.
       # 25-alpine/26-alpine bare-major tags do not exist on Docker Hub,
       # hence the explicit LTS minors.
       matrix:
@@ -40,9 +43,8 @@ jobs:
           - { php: "8.4", laravel: "^13.0", clickhouse: "23.8-alpine" }
           - { php: "8.4", laravel: "^13.0", clickhouse: "24.8-alpine" }
           - { php: "8.4", laravel: "^13.0", clickhouse: "25.8-alpine" }
-          - { php: "8.4", laravel: "^13.0", clickhouse: "26.3-alpine", guzzle: "^7.0" }
 
-    name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }} / ClickHouse ${{ matrix.clickhouse }}${{ matrix.guzzle && format(' / Guzzle {0}', matrix.guzzle) || '' }}
+    name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }} / ClickHouse ${{ matrix.clickhouse }}
 
     services:
       clickhouse:
@@ -77,9 +79,6 @@ jobs:
       - name: Install dependencies
         run: |
           composer require "illuminate/database:${{ matrix.laravel }}" --dev --no-update
-          if [ -n "${{ matrix.guzzle }}" ]; then
-            composer require "guzzlehttp/guzzle:${{ matrix.guzzle }}" --no-update
-          fi
           composer update --prefer-dist -n -o
 
       - name: Execute tests

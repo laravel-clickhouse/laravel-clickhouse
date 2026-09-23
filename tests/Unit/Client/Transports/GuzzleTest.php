@@ -8,6 +8,7 @@ use ClickHouse\Exceptions\QueryException;
 use ClickHouse\Tests\Unit\TestCase;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\ResponseTransferException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
@@ -21,6 +22,8 @@ class GuzzleTest extends TestCase
     protected const URI = 'http://localhost:8123/';
 
     protected const CLICKHOUSE_ERROR = "Code: 60. DB::Exception: Unknown table expression identifier 'missing_table' in scope SELECT broken FROM missing_table. (UNKNOWN_TABLE) (version 26.3.1.1)";
+
+    protected const CLICKHOUSE_STREAM_ERROR = 'Code: 395. DB::Exception: Value passed to \'throwIf\' function is non-zero: while executing \'FUNCTION throwIf(equals(number, 1)) UInt8\'. (FUNCTION_THROW_IF_VALUE_IS_NON_ZERO) (version 26.3.1.1)';
 
     public function testSessionParametersAreAddedToRequestUri(): void
     {
@@ -139,6 +142,70 @@ class GuzzleTest extends TestCase
                 $exception->getErrors()['bad']->getMessage(),
             );
         }
+    }
+
+    public function testErrorInAbortedStreamIsPreferredOverGuzzlesSummary(): void
+    {
+        $history = [];
+
+        $transport = $this->getTransport($history, responses: [
+            $this->createAbortedStreamException(),
+        ]);
+
+        $this->expectException(QueryException::class);
+        $this->expectExceptionMessage('ClickHouse query error: ');
+        $this->expectExceptionMessage(self::CLICKHOUSE_STREAM_ERROR);
+
+        $transport->execute('SELECT throwIf(number = 1) FROM numbers(2)');
+    }
+
+    public function testParallelErrorInAbortedStreamIsPreferredOverGuzzlesSummary(): void
+    {
+        $history = [];
+
+        $transport = $this->getTransport($history, responses: [
+            new Response(200, ['Content-Type' => 'application/json'], '{"data": [{"first": 1}]}'),
+            $this->createAbortedStreamException(),
+        ]);
+
+        try {
+            $transport->executeParallelly([
+                'good' => 'SELECT 1 as first',
+                'bad' => 'SELECT throwIf(number = 1) FROM numbers(2)',
+            ]);
+
+            $this->fail('ParallelQueryException was not thrown.');
+        } catch (ParallelQueryException $exception) {
+            $this->assertArrayHasKey('good', $exception->getResponses());
+            $this->assertEquals([['first' => 1]], $exception->getResponses()['good']->getRecords());
+
+            $this->assertArrayHasKey('bad', $exception->getErrors());
+            $this->assertStringContainsString(
+                self::CLICKHOUSE_STREAM_ERROR,
+                $exception->getErrors()['bad']->getMessage(),
+            );
+        }
+    }
+
+    /**
+     * A query that fails after ClickHouse has started streaming a 200
+     * response: cURL aborts the transfer (error 18) and Guzzle attaches
+     * the partial body, which ends with the DB::Exception text. Guzzle 8
+     * raises ResponseTransferException, Guzzle 7 a plain RequestException.
+     */
+    protected function createAbortedStreamException(): RequestException
+    {
+        $request = new Request('POST', self::URI);
+        $response = new Response(
+            200,
+            ['Content-Type' => 'application/json'],
+            '{"meta": [], "data": [{"x": 0},'."\n".self::CLICKHOUSE_STREAM_ERROR,
+        );
+        $message = 'cURL error 18: transfer closed with outstanding read data remaining';
+
+        return class_exists(ResponseTransferException::class)
+            ? new ResponseTransferException($message, $request, $response)
+            : new RequestException($message, $request, $response);
     }
 
     /**

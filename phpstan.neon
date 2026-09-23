@@ -9,6 +9,11 @@ parameters:
       message: '#Parameter \#1 \$config of class GuzzleHttp\\Client constructor expects#'
       path: src/Client/Transports/Guzzle.php
       reportUnmatched: false
+    # Guzzle 7-only branch of extractResponse(); Guzzle 8 moved getResponse() to ResponseException.
+    -
+      message: '#Call to an undefined method GuzzleHttp\\Exception\\RequestException::getResponse\(\)#'
+      path: src/Client/Transports/Guzzle.php
+      reportUnmatched: false
     # Dynamic SQL vs L13's literal-string typing on Expression / fromRaw / Arr::wrap.
     -
       message: '#Expression constructor expects TValue#'

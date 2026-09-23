@@ -7,9 +7,9 @@ use ClickHouse\Client\Response;
 use ClickHouse\Exceptions\ParallelQueryException;
 use ClickHouse\Exceptions\QueryException;
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\BadResponseException;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\ResponseException;
 use GuzzleHttp\Pool;
 use GuzzleHttp\Psr7\Request;
 use Psr\Http\Message\ResponseInterface;
@@ -213,11 +213,20 @@ class Guzzle implements Transport
     }
 
     /**
-     * Only BadResponseException carries a response on both Guzzle majors.
+     * Guzzle 8 keeps the response only on ResponseException and its
+     * subclasses, while Guzzle 7 exposes it on any RequestException. Both
+     * cover more than HTTP error statuses: a query that fails after
+     * ClickHouse has started streaming a 200 response aborts the transfer,
+     * and the partial body attached to that exception ends with the
+     * DB::Exception text.
      */
     protected function extractResponse(mixed $e): ?ResponseInterface
     {
-        return $e instanceof BadResponseException ? $e->getResponse() : null;
+        if (class_exists(ResponseException::class)) {
+            return $e instanceof ResponseException ? $e->getResponse() : null;
+        }
+
+        return $e instanceof RequestException ? $e->getResponse() : null;
     }
 
     /**
