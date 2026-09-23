@@ -140,7 +140,7 @@ class ClientTest extends TestCase
         $this->assertEquals($transport, $client->getTransport());
     }
 
-    public function testConnectTimeoutReachesGuzzleThroughTheDefaultFactory()
+    public function testTimeoutsReachGuzzleThroughTheDefaultFactory()
     {
         $client = new Client(
             host: 'localhost',
@@ -149,6 +149,7 @@ class ClientTest extends TestCase
             username: 'default',
             password: 'default',
             transport: 'guzzle',
+            timeout: 30,
             connectTimeout: 1.25,
         );
 
@@ -158,10 +159,11 @@ class ClientTest extends TestCase
         $guzzleClient = $this->innerClient($transport);
 
         $this->assertInstanceOf(GuzzleClient::class, $guzzleClient);
+        $this->assertSame(30.0, $guzzleClient->getConfig('timeout'));
         $this->assertSame(1.25, $guzzleClient->getConfig('connect_timeout'));
     }
 
-    public function testConnectTimeoutReachesCurlThroughTheDefaultFactory()
+    public function testTimeoutsReachCurlThroughTheDefaultFactory()
     {
         $client = new Client(
             host: 'localhost',
@@ -170,6 +172,7 @@ class ClientTest extends TestCase
             username: 'default',
             password: 'default',
             transport: 'curl',
+            timeout: 30,
             connectTimeout: 1.25,
         );
 
@@ -179,6 +182,7 @@ class ClientTest extends TestCase
         $clickHouseClient = $this->innerClient($transport);
 
         $this->assertInstanceOf(ClickHouseClient::class, $clickHouseClient);
+        $this->assertSame(30, $clickHouseClient->getTimeout());
         $this->assertSame(1.25, $clickHouseClient->getConnectTimeOut());
     }
 
