@@ -163,6 +163,36 @@ class QueryTest extends TestCase
         }
     }
 
+    /**
+     * Values-format inserts carry DateTimeInterface objects as bindings, so
+     * the Escaper renders whole-second values as plain literals and
+     * microsecond values as toDateTime64() expressions, which the Values
+     * parser evaluates (input_format_values_interpret_expressions is on by
+     * default).
+     */
+    public function testInsertValuesFormatWithDateTimeObjects()
+    {
+        $connection = $this->app->make('db')->connection('clickhouse');
+
+        $connection->statement('create table query_values_datetime_test (id UInt64, dt DateTime, dt64 DateTime64(6)) engine = Memory');
+
+        try {
+            $inserted = $connection->table('query_values_datetime_test')->insert([
+                'id' => 1,
+                'dt' => new DateTimeImmutable('2026-08-13 10:00:00'),
+                'dt64' => new DateTimeImmutable('2026-08-13 10:00:00.123456'),
+            ]);
+
+            $this->assertTrue($inserted);
+            $this->assertEquals(
+                [['id' => 1, 'dt' => '2026-08-13 10:00:00', 'dt64' => '2026-08-13 10:00:00.123456']],
+                $connection->table('query_values_datetime_test')->get()->map(fn ($row) => (array) $row)->all()
+            );
+        } finally {
+            $connection->statement('drop table query_values_datetime_test');
+        }
+    }
+
     protected function defaultConnection(): string
     {
         return 'clickhouse';

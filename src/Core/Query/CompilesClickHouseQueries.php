@@ -143,21 +143,6 @@ trait CompilesClickHouseQueries
     /**
      * {@inheritDoc}
      *
-     * Includes microseconds so that precision is preserved when Eloquent
-     * stringifies date attributes for inserts; the fractional part is
-     * harmlessly truncated by the input parsers when the target column is a
-     * second-precision `DateTime`. Query bindings do not flow through this
-     * format: prepareBindings() keeps DateTimeInterface objects intact so
-     * the Escaper can emit version-safe SQL for comparisons.
-     */
-    public function getDateFormat(): string
-    {
-        return 'Y-m-d H:i:s.u';
-    }
-
-    /**
-     * {@inheritDoc}
-     *
      * @param  mixed  $query
      */
     public function compileDelete($query, ?bool $lightweight = null, mixed $partition = null): string

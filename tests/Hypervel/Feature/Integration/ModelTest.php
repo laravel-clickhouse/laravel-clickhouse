@@ -6,6 +6,7 @@ use ClickHouse\Hypervel\Eloquent\Builder;
 use ClickHouse\Hypervel\Eloquent\Model;
 use ClickHouse\Hypervel\Facades\Schema;
 use ClickHouse\Tests\Hypervel\Feature\TestCase;
+use DateTimeImmutable;
 use Hypervel\Database\Eloquent\Model as BaseSQLiteModel;
 use Hypervel\Database\Schema\Blueprint;
 use UnitEnum;
@@ -90,6 +91,34 @@ class ModelTest extends TestCase
 
         $sqliteSchema->drop('model_sqlite_test');
     }
+
+    /**
+     * Date attributes default to the framework-wide second-precision storage
+     * format, which every ClickHouse version accepts for DateTime columns;
+     * models persisting into DateTime64 columns opt into sub-second
+     * precision by setting $dateFormat explicitly.
+     */
+    public function testDateAttributesDefaultToSecondPrecisionWithOptIn()
+    {
+        $connection = $this->app->make('db')->connection('clickhouse');
+
+        $connection->statement('create table model_date_format_test (id UInt64, occurred_at DateTime64(6)) engine = Memory');
+
+        try {
+            DefaultDateFormatModel::create(['id' => 1, 'occurred_at' => new DateTimeImmutable('2026-07-29 12:34:56.123456')]);
+            MicrosecondDateFormatModel::create(['id' => 2, 'occurred_at' => new DateTimeImmutable('2026-07-29 12:34:56.123456')]);
+
+            $this->assertEquals(
+                [
+                    ['id' => 1, 'occurred_at' => '2026-07-29 12:34:56.000000'],
+                    ['id' => 2, 'occurred_at' => '2026-07-29 12:34:56.123456'],
+                ],
+                $connection->table('model_date_format_test')->orderBy('id')->get()->map(fn ($row) => (array) $row)->all()
+            );
+        } finally {
+            $connection->statement('drop table model_date_format_test');
+        }
+    }
 }
 
 class ClickHouseModel extends Model
@@ -122,4 +151,22 @@ class SQLiteModel extends BaseSQLiteModel
     protected ?string $table = 'model_sqlite_test';
 
     protected array $fillable = ['id', 'name'];
+}
+
+class DefaultDateFormatModel extends Model
+{
+    public bool $timestamps = false;
+
+    protected UnitEnum|string|null $connection = 'clickhouse';
+
+    protected ?string $table = 'model_date_format_test';
+
+    protected array $fillable = ['id', 'occurred_at'];
+
+    protected array $casts = ['occurred_at' => 'datetime'];
+}
+
+class MicrosecondDateFormatModel extends DefaultDateFormatModel
+{
+    protected ?string $dateFormat = 'Y-m-d H:i:s.u';
 }

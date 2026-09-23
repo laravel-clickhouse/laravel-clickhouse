@@ -7,6 +7,7 @@ use ClickHouse\Laravel\Eloquent\Builder;
 use ClickHouse\Laravel\Eloquent\Model as BaseClickHouseModel;
 use ClickHouse\Laravel\Schema\Blueprint as ClickHouseBlueprint;
 use ClickHouse\Tests\Laravel\Unit\TestCase;
+use DateTimeImmutable;
 use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Database\Eloquent\Model as BaseSQLiteModel;
 use Illuminate\Database\Schema\Blueprint;
@@ -82,6 +83,34 @@ class ModelTest extends TestCase
         $this->assertTrue($clickhouseModel->sqliteRelated->is($sqliteModel));
 
         $this->dropSQLiteTestTable();
+    }
+
+    /**
+     * Date attributes default to the framework-wide second-precision storage
+     * format, which every ClickHouse version accepts for DateTime columns;
+     * models persisting into DateTime64 columns opt into sub-second
+     * precision by setting $dateFormat explicitly.
+     */
+    public function testDateAttributesDefaultToSecondPrecisionWithOptIn()
+    {
+        $connection = $this->db->getConnection('clickhouse');
+
+        $connection->statement('create table model_date_format_test (id UInt64, occurred_at DateTime64(6)) engine = Memory');
+
+        try {
+            DefaultDateFormatModel::create(['id' => 1, 'occurred_at' => new DateTimeImmutable('2026-07-29 12:34:56.123456')]);
+            MicrosecondDateFormatModel::create(['id' => 2, 'occurred_at' => new DateTimeImmutable('2026-07-29 12:34:56.123456')]);
+
+            $this->assertEquals(
+                [
+                    ['id' => 1, 'occurred_at' => '2026-07-29 12:34:56.000000'],
+                    ['id' => 2, 'occurred_at' => '2026-07-29 12:34:56.123456'],
+                ],
+                $connection->table('model_date_format_test')->orderBy('id')->get()->map(fn ($row) => (array) $row)->all()
+            );
+        } finally {
+            $connection->statement('drop table model_date_format_test');
+        }
     }
 
     private function setUpEloquent()
@@ -185,4 +214,22 @@ class SQLiteModel extends BaseSQLiteModel
     protected $table = 'model_sqlite_test';
 
     protected $fillable = ['id', 'name'];
+}
+
+class DefaultDateFormatModel extends BaseClickHouseModel
+{
+    public $timestamps = false;
+
+    protected $connection = 'clickhouse';
+
+    protected $table = 'model_date_format_test';
+
+    protected $fillable = ['id', 'occurred_at'];
+
+    protected $casts = ['occurred_at' => 'datetime'];
+}
+
+class MicrosecondDateFormatModel extends DefaultDateFormatModel
+{
+    protected $dateFormat = 'Y-m-d H:i:s.u';
 }
