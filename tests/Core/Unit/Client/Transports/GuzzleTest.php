@@ -9,6 +9,7 @@ use ClickHouse\Core\Exceptions\QueryException;
 use ClickHouse\Tests\Core\Unit\Client\Concerns\InspectsTransportClients;
 use ClickHouse\Tests\Core\Unit\TestCase;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Exception\ResponseTransferException;
@@ -58,7 +59,7 @@ class GuzzleTest extends TestCase
     {
         $request = new Request('POST', 'http://localhost');
         $response = new Response(400, ['Content-Type' => 'application/json'], '{"exception":"Unknown table"}');
-        $requestFailure = new RequestException('truncated error', $request, $response);
+        $requestFailure = new ClientException('truncated error', $request, $response);
         $client = $this->mock(Client::class);
         $client->shouldReceive('send')->once()->andThrow($requestFailure);
 
@@ -117,7 +118,7 @@ class GuzzleTest extends TestCase
     {
         $request = new Request('POST', 'http://localhost');
         $response = new Response(400, ['Content-Type' => 'application/json'], '{"exception":"Unknown table"}');
-        $failure = new RequestException('truncated error', $request, $response);
+        $failure = new ClientException('truncated error', $request, $response);
         $client = $this->mock(Client::class);
         $client->shouldReceive('sendAsync')->once()->andReturn(Create::rejectionFor($failure));
 
