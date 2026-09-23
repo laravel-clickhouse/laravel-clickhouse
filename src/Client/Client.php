@@ -27,8 +27,10 @@ class Client
         protected bool $https = false,
         ?TransportFactory $transportFactory = null,
         ?Escaper $escaper = null,
+        protected ?float $timeout = null,
+        protected ?float $connectTimeout = null,
     ) {
-        $this->transportFactory = $transportFactory ?? new TransportFactory($host, $port, $database, $username, $password, $https);
+        $this->transportFactory = $transportFactory ?? new TransportFactory($host, $port, $database, $username, $password, $https, $timeout, $connectTimeout);
         $this->escaper = $escaper ?? new Escaper;
     }
 

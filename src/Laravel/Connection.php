@@ -15,6 +15,7 @@ use DateTimeInterface;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\QueryException;
+use InvalidArgumentException;
 use LogicException;
 use RuntimeException;
 
@@ -40,6 +41,8 @@ class Connection extends BaseConnection
      *     password?: string,
      *     transport?: string,
      *     https?: bool,
+     *     timeout?: int|float|string|null,
+     *     connect_timeout?: int|float|string|null,
      * }  $config
      */
     public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null, ?Escaper $escaper = null)
@@ -373,6 +376,8 @@ class Connection extends BaseConnection
      *     password?: string,
      *     transport?: string,
      *     https?: bool,
+     *     timeout?: int|float|string|null,
+     *     connect_timeout?: int|float|string|null,
      * }  $config
      */
     protected function getDefaultClient(string $database, array $config): Client
@@ -385,6 +390,30 @@ class Connection extends BaseConnection
             password: $config['password'] ?? 'default',
             transport: $config['transport'] ?? 'guzzle',
             https: $config['https'] ?? false,
+            timeout: $this->parseTimeout($config, 'timeout'),
+            connectTimeout: $this->parseTimeout($config, 'connect_timeout'),
         );
+    }
+
+    /**
+     * Normalize a timeout config value, which may arrive as a numeric
+     * string when read from the environment. An empty string (a blank
+     * env variable) is treated as not configured.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function parseTimeout(array $config, string $key): ?float
+    {
+        $value = $config[$key] ?? null;
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (! is_numeric($value)) {
+            throw new InvalidArgumentException("The [{$key}] config value must be numeric.");
+        }
+
+        return (float) $value;
     }
 }
