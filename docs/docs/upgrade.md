@@ -64,6 +64,12 @@ require `illuminate/database` in your own `composer.json`.
   methods now live in `ClickHouse\Core\Query\CompilesClickHouseQueries` and
   `ClickHouse\Core\Schema\CompilesClickHouseSchema` respectively (behaviour
   is unchanged).
+- **Connections default to a 10-second connect timeout.** 1.x left the
+  connect timeout to the transport (Guzzle: the cURL handler default; Curl:
+  5 seconds). v2 applies 10 seconds on every transport and bridge when
+  `connect_timeout` is unset or blank; configure it explicitly to keep a
+  different limit, or set it to `0` to disable it. See
+  [Configuration Options](./installation.md#configuration-options).
 
 ### New in v2
 

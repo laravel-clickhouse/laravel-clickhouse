@@ -23,6 +23,13 @@ use Throwable;
 trait InteractsWithClickHouseClient
 {
     /**
+     * Connect timeout in seconds when the config leaves it unset or blank.
+     * Matches Hypervel's pool default, so both bridges behave the same
+     * regardless of which transport library is in use.
+     */
+    private const DEFAULT_CONNECT_TIMEOUT = 10.0;
+
+    /**
      * The ClickHouse client.
      */
     protected ?Client $client = null;
@@ -498,7 +505,7 @@ trait InteractsWithClickHouseClient
             transport: $config['transport'] ?? 'guzzle',
             https: $config['https'] ?? false,
             timeout: $this->parseTimeout($config, 'timeout'),
-            connectTimeout: $this->parseTimeout($config, 'connect_timeout'),
+            connectTimeout: $this->parseTimeout($config, 'connect_timeout') ?? self::DEFAULT_CONNECT_TIMEOUT,
         );
     }
 

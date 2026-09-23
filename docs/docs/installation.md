@@ -67,7 +67,7 @@ Add a `clickhouse` connection to your `config/database.php` file under the `conn
 | `https` | `false` | Enables TLS connections to ClickHouse. |
 | `transport` | `'guzzle'` | The HTTP transport driver. Supported: `'guzzle'`, `'curl'`. |
 | `timeout` | `null` | Maximum seconds to wait for a request to complete. `null` keeps the transport default (Guzzle: no limit; Curl: `20`). `0` disables the limit. Floats are allowed. |
-| `connect_timeout` | `null` | Maximum seconds to wait while connecting to the server. `null` keeps the transport default (Guzzle: no explicit limit, so the underlying HTTP handler default applies; Curl: `5`). `0` disables the limit. Floats are allowed. |
+| `connect_timeout` | `10` | Maximum seconds to wait while connecting to the server. `null` or a blank value falls back to `10` on every transport. `0` disables the limit. Floats are allowed. |
 | `engine` | `null` | The default table engine for migrations (e.g. `'MergeTree()'`). When not set, defaults to `MergeTree()`. |
 | `use_lightweight_delete` | `false` | When `true`, Eloquent `delete()` uses lightweight `DELETE` statements instead of `ALTER TABLE ... DELETE`. |
 

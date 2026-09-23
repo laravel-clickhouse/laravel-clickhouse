@@ -41,7 +41,7 @@ Add a ClickHouse connection to your `config/database.php`:
 
 Hypervel resolves connections through its coroutine-aware connection pool. Connections must be declared in the config file because Hypervel does not support `DatabaseManager::build()` or `connectUsing()` dynamic connections.
 
-The `pool.connect_timeout` option controls how long the driver may spend opening an HTTP connection. Hypervel passes this value to the ClickHouse client, which applies it to either the Guzzle or Curl transport. Fractional values are supported. If this option is not set, Hypervel uses the pool's 10-second default. A top-level `connect_timeout` value on the connection takes precedence over the pool value.
+The `pool.connect_timeout` option controls how long the driver may spend opening an HTTP connection. Hypervel passes this value to the ClickHouse client, which applies it to either the Guzzle or Curl transport. Fractional values are supported. If this option is not set, Hypervel uses the pool's 10-second default. A top-level `connect_timeout` value on the connection takes precedence over the pool value. Hypervel only falls back to the pool value when the top-level key is absent or `null`: a blank value (e.g. an empty `CLICKHOUSE_CONNECT_TIMEOUT` variable) falls back to the package's own 10-second default instead, as it does on Laravel. The two defaults only differ if you customise `pool.connect_timeout`.
 
 ## Usage
 

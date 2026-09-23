@@ -38,13 +38,23 @@ class ConnectionTest extends TestCase
         $this->assertSame(2.5, (new ReflectionProperty($client, 'connectTimeout'))->getValue($client));
     }
 
-    public function testMissingOrBlankTimeoutConfigIsNull()
+    public function testMissingOrBlankTimeoutConfigFallsBackToDefaults()
     {
-        $connection = new Connection(config: ['timeout' => '']);
+        foreach ([[], ['timeout' => '', 'connect_timeout' => '']] as $config) {
+            $connection = new Connection(config: $config);
+            $client = (new ReflectionProperty($connection, 'client'))->getValue($connection);
+
+            $this->assertNull((new ReflectionProperty($client, 'timeout'))->getValue($client));
+            $this->assertSame(10.0, (new ReflectionProperty($client, 'connectTimeout'))->getValue($client));
+        }
+    }
+
+    public function testZeroConnectTimeoutIsKeptAsUnlimited()
+    {
+        $connection = new Connection(config: ['connect_timeout' => '0']);
         $client = (new ReflectionProperty($connection, 'client'))->getValue($connection);
 
-        $this->assertNull((new ReflectionProperty($client, 'timeout'))->getValue($client));
-        $this->assertNull((new ReflectionProperty($client, 'connectTimeout'))->getValue($client));
+        $this->assertSame(0.0, (new ReflectionProperty($client, 'connectTimeout'))->getValue($client));
     }
 
     public function testNonNumericTimeoutConfigThrowsException()
