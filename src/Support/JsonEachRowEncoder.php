@@ -12,6 +12,16 @@ use UnitEnum;
 class JsonEachRowEncoder
 {
     /**
+     * DateTimeInterface objects follow the connection's datetime_precision
+     * like every other inferred rendering: choosing JSONEachRow is a
+     * transport decision, not a precision one. Callers that need
+     * microseconds regardless of it pass pre-formatted strings.
+     */
+    public function __construct(
+        protected DateTimePrecision $dateTimePrecision = DateTimePrecision::Second,
+    ) {}
+
+    /**
      * Encode rows into newline-delimited JSON for the JSONEachRow input format.
      *
      * @param  array<string, mixed>[]  $rows
@@ -43,10 +53,8 @@ class JsonEachRowEncoder
             return array_map(fn ($item) => $this->normalizeValue($item), $value);
         }
 
-        // JSONEachRow is parsed against each column's type server-side, so
-        // microseconds are kept regardless of the connection's precision.
         if ($value instanceof DateTimeInterface) {
-            return DateTimeFormatter::format($value, DateTimePrecision::Microsecond);
+            return DateTimeFormatter::format($value, $this->dateTimePrecision);
         }
 
         if ($value instanceof BackedEnum) {

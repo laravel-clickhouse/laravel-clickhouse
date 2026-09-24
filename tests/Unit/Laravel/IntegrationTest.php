@@ -123,7 +123,7 @@ class IntegrationTest extends TestCase
 
     public function testInsertWithFormatAndTypedColumns()
     {
-        $connection = $this->db->getConnection('clickhouse');
+        $connection = $this->db->getConnection('clickhouse_micro');
 
         $connection->statement('create table test_format_types (tags Array(String), created_at DateTime64(6), id UInt64) engine = Memory');
 
@@ -269,7 +269,8 @@ class IntegrationTest extends TestCase
      * and older reject sub-second content in the VALUES section when the
      * target is a second-precision DateTime column, so a microsecond Carbon
      * must insert cleanly into a DateTime column on every supported version.
-     * Sub-second inserts into DateTime64 columns use Format::JSONEachRow.
+     * Sub-second inserts into DateTime64 columns opt in via
+     * 'datetime_precision' => 'microsecond' or pre-formatted strings.
      */
     public function testInsertValuesFormatTruncatesDateTimeObjects()
     {
@@ -291,6 +292,47 @@ class IntegrationTest extends TestCase
             );
         } finally {
             $connection->statement('drop table test_values_datetime');
+        }
+    }
+
+    /**
+     * JSONEachRow is a transport choice, not a precision one, so its
+     * DateTimeInterface objects follow datetime_precision exactly like the
+     * Values path: at the default second precision a microsecond Carbon
+     * must insert cleanly into a DateTime column, which ClickHouse 25.8 and
+     * older would reject as a fractional JSON string. A pre-formatted string
+     * still carries its own precision into the DateTime64 column.
+     */
+    public function testInsertJsonEachRowTruncatesDateTimeObjects()
+    {
+        $connection = $this->db->getConnection('clickhouse');
+
+        $connection->statement('create table test_json_datetime (id UInt64, dt DateTime, dt64 DateTime64(6)) engine = Memory');
+
+        try {
+            $inserted = $connection->table('test_json_datetime')->insert([
+                [
+                    'id' => 1,
+                    'dt' => new DateTimeImmutable('2026-08-13 10:00:00.123456'),
+                    'dt64' => new DateTimeImmutable('2026-08-13 10:00:00.123456'),
+                ],
+                [
+                    'id' => 2,
+                    'dt' => new DateTimeImmutable('2026-08-13 11:00:00'),
+                    'dt64' => (new DateTimeImmutable('2026-08-13 11:00:00.123456'))->format('Y-m-d H:i:s.u'),
+                ],
+            ], format: Format::JSONEachRow);
+
+            $this->assertTrue($inserted);
+            $this->assertEquals(
+                [
+                    ['id' => 1, 'dt' => '2026-08-13 10:00:00', 'dt64' => '2026-08-13 10:00:00.000000'],
+                    ['id' => 2, 'dt' => '2026-08-13 11:00:00', 'dt64' => '2026-08-13 11:00:00.123456'],
+                ],
+                $connection->table('test_json_datetime')->orderBy('id')->get()->map(fn ($row) => (array) $row)->all()
+            );
+        } finally {
+            $connection->statement('drop table test_json_datetime');
         }
     }
 

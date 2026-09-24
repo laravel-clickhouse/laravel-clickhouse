@@ -3,11 +3,11 @@
 namespace ClickHouse\Enums;
 
 /**
- * Precision used when the package has to infer how a DateTimeInterface value
- * should be rendered — query bindings and Values-format insert values, where
- * the target column type is unknown to the driver. Channels that carry
- * explicit microsecond intent (a model's $dateFormat, Format::JSONEachRow,
- * pre-formatted strings) are not affected by this setting.
+ * Precision used whenever the package renders a DateTimeInterface object —
+ * query bindings and insert values in every input format — since the driver
+ * cannot see the target column type. Values the caller already stringified
+ * (a model's $dateFormat, pre-formatted strings) carry their own precision
+ * and are not affected by this setting.
  */
 enum DateTimePrecision: string
 {

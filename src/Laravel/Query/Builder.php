@@ -362,7 +362,8 @@ class Builder extends BaseBuilder
      * section when the target is a second-precision DateTime column — as a
      * bare fractional literal and as a toDateTime64() expression alike.
      * Microsecond precision keeps the fractional part for DateTime64
-     * columns; Format::JSONEachRow does so regardless of this setting.
+     * columns. Format::JSONEachRow applies the same precision in
+     * JsonEachRowEncoder.
      *
      * @param  array<array-key, mixed>  $values
      * @return array<array-key, mixed>
@@ -1225,7 +1226,7 @@ class Builder extends BaseBuilder
 
         return $connection->insertUsingFormat(
             $this->grammar->compileInsertUsingFormat($this, array_keys($first), Format::JSONEachRow),
-            (new JsonEachRowEncoder)->encode($values)
+            (new JsonEachRowEncoder($this->dateTimePrecision()))->encode($values)
         );
     }
 

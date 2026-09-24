@@ -68,10 +68,9 @@ class Connection extends BaseConnection
     }
 
     /**
-     * The precision applied to DateTimeInterface query bindings and
-     * Values-format insert values. Channels carrying explicit microsecond
-     * intent (a model's $dateFormat, Format::JSONEachRow, pre-formatted
-     * strings) are not affected by it.
+     * The precision applied to DateTimeInterface query bindings and insert
+     * values in every input format. Values the caller already stringified
+     * (a model's $dateFormat, pre-formatted strings) are not affected by it.
      */
     public function getDateTimePrecision(): DateTimePrecision
     {
