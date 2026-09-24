@@ -2,12 +2,15 @@
 
 namespace ClickHouse\Laravel\Query;
 
+use ClickHouse\Enums\DateTimePrecision;
 use ClickHouse\Enums\Format;
 use ClickHouse\Laravel\Connection;
 use ClickHouse\Laravel\Eloquent\Builder as EloquentBuilder;
 use ClickHouse\Laravel\Eloquent\Model;
+use ClickHouse\Support\DateTimeFormatter;
 use ClickHouse\Support\JsonEachRowEncoder;
 use Closure;
+use DateTimeInterface;
 use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
@@ -346,9 +349,40 @@ class Builder extends BaseBuilder
     public function insert(array $values, Format $format = Format::Values)
     {
         return match ($format) {
-            Format::Values => parent::insert($values),
+            Format::Values => parent::insert($this->formatInsertDateTimes($values)),
             Format::JSONEachRow => $this->insertJsonEachRow($values),
         };
+    }
+
+    /**
+     * Render DateTimeInterface insert values as plain strings before they
+     * are compiled into a VALUES clause, honoring the connection's
+     * datetime_precision. The default second precision is the safe choice:
+     * ClickHouse 25.8 and older reject sub-second content in the VALUES
+     * section when the target is a second-precision DateTime column — as a
+     * bare fractional literal and as a toDateTime64() expression alike.
+     * Microsecond precision keeps the fractional part for DateTime64
+     * columns; Format::JSONEachRow does so regardless of this setting.
+     *
+     * @param  array<array-key, mixed>  $values
+     * @return array<array-key, mixed>
+     */
+    protected function formatInsertDateTimes(array $values): array
+    {
+        return array_map(function ($value) {
+            if ($value instanceof DateTimeInterface) {
+                return DateTimeFormatter::format($value, $this->dateTimePrecision());
+            }
+
+            return is_array($value) ? $this->formatInsertDateTimes($value) : $value;
+        }, $values);
+    }
+
+    protected function dateTimePrecision(): DateTimePrecision
+    {
+        return $this->connection instanceof Connection
+            ? $this->connection->getDateTimePrecision()
+            : DateTimePrecision::Second;
     }
 
     /**

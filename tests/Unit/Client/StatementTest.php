@@ -6,6 +6,7 @@ use ClickHouse\Client\Client;
 use ClickHouse\Client\Contracts\Transport;
 use ClickHouse\Client\Response;
 use ClickHouse\Client\Statement;
+use ClickHouse\Enums\DateTimePrecision;
 use ClickHouse\Support\Escaper;
 use ClickHouse\Tests\Unit\TestCase;
 use DateTimeImmutable;
@@ -65,7 +66,7 @@ class StatementTest extends TestCase
         $this->assertEquals($affectedRows, $statement->rowCount());
     }
 
-    public function testToRawSqlWithDateTimeBindings()
+    public function testToRawSqlTruncatesDateTimeBindingsAtDefaultSecondPrecision()
     {
         $client = $this->mock(Client::class);
 
@@ -74,6 +75,27 @@ class StatementTest extends TestCase
             ->withNoArgs()
             ->twice()
             ->andReturn(new Escaper);
+
+        $statement = new Statement($client, 'select * from `table` where `dt` between ? and ?');
+
+        $statement->bindValue(1, new DateTimeImmutable('2024-01-02 03:04:05'));
+        $statement->bindValue(2, new DateTimeImmutable('2024-01-02 03:04:05.123456'));
+
+        $this->assertEquals(
+            "select * from `table` where `dt` between '2024-01-02 03:04:05' and '2024-01-02 03:04:05'",
+            $statement->toRawSql()
+        );
+    }
+
+    public function testToRawSqlWithDateTimeBindingsAtMicrosecondPrecision()
+    {
+        $client = $this->mock(Client::class);
+
+        $client
+            ->shouldReceive('getEscaper')
+            ->withNoArgs()
+            ->twice()
+            ->andReturn(new Escaper(DateTimePrecision::Microsecond));
 
         $statement = new Statement($client, 'select * from `table` where `dt` between ? and ?');
 

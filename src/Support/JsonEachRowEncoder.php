@@ -3,6 +3,7 @@
 namespace ClickHouse\Support;
 
 use BackedEnum;
+use ClickHouse\Enums\DateTimePrecision;
 use DateTimeInterface;
 use JsonException;
 use RuntimeException;
@@ -42,8 +43,10 @@ class JsonEachRowEncoder
             return array_map(fn ($item) => $this->normalizeValue($item), $value);
         }
 
+        // JSONEachRow is parsed against each column's type server-side, so
+        // microseconds are kept regardless of the connection's precision.
         if ($value instanceof DateTimeInterface) {
-            return DateTimeFormatter::format($value);
+            return DateTimeFormatter::format($value, DateTimePrecision::Microsecond);
         }
 
         if ($value instanceof BackedEnum) {

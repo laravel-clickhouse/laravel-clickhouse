@@ -4,6 +4,7 @@ namespace ClickHouse\Laravel;
 
 use ClickHouse\Client\Client;
 use ClickHouse\Client\Statement;
+use ClickHouse\Enums\DateTimePrecision;
 use ClickHouse\Exceptions\ParallelQueryException;
 use ClickHouse\Laravel\Query\Builder as QueryBuilder;
 use ClickHouse\Laravel\Query\Grammar as QueryGrammar;
@@ -27,12 +28,12 @@ class Connection extends BaseConnection
     protected Client $client;
 
     /**
-     * The value escaper.
-     */
-    protected Escaper $escaper;
-
-    /**
      * Create a new database connection instance.
+     *
+     * The client's escaper renders every executed query, so it is the single
+     * source of the value escaping rules (including datetime_precision). An
+     * injected client brings its own escaper, and the datetime_precision
+     * config is not read; $escaper is only used to build the default client.
      *
      * @param  array{
      *     host?: string,
@@ -43,6 +44,7 @@ class Connection extends BaseConnection
      *     https?: bool,
      *     timeout?: int|float|string|null,
      *     connect_timeout?: int|float|string|null,
+     *     datetime_precision?: string,
      * }  $config
      */
     public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null, ?Escaper $escaper = null)
@@ -50,11 +52,44 @@ class Connection extends BaseConnection
         $this->database = $database ?: 'default';
         $this->tablePrefix = $tablePrefix;
         $this->config = $config;
-        $this->client = $client ?? $this->getDefaultClient($database, $config);
-        $this->escaper = $escaper ?? new Escaper;
+
+        if ($client && $escaper && $escaper !== $client->getEscaper()) {
+            throw new InvalidArgumentException('An injected client brings its own escaper; pass the escaper to the client instead.');
+        }
+
+        $this->client = $client ?? $this->getDefaultClient(
+            $database,
+            $config,
+            $escaper ?? new Escaper($this->parseDateTimePrecision($config))
+        );
 
         $this->useDefaultQueryGrammar();
         $this->useDefaultPostProcessor();
+    }
+
+    /**
+     * The precision applied to DateTimeInterface query bindings and
+     * Values-format insert values. Channels carrying explicit microsecond
+     * intent (a model's $dateFormat, Format::JSONEachRow, pre-formatted
+     * strings) are not affected by it.
+     */
+    public function getDateTimePrecision(): DateTimePrecision
+    {
+        return $this->client->getEscaper()->getDateTimePrecision();
+    }
+
+    /**
+     * @param  array{datetime_precision?: string}  $config
+     */
+    protected function parseDateTimePrecision(array $config): DateTimePrecision
+    {
+        $value = $config['datetime_precision'] ?? DateTimePrecision::Second->value;
+
+        return DateTimePrecision::tryFrom($value) ?? throw new InvalidArgumentException(sprintf(
+            'Invalid datetime_precision "%s". Valid values: %s.',
+            $value,
+            implode(', ', array_column(DateTimePrecision::cases(), 'value'))
+        ));
     }
 
     /** {@inheritDoc} */
@@ -210,7 +245,7 @@ class Connection extends BaseConnection
     /** {@inheritDoc} */
     public function escape($value, $binary = false): string
     {
-        return $this->escaper->escape($value, $binary);
+        return $this->client->getEscaper()->escape($value, $binary);
     }
 
     /** {@inheritDoc} */
@@ -380,7 +415,7 @@ class Connection extends BaseConnection
      *     connect_timeout?: int|float|string|null,
      * }  $config
      */
-    protected function getDefaultClient(string $database, array $config): Client
+    protected function getDefaultClient(string $database, array $config, Escaper $escaper): Client
     {
         return new Client(
             host: $config['host'] ?? '127.0.0.1',
@@ -390,6 +425,7 @@ class Connection extends BaseConnection
             password: $config['password'] ?? 'default',
             transport: $config['transport'] ?? 'guzzle',
             https: $config['https'] ?? false,
+            escaper: $escaper,
             timeout: $this->parseTimeout($config, 'timeout'),
             connectTimeout: $this->parseTimeout($config, 'connect_timeout'),
         );
