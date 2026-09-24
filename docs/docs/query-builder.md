@@ -890,8 +890,12 @@ DB::connection('clickhouse')->table('events')->truncate();
 How `DateTimeInterface` values (`Carbon`, `DateTime`, …) are rendered is governed by the `datetime_precision` connection option:
 
 ```php
+use ClickHouse\Enums\DateTimePrecision;
+
 'clickhouse' => [
     // ...
+    'datetime_precision' => DateTimePrecision::Second,
+    // or, environment-driven, using the enum's string values:
     'datetime_precision' => env('CLICKHOUSE_DATETIME_PRECISION', 'second'),
 ],
 ```

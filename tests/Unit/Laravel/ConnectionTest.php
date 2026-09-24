@@ -116,6 +116,17 @@ class ConnectionTest extends TestCase
         );
     }
 
+    public function testDateTimePrecisionAcceptsEnumInConfig()
+    {
+        $connection = new Connection(config: ['datetime_precision' => DateTimePrecision::Microsecond]);
+
+        $this->assertSame(DateTimePrecision::Microsecond, $connection->getDateTimePrecision());
+        $this->assertSame(
+            "toDateTime64('2026-08-13 10:00:00.123456', 6)",
+            $connection->escape(Carbon::parse('2026-08-13 10:00:00.123456'))
+        );
+    }
+
     public function testInjectedEscaperIsUsedByDefaultClient()
     {
         $escaper = new Escaper(DateTimePrecision::Microsecond);

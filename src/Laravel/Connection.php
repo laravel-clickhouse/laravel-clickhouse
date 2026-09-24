@@ -44,7 +44,7 @@ class Connection extends BaseConnection
      *     https?: bool,
      *     timeout?: int|float|string|null,
      *     connect_timeout?: int|float|string|null,
-     *     datetime_precision?: string,
+     *     datetime_precision?: DateTimePrecision|string,
      * }  $config
      */
     public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null, ?Escaper $escaper = null)
@@ -79,11 +79,18 @@ class Connection extends BaseConnection
     }
 
     /**
-     * @param  array{datetime_precision?: string}  $config
+     * The config value may be a DateTimePrecision case, or its string value
+     * when it comes from an environment variable.
+     *
+     * @param  array{datetime_precision?: DateTimePrecision|string}  $config
      */
     protected function parseDateTimePrecision(array $config): DateTimePrecision
     {
-        $value = $config['datetime_precision'] ?? DateTimePrecision::Second->value;
+        $value = $config['datetime_precision'] ?? DateTimePrecision::Second;
+
+        if ($value instanceof DateTimePrecision) {
+            return $value;
+        }
 
         return DateTimePrecision::tryFrom($value) ?? throw new InvalidArgumentException(sprintf(
             'Invalid datetime_precision "%s". Valid values: %s.',
