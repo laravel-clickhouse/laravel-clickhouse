@@ -91,6 +91,7 @@ ClickHouse connection config in Laravel `config/database.php`:
     'transport' => env('CLICKHOUSE_TRANSPORT', 'guzzle'),
     'timeout' => env('CLICKHOUSE_TIMEOUT'),
     'connect_timeout' => env('CLICKHOUSE_CONNECT_TIMEOUT'),
+    'datetime_precision' => env('CLICKHOUSE_DATETIME_PRECISION', 'second'),
     'engine' => env('CLICKHOUSE_ENGINE'),
     'use_lightweight_delete' => env('CLICKHOUSE_USE_LIGHTWEIGHT_DELETE', false),
 ]

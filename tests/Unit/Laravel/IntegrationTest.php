@@ -12,6 +12,7 @@ use DateTimeImmutable;
 use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model as BaseSQLiteModel;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Collection;
 
@@ -122,7 +123,7 @@ class IntegrationTest extends TestCase
 
     public function testInsertWithFormatAndTypedColumns()
     {
-        $connection = $this->db->getConnection('clickhouse');
+        $connection = $this->db->getConnection('clickhouse_micro');
 
         $connection->statement('create table test_format_types (tags Array(String), created_at DateTime64(6), id UInt64) engine = Memory');
 
@@ -144,15 +145,57 @@ class IntegrationTest extends TestCase
     }
 
     /**
-     * Regression test for issue #29: a DateTimeInterface binding carrying
-     * microseconds must not error against a second-precision DateTime column
-     * (older ClickHouse versions reject the bare fractional literal) and must
-     * not be truncated before the comparison (newer versions would otherwise
-     * wrongly match on equality).
+     * At the default second precision, DateTimeInterface bindings are
+     * truncated before they reach the SQL — matching Laravel's behavior on
+     * other databases: every context works on every ClickHouse version, at
+     * the cost of sub-second exactness ('datetime_precision' =>
+     * 'microsecond' opts into exact comparisons).
      */
-    public function testDateTimeBindingsCompareCorrectlyAgainstDateTimeColumns()
+    public function testDateTimeBindingsTruncateAtDefaultSecondPrecision()
     {
         $connection = $this->db->getConnection('clickhouse');
+
+        $connection->statement('create table test_datetime_default (id UInt64, dt DateTime, dt64 DateTime64(6)) engine = Memory');
+
+        try {
+            $connection->table('test_datetime_default')->insert([
+                ['id' => 1, 'dt' => '2026-08-13 10:00:00', 'dt64' => '2026-08-13 10:00:00.123456'],
+            ], format: Format::JSONEachRow);
+
+            $table = fn () => $connection->table('test_datetime_default');
+
+            $this->assertEquals(
+                [1],
+                $table()->where('dt', '=', new DateTimeImmutable('2026-08-13 10:00:00.123456'))->pluck('id')->all()
+            );
+
+            $this->assertEquals(
+                [1],
+                $table()->whereIn('dt', [new DateTimeImmutable('2026-08-13 10:00:00.123456')])->pluck('id')->all()
+            );
+
+            // The documented cost of the safe default: a sub-second DateTime64
+            // value read from a row no longer matches it once truncated.
+            $this->assertEquals(
+                [],
+                $table()->where('dt64', '=', new DateTimeImmutable('2026-08-13 10:00:00.123456'))->pluck('id')->all()
+            );
+        } finally {
+            $connection->statement('drop table test_datetime_default');
+        }
+    }
+
+    /**
+     * Regression test for issue #29, at 'datetime_precision' =>
+     * 'microsecond': a DateTimeInterface binding carrying microseconds must
+     * not error against a second-precision DateTime column (older ClickHouse
+     * versions reject the bare fractional literal) and must not be truncated
+     * before the comparison (newer versions would otherwise wrongly match on
+     * equality).
+     */
+    public function testDateTimeBindingsCompareExactlyAtMicrosecondPrecision()
+    {
+        $connection = $this->db->getConnection('clickhouse_micro');
 
         $connection->statement('create table test_datetime_bindings (id UInt64, dt DateTime, dt64 DateTime64(6)) engine = Memory');
 
@@ -186,19 +229,50 @@ class IntegrationTest extends TestCase
                     new DateTimeImmutable('2026-08-13 10:00:00.123456'),
                 ])->pluck('id')->all()
             );
+
+            // Whole-second IN elements are plain literals and work against
+            // both column types on every ClickHouse version.
+            $this->assertEquals(
+                [1],
+                $table()->whereIn('dt', [
+                    new DateTimeImmutable('2026-08-13 10:00:00'),
+                    new DateTimeImmutable('2026-08-13 09:00:00'),
+                ])->pluck('id')->all()
+            );
+
+            // Sub-second IN lookups round-trip exactly against DateTime64.
+            $this->assertEquals(
+                [1],
+                $table()->whereIn('dt64', [new DateTimeImmutable('2026-08-13 10:00:00.123456')])->pluck('id')->all()
+            );
+
+            // ClickHouse's IN-section type check rejects DateTime64 set
+            // elements against a second-precision DateTime column on every
+            // supported version, so a sub-second whereIn() fails loudly
+            // instead of silently matching a truncated value. If a future
+            // version starts accepting this, revisit the documented
+            // limitation in docs/docs/eloquent.md.
+            try {
+                $table()->whereIn('dt', [new DateTimeImmutable('2026-08-13 10:00:00.123456')])->get();
+
+                $this->fail('Expected a QueryException for a sub-second IN element against a DateTime column.');
+            } catch (QueryException) {
+            }
         } finally {
             $connection->statement('drop table test_datetime_bindings');
         }
     }
 
     /**
-     * Values-format inserts carry DateTimeInterface objects as bindings, so
-     * the Escaper renders whole-second values as plain literals and
-     * microsecond values as toDateTime64() expressions, which the Values
-     * parser evaluates (input_format_values_interpret_expressions is on by
-     * default).
+     * Values-format inserts normalize DateTimeInterface values to second
+     * precision (Query\Builder::formatInsertDateTimes()): ClickHouse 25.8
+     * and older reject sub-second content in the VALUES section when the
+     * target is a second-precision DateTime column, so a microsecond Carbon
+     * must insert cleanly into a DateTime column on every supported version.
+     * Sub-second inserts into DateTime64 columns opt in via
+     * 'datetime_precision' => 'microsecond' or pre-formatted strings.
      */
-    public function testInsertValuesFormatWithDateTimeObjects()
+    public function testInsertValuesFormatTruncatesDateTimeObjects()
     {
         $connection = $this->db->getConnection('clickhouse');
 
@@ -207,6 +281,75 @@ class IntegrationTest extends TestCase
         try {
             $inserted = $connection->table('test_values_datetime')->insert([
                 'id' => 1,
+                'dt' => new DateTimeImmutable('2026-08-13 10:00:00.123456'),
+                'dt64' => new DateTimeImmutable('2026-08-13 10:00:00.123456'),
+            ]);
+
+            $this->assertTrue($inserted);
+            $this->assertEquals(
+                [['id' => 1, 'dt' => '2026-08-13 10:00:00', 'dt64' => '2026-08-13 10:00:00.000000']],
+                $connection->table('test_values_datetime')->get()->map(fn ($row) => (array) $row)->all()
+            );
+        } finally {
+            $connection->statement('drop table test_values_datetime');
+        }
+    }
+
+    /**
+     * JSONEachRow is a transport choice, not a precision one, so its
+     * DateTimeInterface objects follow datetime_precision exactly like the
+     * Values path: at the default second precision a microsecond Carbon
+     * must insert cleanly into a DateTime column, which ClickHouse 25.8 and
+     * older would reject as a fractional JSON string. A pre-formatted string
+     * still carries its own precision into the DateTime64 column.
+     */
+    public function testInsertJsonEachRowTruncatesDateTimeObjects()
+    {
+        $connection = $this->db->getConnection('clickhouse');
+
+        $connection->statement('create table test_json_datetime (id UInt64, dt DateTime, dt64 DateTime64(6)) engine = Memory');
+
+        try {
+            $inserted = $connection->table('test_json_datetime')->insert([
+                [
+                    'id' => 1,
+                    'dt' => new DateTimeImmutable('2026-08-13 10:00:00.123456'),
+                    'dt64' => new DateTimeImmutable('2026-08-13 10:00:00.123456'),
+                ],
+                [
+                    'id' => 2,
+                    'dt' => new DateTimeImmutable('2026-08-13 11:00:00'),
+                    'dt64' => (new DateTimeImmutable('2026-08-13 11:00:00.123456'))->format('Y-m-d H:i:s.u'),
+                ],
+            ], format: Format::JSONEachRow);
+
+            $this->assertTrue($inserted);
+            $this->assertEquals(
+                [
+                    ['id' => 1, 'dt' => '2026-08-13 10:00:00', 'dt64' => '2026-08-13 10:00:00.000000'],
+                    ['id' => 2, 'dt' => '2026-08-13 11:00:00', 'dt64' => '2026-08-13 11:00:00.123456'],
+                ],
+                $connection->table('test_json_datetime')->orderBy('id')->get()->map(fn ($row) => (array) $row)->all()
+            );
+        } finally {
+            $connection->statement('drop table test_json_datetime');
+        }
+    }
+
+    /**
+     * At 'datetime_precision' => 'microsecond', Values-format inserts render
+     * microsecond strings, which every ClickHouse version accepts for
+     * DateTime64 columns.
+     */
+    public function testInsertValuesFormatKeepsMicrosecondsAtMicrosecondPrecision()
+    {
+        $connection = $this->db->getConnection('clickhouse_micro');
+
+        $connection->statement('create table test_values_micro (id UInt64, dt DateTime, dt64 DateTime64(6)) engine = Memory');
+
+        try {
+            $inserted = $connection->table('test_values_micro')->insert([
+                'id' => 1,
                 'dt' => new DateTimeImmutable('2026-08-13 10:00:00'),
                 'dt64' => new DateTimeImmutable('2026-08-13 10:00:00.123456'),
             ]);
@@ -214,10 +357,10 @@ class IntegrationTest extends TestCase
             $this->assertTrue($inserted);
             $this->assertEquals(
                 [['id' => 1, 'dt' => '2026-08-13 10:00:00', 'dt64' => '2026-08-13 10:00:00.123456']],
-                $connection->table('test_values_datetime')->get()->map(fn ($row) => (array) $row)->all()
+                $connection->table('test_values_micro')->get()->map(fn ($row) => (array) $row)->all()
             );
         } finally {
-            $connection->statement('drop table test_values_datetime');
+            $connection->statement('drop table test_values_micro');
         }
     }
 
@@ -308,14 +451,17 @@ class IntegrationTest extends TestCase
 
     private function addClickHouseConnection()
     {
-        $this->db->addConnection([
+        $config = [
             'driver' => 'clickhouse',
             'host' => getenv('CLICKHOUSE_HOST'),
             'port' => getenv('CLICKHOUSE_PORT'),
             'database' => getenv('CLICKHOUSE_DATABASE'),
             'username' => getenv('CLICKHOUSE_USERNAME'),
             'password' => getenv('CLICKHOUSE_PASSWORD'),
-        ], 'clickhouse');
+        ];
+
+        $this->db->addConnection($config, 'clickhouse');
+        $this->db->addConnection($config + ['datetime_precision' => 'microsecond'], 'clickhouse_micro');
     }
 
     private function createClickHouseTestTable()

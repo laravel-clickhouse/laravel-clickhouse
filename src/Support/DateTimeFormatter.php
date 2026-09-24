@@ -2,6 +2,7 @@
 
 namespace ClickHouse\Support;
 
+use ClickHouse\Enums\DateTimePrecision;
 use DateTimeInterface;
 
 final class DateTimeFormatter
@@ -12,9 +13,9 @@ final class DateTimeFormatter
 
     private const MICROSECOND_PRECISION_FORMAT = 'Y-m-d H:i:s.u';
 
-    public static function format(DateTimeInterface $value): string
+    public static function format(DateTimeInterface $value, DateTimePrecision $precision): string
     {
-        if (! self::hasMicroseconds($value)) {
+        if ($precision === DateTimePrecision::Second || ! self::hasMicroseconds($value)) {
             return $value->format(self::SECOND_PRECISION_FORMAT);
         }
 

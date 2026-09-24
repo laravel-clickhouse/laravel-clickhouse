@@ -3,6 +3,7 @@
 namespace ClickHouse\Tests\Unit\Support;
 
 use Carbon\Carbon;
+use ClickHouse\Enums\DateTimePrecision;
 use ClickHouse\Support\JsonEachRowEncoder;
 use ClickHouse\Tests\Unit\TestCase;
 use JsonException;
@@ -42,11 +43,35 @@ class JsonEachRowEncoderTest extends TestCase
         );
     }
 
-    public function testDateTimePreservesMicroseconds()
+    public function testDateTimeTruncatesMicrosecondsAtDefaultSecondPrecision()
+    {
+        $this->assertEquals(
+            '{"created_at":"2026-07-29 12:34:56"}',
+            (new JsonEachRowEncoder)->encode([['created_at' => Carbon::parse('2026-07-29 12:34:56.123456')]])
+        );
+    }
+
+    public function testDateTimePreservesMicrosecondsAtMicrosecondPrecision()
     {
         $this->assertEquals(
             '{"created_at":"2026-07-29 12:34:56.123456"}',
-            (new JsonEachRowEncoder)->encode([['created_at' => Carbon::parse('2026-07-29 12:34:56.123456')]])
+            (new JsonEachRowEncoder(DateTimePrecision::Microsecond))->encode([['created_at' => Carbon::parse('2026-07-29 12:34:56.123456')]])
+        );
+    }
+
+    public function testWholeSecondDateTimeStaysPlainAtMicrosecondPrecision()
+    {
+        $this->assertEquals(
+            '{"created_at":"2026-07-29 12:34:56"}',
+            (new JsonEachRowEncoder(DateTimePrecision::Microsecond))->encode([['created_at' => Carbon::parse('2026-07-29 12:34:56')]])
+        );
+    }
+
+    public function testPreFormattedStringKeepsItsPrecision()
+    {
+        $this->assertEquals(
+            '{"created_at":"2026-07-29 12:34:56.123456"}',
+            (new JsonEachRowEncoder)->encode([['created_at' => Carbon::parse('2026-07-29 12:34:56.123456')->format('Y-m-d H:i:s.u')]])
         );
     }
 

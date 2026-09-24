@@ -7,8 +7,10 @@ use ClickHouse\Client\Client;
 use ClickHouse\Client\Contracts\Transport;
 use ClickHouse\Client\Response;
 use ClickHouse\Client\Statement;
+use ClickHouse\Enums\DateTimePrecision;
 use ClickHouse\Exceptions\ParallelQueryException;
 use ClickHouse\Laravel\Connection;
+use ClickHouse\Support\Escaper;
 use ClickHouse\Tests\Unit\TestCase;
 use Exception;
 use Illuminate\Database\QueryException;
@@ -92,6 +94,86 @@ class ConnectionTest extends TestCase
         $this->assertSame($date, $prepared[0]);
         $this->assertSame(1, $prepared[1]);
         $this->assertSame('value', $prepared[2]);
+    }
+
+    public function testDateTimePrecisionDefaultsToSecond()
+    {
+        $connection = new Connection;
+
+        $this->assertSame(DateTimePrecision::Second, $connection->getDateTimePrecision());
+        $this->assertSame("'2026-08-13 10:00:00'", $connection->escape(Carbon::parse('2026-08-13 10:00:00.123456')));
+    }
+
+    public function testDateTimePrecisionMicrosecondFromConfig()
+    {
+        $connection = new Connection(config: ['datetime_precision' => 'microsecond']);
+
+        $this->assertSame(DateTimePrecision::Microsecond, $connection->getDateTimePrecision());
+        $this->assertSame(DateTimePrecision::Microsecond, $connection->getClient()->getEscaper()->getDateTimePrecision());
+        $this->assertSame(
+            "toDateTime64('2026-08-13 10:00:00.123456', 6)",
+            $connection->escape(Carbon::parse('2026-08-13 10:00:00.123456'))
+        );
+    }
+
+    public function testDateTimePrecisionAcceptsEnumInConfig()
+    {
+        $connection = new Connection(config: ['datetime_precision' => DateTimePrecision::Microsecond]);
+
+        $this->assertSame(DateTimePrecision::Microsecond, $connection->getDateTimePrecision());
+        $this->assertSame(
+            "toDateTime64('2026-08-13 10:00:00.123456', 6)",
+            $connection->escape(Carbon::parse('2026-08-13 10:00:00.123456'))
+        );
+    }
+
+    public function testInjectedEscaperIsUsedByDefaultClient()
+    {
+        $escaper = new Escaper(DateTimePrecision::Microsecond);
+
+        $connection = new Connection(config: ['datetime_precision' => 'second'], escaper: $escaper);
+
+        $this->assertSame($escaper, $connection->getClient()->getEscaper());
+        $this->assertSame(DateTimePrecision::Microsecond, $connection->getDateTimePrecision());
+    }
+
+    public function testDateTimePrecisionFollowsInjectedClientEscaper()
+    {
+        $client = $this->mock(Client::class);
+
+        $client
+            ->shouldReceive('getEscaper')
+            ->andReturn(new Escaper(DateTimePrecision::Microsecond));
+
+        $connection = new Connection(config: ['datetime_precision' => 'second'], client: $client);
+
+        $this->assertSame(DateTimePrecision::Microsecond, $connection->getDateTimePrecision());
+        $this->assertSame(
+            "toDateTime64('2026-08-13 10:00:00.123456', 6)",
+            $connection->escape(Carbon::parse('2026-08-13 10:00:00.123456'))
+        );
+    }
+
+    public function testInjectingClientAndDifferentEscaperThrows()
+    {
+        $client = $this->mock(Client::class);
+
+        $client
+            ->shouldReceive('getEscaper')
+            ->andReturn(new Escaper);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('An injected client brings its own escaper; pass the escaper to the client instead.');
+
+        new Connection(client: $client, escaper: new Escaper);
+    }
+
+    public function testInvalidDateTimePrecisionThrows()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid datetime_precision "millisecond". Valid values: second, microsecond.');
+
+        new Connection(config: ['datetime_precision' => 'millisecond']);
     }
 
     public function testInsert()
