@@ -6,6 +6,7 @@ use ClickHouse\Core\Client\Client;
 use ClickHouse\Core\Connection\InteractsWithClickHouseClient;
 use ClickHouse\Core\Connection\RejectsTransactions;
 use ClickHouse\Core\Contracts\ClickHouseConnection;
+use ClickHouse\Core\Enums\DateTimePrecision;
 use ClickHouse\Core\Support\Escaper;
 use ClickHouse\Hypervel\Query\Builder as QueryBuilder;
 use ClickHouse\Hypervel\Query\Grammar as QueryGrammar;
@@ -39,6 +40,7 @@ class Connection extends BaseConnection implements ClickHouseConnection
      *     https?: bool,
      *     timeout?: int|float|string|null,
      *     connect_timeout?: int|float|string|null,
+     *     datetime_precision?: DateTimePrecision|string,
      * }  $config
      */
     public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null, ?Escaper $escaper = null)

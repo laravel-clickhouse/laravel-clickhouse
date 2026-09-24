@@ -723,6 +723,14 @@ DB::connection('clickhouse')->table('events')->insert([
 // insert into `events` (`id`, `name`) values (1, 'page_view'), (2, 'click')
 ```
 
+`DateTimeInterface` values are stored at second precision by default:
+ClickHouse 25.8 and older reject sub-second content when the target is a
+second-precision `DateTime` column, so the builder truncates before sending
+them. To insert sub-second values into `DateTime64` columns, set
+`'datetime_precision' => 'microsecond'` or pass pre-formatted strings — see
+[DateTime and DateTime64 Values](#datetime-and-datetime64-values) for the full
+rules.
+
 ### Insert Using an Input Format
 
 `Format::Values` is the default input format. For large batches, pass
@@ -752,9 +760,10 @@ Event::insert($rows, format: Format::JSONEachRow);
 
 Both code paths behave like a regular `insert()` and return a `bool`.
 
-`DateTimeInterface` values preserve sub-second precision when present, enums are
-converted to their value (or name for pure enums), and nested PHP arrays map to
-ClickHouse `Array` columns.
+`DateTimeInterface` values follow the connection's
+[`datetime_precision`](#datetime-and-datetime64-values) exactly like the
+`Values` path, enums are converted to their value (or name for pure enums), and
+nested PHP arrays map to ClickHouse `Array` columns.
 
 Things to keep in mind:
 
@@ -875,6 +884,91 @@ DB::connection('clickhouse')->table('events')
 DB::connection('clickhouse')->table('events')->truncate();
 // truncate table `events`
 ```
+
+## DateTime and DateTime64 Values
+
+How `DateTimeInterface` values (`Carbon`, `DateTime`, …) are rendered is governed by the `datetime_precision` connection option:
+
+```php
+use ClickHouse\Core\Enums\DateTimePrecision;
+
+'clickhouse' => [
+    // ...
+    'datetime_precision' => DateTimePrecision::Second,
+    // or, environment-driven, using the enum's string values:
+    'datetime_precision' => env('CLICKHOUSE_DATETIME_PRECISION', 'second'),
+],
+```
+
+- **`second` (default)** — `DateTimeInterface` objects are truncated to `Y-m-d H:i:s` wherever the driver renders them: query bindings and insert values in every input format. This matches Laravel's behavior on other databases and works in every context on every ClickHouse version, at the cost of sub-second exactness.
+- **`microsecond`** — objects carrying microseconds keep them: comparison bindings are wrapped in `toDateTime64(..., 6)` for exact semantics, and inserts (`Values` and `JSONEachRow`) render microsecond strings. Meant for databases whose date columns are `DateTime64`.
+
+The rule of thumb: **objects follow the option; strings carry their own precision.** Values you stringify yourself — a model's `$dateFormat`, or `$carbon->format('Y-m-d H:i:s.u')` — are never touched by it. Choosing `Format::JSONEachRow` is a transport decision, not a precision one, so its objects follow the option like every other path.
+
+### The Default: Second Precision
+
+Every inferred rendering is a plain `'Y-m-d H:i:s'` literal:
+
+```php
+$query->where('created_at', '>', now())->get();
+// where `created_at` > '2026-08-13 10:00:00'
+
+$query->where('id', 1)->update(['finished_at' => now()]);
+// alter table `events` update `finished_at` = '2026-08-13 10:00:00' where `id` = 1
+```
+
+Every context works on every ClickHouse version, and primary-key, MinMax, and partition pruning apply in full. The trade-off: sub-second content is dropped, so a `DateTime64` row cannot be re-fetched by equality with the microsecond value that was read from it — switch to `microsecond` precision when you need that.
+
+### Microsecond Precision: Comparisons
+
+A whole-second value still becomes a plain literal; a value carrying microseconds is wrapped in `toDateTime64(..., 6)`, which every ClickHouse version compares exactly against both `DateTime` and `DateTime64` columns:
+
+```php
+$query->where('created_at', '>', now())->get();
+// where `created_at` > toDateTime64('2026-08-13 10:00:00.123456', 6)
+```
+
+> **Note:** The `toDateTime64()` wrapper is safe against second-precision `DateTime` columns too. Comparison functions promote both sides to their common supertype (`DateTime64`) instead of converting the constant to the column type, so no ClickHouse version raises an error — the row values simply compare at full precision. Only the IN set element check is strict; see [whereIn()](#microsecond-precision-wherein) below.
+
+Equality against a sub-second value is exact in both directions: a `DateTime64` row can be re-fetched with the very value that was read from it, and a second-precision `DateTime` row never wrongly matches a sub-second bound.
+
+`update()` behaves the same way in both its SET values and its WHERE clause — the mutation casts the value to the column type, so a `DateTime` column truncates the sub-second part and a `DateTime64` column keeps it.
+
+### Microsecond Precision: whereIn()
+
+ClickHouse builds the IN set by converting each element to the column's type, and that conversion rejects sub-second values against a second-precision `DateTime` column **on every ClickHouse version** — as a `toDateTime64()` expression and as a fractional string alike. `whereIn()` values carrying microseconds therefore only work when the column is `DateTime64`; whole-second values work against both column types:
+
+```php
+$query->whereIn('dt64', [$valueReadFromDt64])->get(); // exact match on every version
+
+$query->whereIn('dt', [now()])->get();
+// throws a QueryException (TYPE_MISMATCH) — pass whole-second values instead
+```
+
+### Inserting Microseconds
+
+At the default second precision, inserts store `DateTimeInterface` **objects** truncated to seconds in every input format — the safe choice, since ClickHouse 25.8 and older reject sub-second content when the target column is a second-precision `DateTime`, whether it arrives in a `VALUES` list or a JSONEachRow row. Every channel below keeps microseconds on all supported ClickHouse versions when the target column is `DateTime64`:
+
+| Channel | Usage |
+|---|---|
+| `'datetime_precision' => 'microsecond'` | Objects render as microsecond strings in both `Values` and `Format::JSONEachRow` inserts. |
+| Model `$dateFormat` | `protected $dateFormat = 'Y-m-d H:i:s.u';` — date attributes are stringified with microseconds. Only for models whose date columns are all `DateTime64`. |
+| Pre-formatted strings | `->insert(['dt64' => $carbon->format('Y-m-d H:i:s.u')])` — works in both `Values` and `Format::JSONEachRow` inserts; only objects are normalized. |
+
+### Behavior Summary
+
+For values carrying microseconds (whole-second values are plain `'Y-m-d H:i:s'` literals in both modes):
+
+| Context | `second` (default) | `microsecond` |
+|---|---|---|
+| `where` comparisons / `whereBetween()` | truncated literal | `toDateTime64(..., 6)` — exact against both column types |
+| `whereIn()` | truncated literal | `toDateTime64(..., 6)` — exact for `DateTime64`, rejected by the server for `DateTime` |
+| `update()` SET / WHERE | truncated literal | `toDateTime64(..., 6)` — cast to the column type |
+| `insert()` objects (default `Values`) | truncated literal | microsecond string — for `DateTime64` columns |
+| `insert()` objects with `Format::JSONEachRow` | truncated string | microsecond string — for `DateTime64` columns |
+| Pre-formatted strings / model `$dateFormat` | kept as written | kept as written |
+
+Eloquent date attributes have their own storage format; see [Date Precision](eloquent.md#date-precision).
 
 ## Unsupported Operations
 

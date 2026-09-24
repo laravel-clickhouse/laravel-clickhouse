@@ -3,6 +3,7 @@
 namespace ClickHouse\Core\Support;
 
 use BackedEnum;
+use ClickHouse\Core\Enums\DateTimePrecision;
 use DateTimeInterface;
 use JsonException;
 use RuntimeException;
@@ -10,6 +11,16 @@ use UnitEnum;
 
 class JsonEachRowEncoder
 {
+    /**
+     * DateTimeInterface objects follow the connection's datetime_precision
+     * like every other inferred rendering: choosing JSONEachRow is a
+     * transport decision, not a precision one. Callers that need
+     * microseconds regardless of it pass pre-formatted strings.
+     */
+    public function __construct(
+        protected DateTimePrecision $dateTimePrecision = DateTimePrecision::Second,
+    ) {}
+
     /**
      * Encode rows into newline-delimited JSON for the JSONEachRow input format.
      *
@@ -43,7 +54,7 @@ class JsonEachRowEncoder
         }
 
         if ($value instanceof DateTimeInterface) {
-            return DateTimeFormatter::format($value);
+            return DateTimeFormatter::format($value, $this->dateTimePrecision);
         }
 
         if ($value instanceof BackedEnum) {

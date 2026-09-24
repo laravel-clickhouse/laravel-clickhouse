@@ -2,6 +2,7 @@
 
 namespace ClickHouse\Tests\Core\Unit\Support;
 
+use ClickHouse\Core\Enums\DateTimePrecision;
 use ClickHouse\Core\Support\Escaper;
 use ClickHouse\Tests\Core\Unit\TestCase;
 use DateTime;
@@ -55,18 +56,38 @@ class EscaperTest extends TestCase
         $this->assertEquals("'2024-01-02 03:04:05'", (new Escaper)->escape($date));
     }
 
-    public function testDateTimePreservesMicroseconds()
+    public function testDateTimeTruncatesMicrosecondsAtDefaultSecondPrecision()
     {
         $date = DateTime::createFromFormat('Y-m-d H:i:s.u', '2024-01-02 03:04:05.123456');
 
-        $this->assertEquals("toDateTime64('2024-01-02 03:04:05.123456', 6)", (new Escaper)->escape($date));
+        $this->assertEquals("'2024-01-02 03:04:05'", (new Escaper)->escape($date));
     }
 
-    public function testDateTimeImmutablePreservesMicroseconds()
+    public function testDateTimePreservesMicrosecondsAtMicrosecondPrecision()
+    {
+        $date = DateTime::createFromFormat('Y-m-d H:i:s.u', '2024-01-02 03:04:05.123456');
+
+        $this->assertEquals(
+            "toDateTime64('2024-01-02 03:04:05.123456', 6)",
+            (new Escaper(DateTimePrecision::Microsecond))->escape($date)
+        );
+    }
+
+    public function testDateTimeImmutableAtMicrosecondPrecision()
     {
         $date = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', '2024-01-02 03:04:05.000001');
 
-        $this->assertEquals("toDateTime64('2024-01-02 03:04:05.000001', 6)", (new Escaper)->escape($date));
+        $this->assertEquals(
+            "toDateTime64('2024-01-02 03:04:05.000001', 6)",
+            (new Escaper(DateTimePrecision::Microsecond))->escape($date)
+        );
+    }
+
+    public function testWholeSecondDateTimeStaysPlainAtMicrosecondPrecision()
+    {
+        $date = DateTime::createFromFormat('Y-m-d H:i:s', '2024-01-02 03:04:05');
+
+        $this->assertEquals("'2024-01-02 03:04:05'", (new Escaper(DateTimePrecision::Microsecond))->escape($date));
     }
 
     public function testDateTimeArray()
@@ -75,8 +96,12 @@ class EscaperTest extends TestCase
         $micro = DateTime::createFromFormat('Y-m-d H:i:s.u', '2024-01-02 03:04:05.123456');
 
         $this->assertEquals(
-            "['2024-01-02 03:04:05', toDateTime64('2024-01-02 03:04:05.123456', 6)]",
+            "['2024-01-02 03:04:05', '2024-01-02 03:04:05']",
             (new Escaper)->escape([$whole, $micro])
+        );
+        $this->assertEquals(
+            "['2024-01-02 03:04:05', toDateTime64('2024-01-02 03:04:05.123456', 6)]",
+            (new Escaper(DateTimePrecision::Microsecond))->escape([$whole, $micro])
         );
     }
 

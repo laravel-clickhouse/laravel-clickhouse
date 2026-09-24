@@ -47,6 +47,7 @@ Add a `clickhouse` connection to your `config/database.php` file under the `conn
         'transport' => env('CLICKHOUSE_TRANSPORT', 'guzzle'),
         'timeout' => env('CLICKHOUSE_TIMEOUT'),
         'connect_timeout' => env('CLICKHOUSE_CONNECT_TIMEOUT'),
+        'datetime_precision' => env('CLICKHOUSE_DATETIME_PRECISION', 'second'),
         'engine' => env('CLICKHOUSE_ENGINE'),
         'use_lightweight_delete' => env('CLICKHOUSE_USE_LIGHTWEIGHT_DELETE', false),
     ],
@@ -68,6 +69,7 @@ Add a `clickhouse` connection to your `config/database.php` file under the `conn
 | `transport` | `'guzzle'` | The HTTP transport driver. Supported: `'guzzle'`, `'curl'`. |
 | `timeout` | `null` | Maximum seconds to wait for a request to complete. `null` keeps the transport default (Guzzle: no limit; Curl: `20`). `0` disables the limit. Floats are allowed. |
 | `connect_timeout` | `10` | Maximum seconds to wait while connecting to the server. `null` or a blank value falls back to `10` on every transport. `0` disables the limit. Floats are allowed. |
+| `datetime_precision` | `'second'` | How `DateTimeInterface` query bindings and `Values`-format insert values are rendered: `'second'` truncates them, `'microsecond'` keeps sub-second precision for `DateTime64` columns. Accepts a `ClickHouse\Core\Enums\DateTimePrecision` case or its string value. See [DateTime and DateTime64 Values](query-builder.md#datetime-and-datetime64-values). |
 | `engine` | `null` | The default table engine for migrations (e.g. `'MergeTree()'`). When not set, defaults to `MergeTree()`. |
 | `use_lightweight_delete` | `false` | When `true`, Eloquent `delete()` uses lightweight `DELETE` statements instead of `ALTER TABLE ... DELETE`. |
 
@@ -85,6 +87,7 @@ CLICKHOUSE_HTTPS=
 CLICKHOUSE_TRANSPORT=guzzle
 CLICKHOUSE_TIMEOUT=
 CLICKHOUSE_CONNECT_TIMEOUT=
+CLICKHOUSE_DATETIME_PRECISION=second
 CLICKHOUSE_ENGINE=
 CLICKHOUSE_USE_LIGHTWEIGHT_DELETE=false
 ```

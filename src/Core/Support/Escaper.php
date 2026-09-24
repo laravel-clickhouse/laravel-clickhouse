@@ -2,11 +2,21 @@
 
 namespace ClickHouse\Core\Support;
 
+use ClickHouse\Core\Enums\DateTimePrecision;
 use DateTimeInterface;
 use RuntimeException;
 
 class Escaper
 {
+    public function __construct(
+        protected DateTimePrecision $dateTimePrecision = DateTimePrecision::Second,
+    ) {}
+
+    public function getDateTimePrecision(): DateTimePrecision
+    {
+        return $this->dateTimePrecision;
+    }
+
     public function escape(mixed $value, bool $binary = false): string
     {
         if (is_array($value)) {
@@ -61,19 +71,26 @@ class Escaper
     }
 
     /**
-     * A whole-second value becomes a plain quoted literal, which every
-     * ClickHouse version accepts against both DateTime and DateTime64
-     * columns. A value carrying microseconds is wrapped in
+     * At second precision (the default), every value becomes a plain quoted
+     * 'Y-m-d H:i:s' literal, which every ClickHouse version accepts in every
+     * context against both DateTime and DateTime64 columns. At microsecond
+     * precision, a value carrying microseconds is wrapped in
      * toDateTime64(..., 6) instead: a bare fractional literal is rejected
      * by older ClickHouse versions when compared against a DateTime column
      * and silently truncated before comparison by newer ones, while the
      * expression keeps exact comparison semantics on both column types.
+     * Server-side exception at microsecond precision: the IN and VALUES
+     * sections type-check set elements strictly, so a DateTime64 expression
+     * is rejected there when the target is a second-precision DateTime
+     * column — sub-second IN lookups require a DateTime64 column, and the
+     * query builder renders Values-insert values as plain strings before
+     * they reach this escaper (BuildsClickHouseQueries::formatInsertDateTimes()).
      */
     public function escapeDateTime(DateTimeInterface $value): string
     {
-        $escaped = $this->escapeString(DateTimeFormatter::format($value));
+        $escaped = $this->escapeString(DateTimeFormatter::format($value, $this->dateTimePrecision));
 
-        if (! DateTimeFormatter::hasMicroseconds($value)) {
+        if ($this->dateTimePrecision === DateTimePrecision::Second || ! DateTimeFormatter::hasMicroseconds($value)) {
             return $escaped;
         }
 

@@ -33,6 +33,11 @@ abstract class TestCase extends OrchestraTestCase
             'password' => env('CLICKHOUSE_PASSWORD', 'default'),
         ]);
 
+        $app['config']->set(
+            'database.connections.clickhouse_micro',
+            $app['config']->get('database.connections.clickhouse') + ['datetime_precision' => 'microsecond']
+        );
+
         $app['config']->set('database.connections.sqlite', [
             'driver' => 'sqlite',
             'database' => ':memory:',

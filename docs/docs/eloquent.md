@@ -63,9 +63,11 @@ class Event extends Model
 }
 ```
 
-> **Note:** Older ClickHouse versions reject fractional seconds when inserting into a second-precision `DateTime` column, so only opt in on models whose date columns are `DateTime64`.
+> **Warning:** ClickHouse 25.8 and older reject fractional seconds when inserting into a second-precision `DateTime` column — in every input format (`Values` literals, `toDateTime64()` expressions, and `JSONEachRow`); 26.x merely truncates them. Only opt in on models whose date columns are all `DateTime64`.
 
-`$dateFormat` only affects how attributes are stored. Query bindings need no configuration: passing a `Carbon`/`DateTime` instance to `where()` or `whereBetween()` always compares correctly — values carrying microseconds are automatically wrapped in `toDateTime64(..., 6)` so precision is preserved against `DateTime64` columns without breaking comparisons against `DateTime` columns.
+`$dateFormat` only affects how attributes are stored. Query bindings and Query Builder insert values follow the connection's `datetime_precision` option instead — at the default `'second'` they are truncated, matching Laravel's behavior on other databases; at `'microsecond'` comparisons are wrapped in `toDateTime64(..., 6)` for exact sub-second semantics against `DateTime64` columns.
+
+The full rules — both precision modes, the `whereIn()` limitation, every microsecond-insert channel, and a behavior summary table — live in [DateTime and DateTime64 Values](query-builder.md#datetime-and-datetime64-values).
 
 ## Querying
 

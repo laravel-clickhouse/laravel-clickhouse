@@ -3,13 +3,14 @@
 namespace ClickHouse\Tests\Laravel\Unit\Query;
 
 use Carbon\Carbon;
+use ClickHouse\Core\Enums\DateTimePrecision;
 use ClickHouse\Core\Enums\Format;
 use ClickHouse\Core\Support\Escaper;
+use ClickHouse\Laravel\Connection;
 use ClickHouse\Laravel\Query\Builder;
 use ClickHouse\Laravel\Query\Grammar;
 use ClickHouse\Tests\Laravel\Unit\TestCase;
 use DateTimeInterface;
-use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Processors\Processor;
 use LogicException;
 
@@ -174,11 +175,22 @@ class BuilderTest extends TestCase
         );
     }
 
-    public function testWhereBetweenDateTimes()
+    public function testWhereBetweenDateTimesTruncatesAtDefaultSecondPrecision()
+    {
+        $this->assertEquals(
+            "select * from `table` where `column` between '2026-08-13 10:00:00' and '2026-08-13 11:00:00'",
+            $this->getBuilder()->from('table')->whereBetween('column', [
+                Carbon::parse('2026-08-13 10:00:00'),
+                Carbon::parse('2026-08-13 11:00:00.123456'),
+            ])->toRawSql()
+        );
+    }
+
+    public function testWhereBetweenDateTimesAtMicrosecondPrecision()
     {
         $this->assertEquals(
             "select * from `table` where `column` between '2026-08-13 10:00:00' and toDateTime64('2026-08-13 11:00:00.123456', 6)",
-            $this->getBuilder()->from('table')->whereBetween('column', [
+            $this->getBuilder(dateTimePrecision: DateTimePrecision::Microsecond)->from('table')->whereBetween('column', [
                 Carbon::parse('2026-08-13 10:00:00'),
                 Carbon::parse('2026-08-13 11:00:00.123456'),
             ])->toRawSql()
@@ -1097,6 +1109,24 @@ class BuilderTest extends TestCase
         $this->getBuilder(insert: $expectedSql, bindings: $bindings)->from('table')->insert(['column' => 'value']);
     }
 
+    public function testInsertTruncatesDateTimeObjectsToSecondPrecision()
+    {
+        $expectedSql = 'insert into `table` (`dt`) values (?)';
+        $bindings = ['2026-08-13 10:00:00'];
+        $this->getBuilder(insert: $expectedSql, bindings: $bindings)
+            ->from('table')
+            ->insert(['dt' => Carbon::parse('2026-08-13 10:00:00.123456')]);
+    }
+
+    public function testInsertKeepsMicrosecondsAtMicrosecondPrecision()
+    {
+        $expectedSql = 'insert into `table` (`dt`) values (?)';
+        $bindings = ['2026-08-13 10:00:00.123456'];
+        $this->getBuilder(insert: $expectedSql, bindings: $bindings, dateTimePrecision: DateTimePrecision::Microsecond)
+            ->from('table')
+            ->insert(['dt' => Carbon::parse('2026-08-13 10:00:00.123456')]);
+    }
+
     public function testInsertMultiple()
     {
         $expectedSql = 'insert into `table` (`column`) values (?), (?)';
@@ -1626,9 +1656,10 @@ class BuilderTest extends TestCase
         ?string $update = null,
         ?string $delete = null,
         array $bindings = [],
-        mixed $result = null
+        mixed $result = null,
+        DateTimePrecision $dateTimePrecision = DateTimePrecision::Second
     ) {
-        $connection = $this->mockConnection($select, $insert, $update, $delete, $bindings, $result);
+        $connection = $this->mockConnection($select, $insert, $update, $delete, $bindings, $result, $dateTimePrecision);
         $grammar = $this->getGrammar(Grammar::class, $connection);
         $processor = $this->getProcessor();
 
@@ -1641,27 +1672,32 @@ class BuilderTest extends TestCase
         ?string $update = null,
         ?string $delete = null,
         array $bindings = [],
-        mixed $result = null
+        mixed $result = null,
+        DateTimePrecision $dateTimePrecision = DateTimePrecision::Second
     ) {
         return $this->mock(
             Connection::class,
-            function ($connection) use ($select, $insert, $update, $delete, $bindings, $result) {
+            function ($connection) use ($select, $insert, $update, $delete, $bindings, $result, $dateTimePrecision) {
                 $connection->shouldReceive('getDatabaseName')->andReturn('database');
                 $connection->shouldReceive('getTablePrefix')->andReturn('');
+                $connection->shouldReceive('getDateTimePrecision')->andReturn($dateTimePrecision);
                 $connection->shouldReceive('prepareBindings')->andReturnUsing(fn ($bindings) => $bindings);
-                $connection->shouldReceive('escape')->andReturnUsing(function ($value) {
+                $connection->shouldReceive('escape')->andReturnUsing(function ($value) use ($dateTimePrecision) {
                     if ($value instanceof DateTimeInterface) {
-                        return (new Escaper)->escape($value);
+                        return (new Escaper($dateTimePrecision))->escape($value);
                     }
 
                     return is_string($value) ? "'{$value}'" : $value;
                 });
 
                 if ($select) {
+                    // The package Connection types select(): array, so the
+                    // mocked call may not return null for tests that only
+                    // assert the compiled SQL.
                     $connection->shouldReceive('select')
                         ->withArgs(fn ($sql, $args, $useRead = true) => $sql === $select && $args === $bindings && $useRead === true)
                         ->once()
-                        ->andReturn($result);
+                        ->andReturn($result ?? []);
                 }
 
                 if ($insert) {

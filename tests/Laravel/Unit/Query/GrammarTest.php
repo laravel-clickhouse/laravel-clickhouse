@@ -8,10 +8,11 @@ use ClickHouse\Tests\Laravel\Unit\TestCase;
 class GrammarTest extends TestCase
 {
     /**
-     * The inherited second-precision format is a deliberate default: older
-     * ClickHouse versions reject fractional seconds when Eloquent-stringified
-     * date attributes are inserted into a DateTime column. Models persisting
-     * into DateTime64 columns opt into microseconds via $dateFormat.
+     * The inherited second-precision format is a deliberate default:
+     * ClickHouse 25.8 and older reject fractional seconds in every insert
+     * format when the target is a second-precision DateTime column (26.x
+     * merely truncates them). Models whose date columns are all DateTime64
+     * opt into microseconds via $dateFormat.
      */
     public function testGetDateFormatDefaultsToSecondPrecision()
     {

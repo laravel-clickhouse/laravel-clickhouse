@@ -5,6 +5,7 @@ namespace ClickHouse\Core\Connection;
 use ClickHouse\Core\Client\Client;
 use ClickHouse\Core\Client\Session;
 use ClickHouse\Core\Client\Statement;
+use ClickHouse\Core\Enums\DateTimePrecision;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
 use ClickHouse\Core\Support\Escaper;
 use Closure;
@@ -33,11 +34,6 @@ trait InteractsWithClickHouseClient
      * The ClickHouse client.
      */
     protected ?Client $client = null;
-
-    /**
-     * The value escaper.
-     */
-    protected Escaper $escaper;
 
     /**
      * The HTTP session every query is currently issued under, if any.
@@ -228,7 +224,17 @@ trait InteractsWithClickHouseClient
      */
     public function escape($value, $binary = false): string
     {
-        return $this->escaper->escape($value, $binary);
+        return $this->getClient()->getEscaper()->escape($value, $binary);
+    }
+
+    /**
+     * The precision applied to DateTimeInterface query bindings and insert
+     * values in every input format. Values the caller already stringified
+     * (a model's $dateFormat, pre-formatted strings) are not affected by it.
+     */
+    public function getDateTimePrecision(): DateTimePrecision
+    {
+        return $this->getClient()->getEscaper()->getDateTimePrecision();
     }
 
     /**
@@ -272,10 +278,15 @@ trait InteractsWithClickHouseClient
     }
 
     /**
-     * Wire up the client and escaper around the framework parent's own
+     * Wire up the client around the framework parent's own
      * construction, defaulting the database name for both the wrapper and
      * the client. The bridge constructors delegate here so the assembly
      * logic exists once.
+     *
+     * The client's escaper renders every executed query, so it is the single
+     * source of the value escaping rules (including datetime_precision). An
+     * injected client brings its own escaper, and the datetime_precision
+     * config is not read; $escaper is only used to build the default client.
      *
      * @param  array{
      *     host?: string,
@@ -286,6 +297,7 @@ trait InteractsWithClickHouseClient
      *     https?: bool,
      *     timeout?: int|float|string|null,
      *     connect_timeout?: int|float|string|null,
+     *     datetime_precision?: DateTimePrecision|string,
      * }  $config
      * @param  callable(string, string, array<string, mixed>): void  $constructParent
      */
@@ -293,8 +305,15 @@ trait InteractsWithClickHouseClient
     {
         $database = $database ?: 'default';
 
-        $this->client = $client ?? $this->getDefaultClient($database, $config);
-        $this->escaper = $escaper ?? new Escaper;
+        if ($client && $escaper && $escaper !== $client->getEscaper()) {
+            throw new InvalidArgumentException('An injected client brings its own escaper; pass the escaper to the client instead.');
+        }
+
+        $this->client = $client ?? $this->getDefaultClient(
+            $database,
+            $config,
+            $escaper ?? new Escaper($this->parseDateTimePrecision($config))
+        );
 
         $constructParent($database, $tablePrefix, $config);
     }
@@ -477,7 +496,7 @@ trait InteractsWithClickHouseClient
      */
     protected function escapeString($value): string
     {
-        return $this->escaper->escapeString($value);
+        return $this->getClient()->getEscaper()->escapeString($value);
     }
 
     /**
@@ -492,9 +511,10 @@ trait InteractsWithClickHouseClient
      *     https?: bool,
      *     timeout?: int|float|string|null,
      *     connect_timeout?: int|float|string|null,
+     *     datetime_precision?: DateTimePrecision|string,
      * }  $config
      */
-    protected function getDefaultClient(string $database, array $config): Client
+    protected function getDefaultClient(string $database, array $config, Escaper $escaper): Client
     {
         return new Client(
             host: $config['host'] ?? '127.0.0.1',
@@ -504,6 +524,7 @@ trait InteractsWithClickHouseClient
             password: $config['password'] ?? 'default',
             transport: $config['transport'] ?? 'guzzle',
             https: $config['https'] ?? false,
+            escaper: $escaper,
             timeout: $this->parseTimeout($config, 'timeout'),
             connectTimeout: $this->parseTimeout($config, 'connect_timeout') ?? self::DEFAULT_CONNECT_TIMEOUT,
         );
@@ -529,5 +550,26 @@ trait InteractsWithClickHouseClient
         }
 
         return (float) $value;
+    }
+
+    /**
+     * The config value may be a DateTimePrecision case, or its string value
+     * when it comes from an environment variable.
+     *
+     * @param  array{datetime_precision?: DateTimePrecision|string}  $config
+     */
+    private function parseDateTimePrecision(array $config): DateTimePrecision
+    {
+        $value = $config['datetime_precision'] ?? DateTimePrecision::Second;
+
+        if ($value instanceof DateTimePrecision) {
+            return $value;
+        }
+
+        return DateTimePrecision::tryFrom($value) ?? throw new InvalidArgumentException(sprintf(
+            'Invalid datetime_precision "%s". Valid values: %s.',
+            $value,
+            implode(', ', array_column(DateTimePrecision::cases(), 'value'))
+        ));
     }
 }

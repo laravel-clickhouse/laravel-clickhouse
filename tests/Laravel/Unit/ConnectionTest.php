@@ -8,7 +8,9 @@ use ClickHouse\Core\Client\Contracts\Transport;
 use ClickHouse\Core\Client\Response;
 use ClickHouse\Core\Client\Session;
 use ClickHouse\Core\Client\Statement;
+use ClickHouse\Core\Enums\DateTimePrecision;
 use ClickHouse\Core\Exceptions\ParallelQueryException;
+use ClickHouse\Core\Support\Escaper;
 use ClickHouse\Laravel\Connection;
 use DateTimeImmutable;
 use Exception;
@@ -117,6 +119,7 @@ class ConnectionTest extends TestCase
     public function testPretendModeLogsEveryQueryWithoutUsingTheClient()
     {
         $client = $this->mock(Client::class);
+        $client->shouldReceive('getEscaper')->andReturn(new Escaper);
         $connection = new Connection(client: $client);
         $beforeExecutingCalls = [];
         $results = [];
@@ -493,6 +496,86 @@ class ConnectionTest extends TestCase
         $this->assertSame('value', $prepared[2]);
     }
 
+    public function testDateTimePrecisionDefaultsToSecond()
+    {
+        $connection = new Connection;
+
+        $this->assertSame(DateTimePrecision::Second, $connection->getDateTimePrecision());
+        $this->assertSame("'2026-08-13 10:00:00'", $connection->escape(Carbon::parse('2026-08-13 10:00:00.123456')));
+    }
+
+    public function testDateTimePrecisionMicrosecondFromConfig()
+    {
+        $connection = new Connection(config: ['datetime_precision' => 'microsecond']);
+
+        $this->assertSame(DateTimePrecision::Microsecond, $connection->getDateTimePrecision());
+        $this->assertSame(DateTimePrecision::Microsecond, $connection->getClient()->getEscaper()->getDateTimePrecision());
+        $this->assertSame(
+            "toDateTime64('2026-08-13 10:00:00.123456', 6)",
+            $connection->escape(Carbon::parse('2026-08-13 10:00:00.123456'))
+        );
+    }
+
+    public function testDateTimePrecisionAcceptsEnumInConfig()
+    {
+        $connection = new Connection(config: ['datetime_precision' => DateTimePrecision::Microsecond]);
+
+        $this->assertSame(DateTimePrecision::Microsecond, $connection->getDateTimePrecision());
+        $this->assertSame(
+            "toDateTime64('2026-08-13 10:00:00.123456', 6)",
+            $connection->escape(Carbon::parse('2026-08-13 10:00:00.123456'))
+        );
+    }
+
+    public function testInjectedEscaperIsUsedByDefaultClient()
+    {
+        $escaper = new Escaper(DateTimePrecision::Microsecond);
+
+        $connection = new Connection(config: ['datetime_precision' => 'second'], escaper: $escaper);
+
+        $this->assertSame($escaper, $connection->getClient()->getEscaper());
+        $this->assertSame(DateTimePrecision::Microsecond, $connection->getDateTimePrecision());
+    }
+
+    public function testDateTimePrecisionFollowsInjectedClientEscaper()
+    {
+        $client = $this->mock(Client::class);
+
+        $client
+            ->shouldReceive('getEscaper')
+            ->andReturn(new Escaper(DateTimePrecision::Microsecond));
+
+        $connection = new Connection(config: ['datetime_precision' => 'second'], client: $client);
+
+        $this->assertSame(DateTimePrecision::Microsecond, $connection->getDateTimePrecision());
+        $this->assertSame(
+            "toDateTime64('2026-08-13 10:00:00.123456', 6)",
+            $connection->escape(Carbon::parse('2026-08-13 10:00:00.123456'))
+        );
+    }
+
+    public function testInjectingClientAndDifferentEscaperThrows()
+    {
+        $client = $this->mock(Client::class);
+
+        $client
+            ->shouldReceive('getEscaper')
+            ->andReturn(new Escaper);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('An injected client brings its own escaper; pass the escaper to the client instead.');
+
+        new Connection(client: $client, escaper: new Escaper);
+    }
+
+    public function testInvalidDateTimePrecisionThrows()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid datetime_precision "millisecond". Valid values: second, microsecond.');
+
+        new Connection(config: ['datetime_precision' => 'millisecond']);
+    }
+
     public function testReportsDefaultAndConfiguredDriverNames()
     {
         $client = $this->mock(Client::class);
@@ -530,7 +613,7 @@ class ConnectionTest extends TestCase
 
     public function testEscapesClickHouseValues()
     {
-        $connection = new Connection(client: $this->mock(Client::class));
+        $connection = new Connection;
         $stringable = new class implements Stringable
         {
             public function __toString(): string
@@ -549,7 +632,7 @@ class ConnectionTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Strings with null bytes cannot be escaped. Use the binary escape option.');
 
-        (new Connection(client: $this->mock(Client::class)))->escape("null\0byte");
+        (new Connection)->escape("null\0byte");
     }
 
     public function testEscapeRejectsInvalidUtf8()
@@ -557,7 +640,7 @@ class ConnectionTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Strings with invalid UTF-8 byte sequences cannot be escaped.');
 
-        (new Connection(client: $this->mock(Client::class)))->escape("\xB1\x31");
+        (new Connection)->escape("\xB1\x31");
     }
 
     public function testEscapeRejectsBinaryValues()
@@ -565,7 +648,7 @@ class ConnectionTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('The database connection does not support escaping binary values.');
 
-        (new Connection(client: $this->mock(Client::class)))->escape('binary', true);
+        (new Connection)->escape('binary', true);
     }
 
     public function testGetSchemaStateThrows()
@@ -613,10 +696,10 @@ class ConnectionWithCapturedDatabase extends Connection
 {
     public string $defaultClientDatabase;
 
-    protected function getDefaultClient(string $database, array $config): Client
+    protected function getDefaultClient(string $database, array $config, Escaper $escaper): Client
     {
         $this->defaultClientDatabase = $database;
 
-        return parent::getDefaultClient($database, $config);
+        return parent::getDefaultClient($database, $config, $escaper);
     }
 }

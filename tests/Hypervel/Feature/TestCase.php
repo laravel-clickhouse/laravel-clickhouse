@@ -33,6 +33,11 @@ abstract class TestCase extends TestbenchTestCase
             'password' => env('CLICKHOUSE_PASSWORD', 'default'),
         ]);
 
+        $app->make('config')->set(
+            'database.connections.clickhouse_micro',
+            $app->make('config')->get('database.connections.clickhouse') + ['datetime_precision' => 'microsecond']
+        );
+
         $app->make('config')->set('database.connections.sqlite', [
             'driver' => 'sqlite',
             'database' => ':memory:',
