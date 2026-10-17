@@ -42,6 +42,46 @@ class ConnectionTest extends TestCase
         $this->assertEquals($expected, $actual);
     }
 
+    public function testTableAppliesFinal()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $this->assertSame(
+            'select * from `table` final',
+            $connection->table('table', final: true)->toRawSql()
+        );
+    }
+
+    public function testTableWithoutFinal()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $this->assertSame(
+            'select * from `table`',
+            $connection->table('table')->toRawSql()
+        );
+    }
+
+    public function testTableAppliesFinalWithAlias()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $this->assertSame(
+            'select * from `table` as `alias` final',
+            $connection->table('table', 'alias', true)->toRawSql()
+        );
+    }
+
+    public function testTableWithFinalAndSubqueryThrows()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Select with final cannot be used with subquery.');
+
+        $connection->table($connection->table('table'), final: true)->toRawSql();
+    }
+
     public function testSessionRunsCallbackWithSessionAndRestoresClientState()
     {
         $client = $this->mock(Client::class);

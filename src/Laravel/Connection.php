@@ -13,12 +13,16 @@ use ClickHouse\Laravel\Schema\Grammar as SchemaGrammar;
 use ClickHouse\Support\Escaper;
 use Closure;
 use DateTimeInterface;
+use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Database\QueryException;
 use InvalidArgumentException;
 use LogicException;
 use RuntimeException;
+
+use function Illuminate\Support\enum_value;
 
 class Connection extends BaseConnection
 {
@@ -98,7 +102,26 @@ class Connection extends BaseConnection
         ));
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     *
+     * @param  Closure|Builder|Expression|\UnitEnum|string  $table
+     * @param  string|null  $as
+     * @param  bool  $final  Append the ClickHouse FINAL modifier to the table.
+     * @return QueryBuilder
+     */
+    public function table($table, $as = null, bool $final = false)
+    {
+        // enum_value() is typed as returning mixed; $table is already constrained above.
+        // @phpstan-ignore-next-line
+        return $this->query()->from(enum_value($table), $as, $final);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return QueryBuilder
+     */
     public function query()
     {
         return new QueryBuilder($this, $this->getQueryGrammar(), $this->getPostProcessor());
