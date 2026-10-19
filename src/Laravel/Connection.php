@@ -2,6 +2,7 @@
 
 namespace ClickHouse\Laravel;
 
+use BackedEnum;
 use ClickHouse\Client\Client;
 use ClickHouse\Client\Statement;
 use ClickHouse\Enums\DateTimePrecision;
@@ -21,8 +22,7 @@ use Illuminate\Database\QueryException;
 use InvalidArgumentException;
 use LogicException;
 use RuntimeException;
-
-use function Illuminate\Support\enum_value;
+use UnitEnum;
 
 class Connection extends BaseConnection
 {
@@ -105,16 +105,26 @@ class Connection extends BaseConnection
     /**
      * {@inheritDoc}
      *
-     * @param  Closure|Builder|Expression|\UnitEnum|string  $table
+     * @param  Closure|Builder|Expression|UnitEnum|string  $table
      * @param  string|null  $as
      * @param  bool  $final  Append the ClickHouse FINAL modifier to the table.
      * @return QueryBuilder
      */
     public function table($table, $as = null, bool $final = false)
     {
-        // enum_value() is typed as returning mixed; $table is already constrained above.
-        // @phpstan-ignore-next-line
-        return $this->query()->from(enum_value($table), $as, $final);
+        if (! $final) {
+            /** @var QueryBuilder $query */
+            $query = parent::table($table, $as);
+
+            return $query;
+        }
+
+        // Mirrors Illuminate\Support\enum_value(), which only exists since Laravel 11.35.
+        if ($table instanceof UnitEnum) {
+            $table = $table instanceof BackedEnum ? (string) $table->value : $table->name;
+        }
+
+        return $this->query()->from($table, $as, true);
     }
 
     /**
