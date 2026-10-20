@@ -344,7 +344,6 @@ class Connection extends BaseConnection
     /** {@inheritDoc} */
     public function getSchemaBuilder()
     {
-        // @phpstan-ignore-next-line
         if (is_null($this->schemaGrammar)) {
             $this->useDefaultSchemaGrammar();
         }
