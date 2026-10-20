@@ -168,18 +168,22 @@ class Guzzle implements Transport
             throw new QueryException('ClickHouse query error: '.$body);
         }
 
+        // Decoded once and shared by both checks below: result bodies can
+        // be large, and each decode is a full pass over them.
+        $data = json_decode($body, true);
+
         // ClickHouse 24+ reports errors as a JSON body whose `exception`
         // field carries the full message. Without this branch the error
         // would surface truncated: the JSON boilerplate exhausts Guzzle's
         // 120-character body summary before the message begins, and
         // parseRecords() would discard the field by reading `data` only.
-        $exception = $this->parseJsonExceptionMessage($body);
+        $exception = $this->parseJsonExceptionMessage($data);
 
         if ($exception !== null) {
             throw new QueryException('ClickHouse query error: '.$exception);
         }
 
-        $records = $this->parseRecords($body);
+        $records = $this->parseRecords($data);
         $affectedRows = $records === null ? $this->parseAffectedRows($response) : null;
 
         if ($records === null && $affectedRows === null && str_contains($contentType, 'application/json') && trim($body) !== '') {
@@ -236,7 +240,7 @@ class Guzzle implements Transport
      */
     protected function extractErrorMessage(string $body): ?string
     {
-        $exception = $this->parseJsonExceptionMessage($body);
+        $exception = $this->parseJsonExceptionMessage(json_decode($body, true));
 
         if ($exception !== null) {
             return $exception;
@@ -246,12 +250,10 @@ class Guzzle implements Transport
     }
 
     /**
-     * Extract the full error message from a ClickHouse JSON error body.
+     * Extract the full error message from a decoded ClickHouse JSON body.
      */
-    protected function parseJsonExceptionMessage(string $body): ?string
+    protected function parseJsonExceptionMessage(mixed $data): ?string
     {
-        $data = json_decode($body, true);
-
         if (! is_array($data) || ! isset($data['exception']) || ! is_string($data['exception'])) {
             return null;
         }
@@ -260,12 +262,12 @@ class Guzzle implements Transport
     }
 
     /**
+     * Extract the result rows from a decoded ClickHouse JSON body.
+     *
      * @return array<int, array<string, mixed>>|null
      */
-    protected function parseRecords(string $body): ?array
+    protected function parseRecords(mixed $data): ?array
     {
-        $data = json_decode($body, true);
-
         if (! is_array($data) || ! isset($data['data']) || ! is_array($data['data'])) {
             return null;
         }
