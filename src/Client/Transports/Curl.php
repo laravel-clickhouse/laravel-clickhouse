@@ -5,6 +5,7 @@ namespace ClickHouse\Client\Transports;
 use ClickHouse\Client\Contracts\Transport;
 use ClickHouse\Client\Response;
 use ClickHouse\Exceptions\ParallelQueryException;
+use ClickHouse\Exceptions\QueryException;
 use ClickHouseDB\Client;
 use ClickHouseDB\Statement as ClickHouseDBStatement;
 use Exception;
@@ -110,7 +111,20 @@ class Curl implements Transport
             $statement->error();
         }
 
-        $records = $this->parseRecords($statement->getRequest()->response()->body());
+        $body = $statement->getRequest()->response()->body();
+
+        // ClickHouse <= 23 defaults to http_write_exception_in_output_format=1:
+        // an error then arrives as HTTP 200 with a valid JSON body whose
+        // `exception` field carries the message. phpclickhouse only flags
+        // broken JSON, so without this check the error would surface as an
+        // empty or silently truncated result.
+        $exception = $this->parseJsonExceptionMessage($body);
+
+        if ($exception !== null) {
+            throw new QueryException('ClickHouse query error: '.$exception);
+        }
+
+        $records = $this->parseRecords($body);
 
         return new Response(
             $sql,
@@ -124,6 +138,20 @@ class Curl implements Transport
         $writtenRows = $statement->summary('written_rows');
 
         return is_numeric($writtenRows) ? (int) $writtenRows : null;
+    }
+
+    /**
+     * Extract the error message from a ClickHouse JSON body's `exception` field.
+     */
+    protected function parseJsonExceptionMessage(string $body): ?string
+    {
+        $data = json_decode($body, true);
+
+        if (! is_array($data) || ! isset($data['exception']) || ! is_string($data['exception'])) {
+            return null;
+        }
+
+        return $data['exception'];
     }
 
     /**
