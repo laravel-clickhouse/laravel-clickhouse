@@ -112,16 +112,17 @@ class Connection extends BaseConnection
      */
     public function table($table, $as = null, bool $final = false)
     {
+        // Mirrors Illuminate\Support\enum_value(), which only exists since
+        // Laravel 11.35; the parent table() only accepts enums since 12.x.
+        if ($table instanceof UnitEnum) {
+            $table = $table instanceof BackedEnum ? (string) $table->value : $table->name;
+        }
+
         if (! $final) {
             /** @var QueryBuilder $query */
             $query = parent::table($table, $as);
 
             return $query;
-        }
-
-        // Mirrors Illuminate\Support\enum_value(), which only exists since Laravel 11.35.
-        if ($table instanceof UnitEnum) {
-            $table = $table instanceof BackedEnum ? (string) $table->value : $table->name;
         }
 
         return $this->query()->from($table, $as, true);

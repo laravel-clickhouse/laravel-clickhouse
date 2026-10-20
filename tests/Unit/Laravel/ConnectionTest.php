@@ -82,6 +82,35 @@ class ConnectionTest extends TestCase
         $connection->table($connection->table('table'), final: true)->toRawSql();
     }
 
+    public function testTableAcceptsEnums()
+    {
+        // The parent table() only accepts enums since Laravel 12.
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $this->assertSame(
+            'select * from `events`',
+            $connection->table(ConnectionTestBackedEnum::Events)->toRawSql()
+        );
+        $this->assertSame(
+            'select * from `logs` as `alias`',
+            $connection->table(ConnectionTestUnitEnum::logs, 'alias')->toRawSql()
+        );
+    }
+
+    public function testTableAppliesFinalToEnums()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $this->assertSame(
+            'select * from `events` final',
+            $connection->table(ConnectionTestBackedEnum::Events, final: true)->toRawSql()
+        );
+        $this->assertSame(
+            'select * from `logs` as `alias` final',
+            $connection->table(ConnectionTestUnitEnum::logs, 'alias', true)->toRawSql()
+        );
+    }
+
     public function testSessionRunsCallbackWithSessionAndRestoresClientState()
     {
         $client = $this->mock(Client::class);
@@ -421,4 +450,14 @@ class ConnectionTest extends TestCase
 
         new Connection(config: ['timeout' => 'forever']);
     }
+}
+
+enum ConnectionTestBackedEnum: string
+{
+    case Events = 'events';
+}
+
+enum ConnectionTestUnitEnum
+{
+    case logs;
 }
