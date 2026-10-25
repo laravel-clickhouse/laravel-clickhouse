@@ -2,6 +2,7 @@
 
 namespace ClickHouse\Laravel;
 
+use BackedEnum;
 use ClickHouse\Client\Client;
 use ClickHouse\Client\Statement;
 use ClickHouse\Enums\DateTimePrecision;
@@ -13,12 +14,15 @@ use ClickHouse\Laravel\Schema\Grammar as SchemaGrammar;
 use ClickHouse\Support\Escaper;
 use Closure;
 use DateTimeInterface;
+use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Connection as BaseConnection;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Database\QueryException;
 use InvalidArgumentException;
 use LogicException;
 use RuntimeException;
+use UnitEnum;
 
 class Connection extends BaseConnection
 {
@@ -98,7 +102,37 @@ class Connection extends BaseConnection
         ));
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     *
+     * @param  Closure|Builder|Expression|UnitEnum|string  $table
+     * @param  string|null  $as
+     * @param  bool  $final  Append the ClickHouse FINAL modifier to the table.
+     * @return QueryBuilder
+     */
+    public function table($table, $as = null, bool $final = false)
+    {
+        // Mirrors Illuminate\Support\enum_value(), which only exists since
+        // Laravel 11.35; the parent table() only accepts enums since 12.x.
+        if ($table instanceof UnitEnum) {
+            $table = $table instanceof BackedEnum ? (string) $table->value : $table->name;
+        }
+
+        if (! $final) {
+            /** @var QueryBuilder $query */
+            $query = parent::table($table, $as);
+
+            return $query;
+        }
+
+        return $this->query()->from($table, $as, true);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return QueryBuilder
+     */
     public function query()
     {
         return new QueryBuilder($this, $this->getQueryGrammar(), $this->getPostProcessor());
@@ -310,7 +344,6 @@ class Connection extends BaseConnection
     /** {@inheritDoc} */
     public function getSchemaBuilder()
     {
-        // @phpstan-ignore-next-line
         if (is_null($this->schemaGrammar)) {
             $this->useDefaultSchemaGrammar();
         }

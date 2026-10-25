@@ -479,7 +479,6 @@ class Grammar extends BaseGrammar
      */
     protected function compileCreateEngine(string $sql, BaseConnection $connection, Blueprint $blueprint): string
     {
-        // @phpstan-ignore-next-line
         if (isset($blueprint->engine)) {
             $sql = "{$sql} ENGINE = {$blueprint->engine}";
         } elseif (! is_null($engine = $connection->getConfig('engine'))) {
