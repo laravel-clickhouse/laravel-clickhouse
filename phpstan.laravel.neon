@@ -123,8 +123,15 @@ parameters:
       message: '#Parameter \#\d+ \$\w+ of method Illuminate\\Database\\Schema\\Blueprint::__construct\(\) expects#'
       path: src/Laravel/Schema/BlueprintLaravelCompatibility.php
       reportUnmatched: false
-    # $resolver is PHPDoc non-nullable but starts unset at runtime.
-    - '#Property Illuminate\\Database\\Schema\\Builder::\$resolver \(Closure\) in isset\(\) is not nullable#'
+    # PHPDoc non-nullable before L13, but each starts unset/null at runtime.
+    -
+      message: '#Property Illuminate\\Database\\Schema\\Builder::\$resolver \(Closure\) in isset\(\) is not nullable#'
+      path: src/Laravel/Schema/Builder.php
+      reportUnmatched: false
+    -
+      message: '#Call to function is_null\(\) with Illuminate\\Database\\Schema\\Grammars\\Grammar will always evaluate to false#'
+      path: src/Core/Connection/InteractsWithClickHouseClient.php
+      reportUnmatched: false
     -
       message: '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$\w+\.#'
       reportUnmatched: false

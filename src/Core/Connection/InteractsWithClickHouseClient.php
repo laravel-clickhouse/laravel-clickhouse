@@ -2,6 +2,7 @@
 
 namespace ClickHouse\Core\Connection;
 
+use BackedEnum;
 use ClickHouse\Core\Client\Client;
 use ClickHouse\Core\Client\Session;
 use ClickHouse\Core\Client\Statement;
@@ -15,6 +16,7 @@ use InvalidArgumentException;
 use LogicException;
 use RuntimeException;
 use Throwable;
+use UnitEnum;
 
 /**
  * ClickHouse HTTP client integration shared by every framework bridge.
@@ -330,6 +332,22 @@ trait InteractsWithClickHouseClient
     }
 
     /**
+     * Begin a fluent query against a table, optionally with the ClickHouse
+     * FINAL modifier. Enums are converted here because Laravel only accepts
+     * them in table() since 12.x (and enum_value() only exists since 11.35).
+     * The bridges' table() overrides delegate here and only restate their
+     * parent's signature.
+     */
+    protected function newClickHouseTableQuery(mixed $table, ?string $as, bool $final): mixed
+    {
+        if ($table instanceof UnitEnum) {
+            $table = $table instanceof BackedEnum ? (string) $table->value : $table->name;
+        }
+
+        return $this->query()->from($table, $as, $final);
+    }
+
+    /**
      * Build the framework's schema builder, initialising the default schema
      * grammar first. The builder class comes from the bridge's
      * SCHEMA_BUILDER constant; the bridges' overrides delegate here and
@@ -337,7 +355,6 @@ trait InteractsWithClickHouseClient
      */
     protected function createClickHouseSchemaBuilder(): mixed
     {
-        // @phpstan-ignore-next-line
         if (is_null($this->schemaGrammar)) {
             $this->useDefaultSchemaGrammar();
         }

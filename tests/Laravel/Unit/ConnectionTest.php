@@ -31,6 +31,74 @@ class ConnectionTest extends TestCase
         $this->assertSame('default', $connection->defaultClientDatabase);
     }
 
+    public function testTableAppliesFinal()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $this->assertSame(
+            'select * from `table` final',
+            $connection->table('table', final: true)->toRawSql()
+        );
+    }
+
+    public function testTableWithoutFinal()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $this->assertSame(
+            'select * from `table`',
+            $connection->table('table')->toRawSql()
+        );
+    }
+
+    public function testTableAppliesFinalWithAlias()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $this->assertSame(
+            'select * from `table` as `alias` final',
+            $connection->table('table', 'alias', true)->toRawSql()
+        );
+    }
+
+    public function testTableWithFinalAndSubqueryThrows()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Select with final cannot be used with subquery.');
+
+        $connection->table($connection->table('table'), final: true)->toRawSql();
+    }
+
+    public function testTableAcceptsEnums()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $this->assertSame(
+            'select * from `events`',
+            $connection->table(ConnectionTestBackedEnum::Events)->toRawSql()
+        );
+        $this->assertSame(
+            'select * from `logs` as `alias`',
+            $connection->table(ConnectionTestUnitEnum::logs, 'alias')->toRawSql()
+        );
+    }
+
+    public function testTableAppliesFinalToEnums()
+    {
+        $connection = new Connection(client: $this->mock(Client::class));
+
+        $this->assertSame(
+            'select * from `events` final',
+            $connection->table(ConnectionTestBackedEnum::Events, final: true)->toRawSql()
+        );
+        $this->assertSame(
+            'select * from `logs` as `alias` final',
+            $connection->table(ConnectionTestUnitEnum::logs, 'alias', true)->toRawSql()
+        );
+    }
+
     public function testTimeoutConfigIsPassedToClient()
     {
         $connection = new Connection(config: ['timeout' => '30', 'connect_timeout' => 2.5]);
@@ -702,4 +770,14 @@ class ConnectionWithCapturedDatabase extends Connection
 
         return parent::getDefaultClient($database, $config, $escaper);
     }
+}
+
+enum ConnectionTestBackedEnum: string
+{
+    case Events = 'events';
+}
+
+enum ConnectionTestUnitEnum
+{
+    case logs;
 }

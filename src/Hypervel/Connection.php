@@ -12,12 +12,18 @@ use ClickHouse\Hypervel\Query\Builder as QueryBuilder;
 use ClickHouse\Hypervel\Query\Grammar as QueryGrammar;
 use ClickHouse\Hypervel\Schema\Builder as SchemaBuilder;
 use ClickHouse\Hypervel\Schema\Grammar as SchemaGrammar;
+use Closure;
+use Hypervel\Contracts\Database\Query\Expression;
 use Hypervel\Database\Connection as BaseConnection;
+use Hypervel\Database\Eloquent\Builder as EloquentBuilder;
+use Hypervel\Database\Eloquent\Relations\Relation;
+use Hypervel\Database\Query\Builder as BaseQueryBuilder;
 use Hypervel\Database\QueryException;
 use Hypervel\Filesystem\Filesystem;
 use LogicException;
 use Swoole\Coroutine\CanceledException;
 use Throwable;
+use UnitEnum;
 
 class Connection extends BaseConnection implements ClickHouseConnection
 {
@@ -46,6 +52,17 @@ class Connection extends BaseConnection implements ClickHouseConnection
     public function __construct(string $database = '', string $tablePrefix = '', array $config = [], ?Client $client = null, ?Escaper $escaper = null)
     {
         $this->constructClickHouseConnection($database, $tablePrefix, $config, $client, $escaper, parent::__construct(...));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param  bool  $final  Append the ClickHouse FINAL modifier to the table.
+     */
+    public function table(Closure|BaseQueryBuilder|EloquentBuilder|Relation|Expression|UnitEnum|string $table, ?string $as = null, bool $final = false): QueryBuilder
+    {
+        /** @var QueryBuilder */
+        return $this->newClickHouseTableQuery($table, $as, $final);
     }
 
     /** {@inheritDoc} */
