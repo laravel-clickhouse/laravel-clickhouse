@@ -12,8 +12,8 @@ use Hypervel\Database\Eloquent\Scope;
  * @method Builder<static> newModelQuery()
  * @method Builder<static> newQueryWithoutRelationships()
  * @method Builder<static> newQueryWithoutScopes()
- * @method Builder<static> newQueryWithoutScope(Scope|string $scope)
- * @method Builder<static> newQueryForRestoration(array|int|string $ids)
+ * @method Builder<static> newQueryWithoutScope(Scope<static>|string $scope)
+ * @method Builder<static> newQueryForRestoration(array<int|string>|int|string $ids)
  * @method Builder<*> newEloquentBuilder(QueryBuilder $query)
  * @method QueryBuilder newBaseQueryBuilder()
  */

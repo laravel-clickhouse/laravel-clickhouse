@@ -137,6 +137,7 @@ class Curl implements Transport
             return null;
         }
 
+        /** @var array<int, array<string, mixed>> */
         return $data['data'];
     }
 }

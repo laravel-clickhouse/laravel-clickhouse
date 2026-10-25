@@ -70,7 +70,7 @@ parameters:
     # Same widening in the shared grammar trait: $query parameters drop their
     # native builder type so both frameworks' grammars can use the trait.
     -
-      message: '#Parameter \#\d+ \$\w+ of (method|function) .+ expects .+, (mixed|array|object) given\.#'
+      message: '#Parameter \#\d+ \$\w+ of (method|function) .+ expects .+, (mixed|array(<.+>)?|object) given\.#'
       path: src/Core/Query/CompilesClickHouseQueries.php
       reportUnmatched: false
     -
@@ -132,6 +132,34 @@ parameters:
       message: '#Call to function is_null\(\) with Illuminate\\Database\\Schema\\Grammars\\Grammar will always evaluate to false#'
       path: src/Core/Connection/InteractsWithClickHouseClient.php
       reportUnmatched: false
+    # Laravel 11's withTablePrefix() guard and non-generic Scope (generic since 12).
+    -
+      message: '#method_exists\(\) with \$this\(ClickHouse\\Laravel\\Connection\) and ''withTablePrefix''#'
+      path: src/Laravel/Connection.php
+      reportUnmatched: false
+    -
+      identifier: missingType.generics
+      message: '#Illuminate\\Database\\Eloquent\\Scope but does not specify its types#'
+      path: src/Laravel/Eloquent/Model.php
+      reportUnmatched: false
+    # Laravel 11's grammars have no constructor; the guard is only always-true on 12+.
+    -
+      identifier: function.alreadyNarrowedType
+      message: '#method_exists\(\) with .+Grammars\\\\Grammar.+ and ''__construct''#'
+      paths:
+        - src/Core/Query/CompilesClickHouseQueries.php
+        - src/Core/Schema/CompilesClickHouseSchema.php
+      reportUnmatched: false
+    # The grammar's $connection is PHPDoc non-nullable but unset until bound.
+    -
+      identifier: instanceof.alwaysTrue
+      path: src/Laravel/Schema/Grammar.php
+      reportUnmatched: false
+    # The Laravel testing traits are mounted by consumers' test cases, which
+    # are outside the analysed paths; the feature suites exercise them.
+    -
+      identifier: trait.unused
+      path: src/Laravel/Testing/*
     -
       message: '#Access to an undefined property Illuminate\\Support\\Fluent(<string, mixed>)?::\$\w+\.#'
       reportUnmatched: false

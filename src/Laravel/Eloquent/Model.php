@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Scope;
  * @method Builder<static> newQueryWithoutRelationships()
  * @method Builder<static> newQueryWithoutScopes()
  * @method Builder<static> newQueryWithoutScope(Scope|string $scope)
- * @method Builder<static> newQueryForRestoration(array|int $ids)
+ * @method Builder<static> newQueryForRestoration(array<int|string>|int $ids)
  * @method Builder<*> newEloquentBuilder(QueryBuilder $query)
  * @method QueryBuilder newBaseQueryBuilder()
  */

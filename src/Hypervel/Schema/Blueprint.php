@@ -44,9 +44,9 @@ use Hypervel\Support\Fluent;
  * @method IndexDefinition rawIndex(string $expression, string $name)
  * @method CommandDefinition drop()
  * @method CommandDefinition dropIfExists()
- * @method Fluent partitionBy(string $expression)
- * @method Fluent orderBy(array<string>|string ...$columns)
- * @method Fluent array(string $column, string $type)
+ * @method Fluent<string, mixed> partitionBy(string $expression)
+ * @method Fluent<string, mixed> orderBy(array<string>|string ...$columns)
+ * @method Fluent<string, mixed> array(string $column, string $type)
  */
 class Blueprint extends BaseBlueprint
 {

@@ -1199,7 +1199,7 @@ trait BuildsClickHouseQueries
     /**
      * {@inheritDoc}
      *
-     * @param  mixed[]  $bindings
+     * @param  list<mixed>  $bindings
      * @param  string  $type
      */
     public function setBindings(array $bindings, $type = 'where'): static
@@ -1289,7 +1289,7 @@ trait BuildsClickHouseQueries
         /** @var array<string, mixed> $first */
         $first = reset($values);
 
-        /** @var list<array<string, mixed>> $values */
+        /** @var list<mixed> $values */
         foreach ($values as $row) {
             if (! is_array($row)) {
                 throw new LogicException('All rows passed to a formatted insert must be arrays.');
@@ -1302,6 +1302,7 @@ trait BuildsClickHouseQueries
             }
         }
 
+        /** @var list<array<string, mixed>> $values */
         $this->applyBeforeQueryCallbacks();
 
         // @phpstan-ignore-next-line

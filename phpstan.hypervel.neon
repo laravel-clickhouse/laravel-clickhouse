@@ -55,3 +55,10 @@ parameters:
     -
       message: '#Property .+::\$from .+ does not accept mixed\.#'
       path: src/Core/Query/BuildsClickHouseQueries.php
+    # The constructor guard exists for Laravel 11's constructor-less grammars.
+    -
+      identifier: function.alreadyNarrowedType
+      message: '#method_exists\(\) with .+Grammars\\\\Grammar.+ and ''__construct''#'
+      paths:
+        - src/Core/Query/CompilesClickHouseQueries.php
+        - src/Core/Schema/CompilesClickHouseSchema.php
