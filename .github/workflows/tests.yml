@@ -122,7 +122,7 @@ jobs:
           - "8.4"
           - "8.5"
         swoole:
-          - "6.2"
+          - "6.3"
         hypervel:
           - "0.4.x-dev"
         # Same shape as the laravel job: PHP legs pin the current LTS, one
@@ -130,9 +130,9 @@ jobs:
         clickhouse:
           - "26.3-alpine"
         include:
-          - { php: "8.4", swoole: "6.2", hypervel: "0.4.x-dev", clickhouse: "23.8-alpine" }
-          - { php: "8.4", swoole: "6.2", hypervel: "0.4.x-dev", clickhouse: "24.8-alpine" }
-          - { php: "8.4", swoole: "6.2", hypervel: "0.4.x-dev", clickhouse: "25.8-alpine" }
+          - { php: "8.4", swoole: "6.3", hypervel: "0.4.x-dev", clickhouse: "23.8-alpine" }
+          - { php: "8.4", swoole: "6.3", hypervel: "0.4.x-dev", clickhouse: "24.8-alpine" }
+          - { php: "8.4", swoole: "6.3", hypervel: "0.4.x-dev", clickhouse: "25.8-alpine" }
 
     name: PHP ${{ matrix.php }} (swoole-${{ matrix.swoole }}) / Hypervel ${{ matrix.hypervel }} / ClickHouse ${{ matrix.clickhouse }}
 

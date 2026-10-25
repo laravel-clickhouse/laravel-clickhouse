@@ -1,6 +1,6 @@
 # Runner image for the Hypervel bridge test suite — the same base and
 # extension setup as the hypervel job in .github/workflows/tests.yml.
-FROM phpswoole/swoole:6.2-php8.4
+FROM phpswoole/swoole:6.3-php8.4
 
 # hypervel/components declares intl as a platform requirement; Swoole short
 # names must be off or Hypervel's Application refuses to boot.

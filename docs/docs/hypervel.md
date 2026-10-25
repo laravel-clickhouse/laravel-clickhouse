@@ -5,7 +5,7 @@ The package ships a second bridge for [Hypervel](https://hypervel.org) 0.4 — a
 ## Requirements
 
 - PHP 8.4+
-- ext-swoole 6.2+
+- ext-swoole 6.3+
 - `hypervel/components` (or the split `hypervel/database` package) `~0.4`
 
 ## Installation
