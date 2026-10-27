@@ -5,6 +5,7 @@ namespace ClickHouse\Client\Transports;
 use ClickHouse\Client\Contracts\Transport;
 use ClickHouse\Client\Response;
 use ClickHouse\Exceptions\ParallelQueryException;
+use ClickHouse\Exceptions\QueryException;
 use ClickHouseDB\Client;
 use ClickHouseDB\Statement as ClickHouseDBStatement;
 use Exception;
@@ -110,7 +111,22 @@ class Curl implements Transport
             $statement->error();
         }
 
-        $records = $this->parseRecords($statement->getRequest()->response()->body());
+        // Decoded once and shared by both checks below: result bodies can
+        // be large, and each decode is a full pass over them.
+        $data = json_decode($statement->getRequest()->response()->body(), true);
+
+        // ClickHouse <= 23 defaults to http_write_exception_in_output_format=1:
+        // an error then arrives as HTTP 200 with a valid JSON body whose
+        // `exception` field carries the message. phpclickhouse only flags
+        // broken JSON, so without this check the error would surface as an
+        // empty or silently truncated result.
+        $exception = $this->parseJsonExceptionMessage($data);
+
+        if ($exception !== null) {
+            throw new QueryException('ClickHouse query error: '.$exception);
+        }
+
+        $records = $this->parseRecords($data);
 
         return new Response(
             $sql,
@@ -127,12 +143,24 @@ class Curl implements Transport
     }
 
     /**
+     * Extract the error message from a decoded ClickHouse JSON body's `exception` field.
+     */
+    protected function parseJsonExceptionMessage(mixed $data): ?string
+    {
+        if (! is_array($data) || ! isset($data['exception']) || ! is_string($data['exception'])) {
+            return null;
+        }
+
+        return $data['exception'];
+    }
+
+    /**
+     * Extract the result rows from a decoded ClickHouse JSON body.
+     *
      * @return array<int, array<string, mixed>>|null
      */
-    protected function parseRecords(string $body): ?array
+    protected function parseRecords(mixed $data): ?array
     {
-        $data = json_decode($body, true);
-
         if (! is_array($data) || ! isset($data['data']) || ! is_array($data['data'])) {
             return null;
         }
