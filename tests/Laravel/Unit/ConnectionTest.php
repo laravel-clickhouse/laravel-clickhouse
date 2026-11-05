@@ -564,6 +564,32 @@ class ConnectionTest extends TestCase
         $this->assertSame('value', $prepared[2]);
     }
 
+    public function testToRawSqlRendersDateTimeBindingsAtSecondPrecision()
+    {
+        $connection = new Connection;
+
+        $this->assertSame(
+            "select * from `table` where `column` >= '2026-08-13 10:00:00' and `column` in ('2026-08-13 10:00:00', '2026-08-14 10:00:00')",
+            $connection->table('table')
+                ->where('column', '>=', Carbon::parse('2026-08-13 10:00:00.123456'))
+                ->whereIn('column', [new DateTimeImmutable('2026-08-13 10:00:00'), Carbon::parse('2026-08-14 10:00:00')])
+                ->toRawSql()
+        );
+    }
+
+    public function testToRawSqlRendersDateTimeBindingsAtMicrosecondPrecision()
+    {
+        $connection = new Connection(config: ['datetime_precision' => 'microsecond']);
+
+        $this->assertSame(
+            "select * from `table` where `column` >= toDateTime64('2026-08-13 10:00:00.123456', 6) and `column` = '2026-08-13 10:00:00'",
+            $connection->table('table')
+                ->where('column', '>=', Carbon::parse('2026-08-13 10:00:00.123456'))
+                ->where('column', new DateTimeImmutable('2026-08-13 10:00:00'))
+                ->toRawSql()
+        );
+    }
+
     public function testDateTimePrecisionDefaultsToSecond()
     {
         $connection = new Connection;

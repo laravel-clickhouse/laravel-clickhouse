@@ -52,6 +52,19 @@ trait CompilesClickHouseQueries
     }
 
     /**
+     * Widened from Hypervel's scalar-only parameter: the connection's
+     * prepareBindings() keeps DateTimeInterface bindings as objects so the
+     * Escaper can apply the configured precision, and toRawSql() passes
+     * them through here.
+     *
+     * @param  bool  $binary
+     */
+    public function escape(mixed $value, $binary = false): string
+    {
+        return $this->connection->escape($value, $binary);
+    }
+
+    /**
      * {@inheritDoc}
      *
      * @param  string|int  $seed
