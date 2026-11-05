@@ -17,7 +17,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "smi2/phpclickhouse": "^1.5",
+        "smi2/phpclickhouse": "^1.26.610",
         "guzzlehttp/guzzle": "^7.0 || ^8.0",
         "nesbot/carbon": "^2.0 || ^3.0"
     },
